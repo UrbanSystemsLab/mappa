@@ -1,0 +1,24 @@
+services:
+  db:
+    build:
+      context: ./db
+      dockerfile: Dockerfile
+    image: mappa-db:local
+    container_name: mappa-db
+    environment:
+      POSTGRES_USER: mappa
+      POSTGRES_PASSWORD: mappa
+      POSTGRES_DB: mappa
+    ports:
+      - "5433:5432"
+    volumes:
+      - mappa-db-data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mappa -d mappa"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  mappa-db-data:

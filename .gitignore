@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual env
+venv/
+.venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Word lockfiles
+~$*
+
+# Local secrets / env
+.env
+.env.local
+*.pem
+*.key
+
+# Raw partner data (too large / redistribution unclear)
+data/raw/*.gpkg
+data/raw/*.gdb
+data/raw/*.ppkx
+data/raw/*.zip
+data/raw/*.tif
+data/raw/*.tiff
+
+# Docker volumes (if bind-mounted)
+mappa-db-data/
+
+# Ingestion / eval outputs
+data/generated/
+data/inventory/
+logs/

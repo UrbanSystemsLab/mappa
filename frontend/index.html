@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mappa — Asistente Geoespacial de Puerto Rico (MVP)</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+body{font-family:system-ui,sans-serif;margin:0;background:#f5f5f0;color:#222}
+header{background:#0b5d4b;color:#fff;padding:14px 20px}
+header h1{margin:0;font-size:18px}
+header p{margin:4px 0 0;font-size:13px;opacity:.85}
+main{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;height:calc(100vh - 70px)}
+.panel{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:14px;overflow:auto}
+#map{border-radius:8px;min-height:300px}
+textarea{width:100%;height:70px;padding:8px;font:inherit;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}
+button{background:#0b5d4b;color:#fff;border:0;padding:8px 16px;border-radius:6px;cursor:pointer;margin-top:6px}
+button:disabled{opacity:.6}
+.answer{white-space:pre-wrap;background:#fafaf3;padding:10px;border-left:3px solid #0b5d4b;border-radius:4px;margin-top:10px}
+.cite{font-size:13px;margin:4px 0}
+.tag{display:inline-block;background:#e3eee9;color:#0b5d4b;padding:2px 8px;border-radius:10px;font-size:12px;margin-right:4px}
+.meta{font-size:12px;color:#666;margin-top:6px}
+.disc{font-size:12px;color:#555;margin-top:14px;border-top:1px solid #eee;padding-top:8px}
+.samples{font-size:12px;margin-top:8px}
+.samples a{color:#0b5d4b;margin-right:10px;cursor:pointer;text-decoration:underline}
+</style>
+</head>
+<body>
+<header>
+<h1>Mappa — Asistente Geoespacial de Puerto Rico</h1>
+<p>Preguntas sobre uso de terrenos, riesgos ambientales y planificación en Puerto Rico</p>
+</header>
+<main>
+<section class="panel">
+<label><b>Pregunta (en español):</b></label>
+<textarea id="q" placeholder="Ej: ¿Puedo construir en una zona inundable en San Juan?"></textarea>
+<button id="go">Preguntar</button>
+<div class="samples">Ejemplos:
+<a data-q="¿Puedo construir en una zona inundable?">inundación</a>
+<a data-q="¿Qué regula el Reglamento Conjunto?">permisos</a>
+<a data-q="¿Cómo se protegen los humedales en Puerto Rico?">humedales</a>
+<a data-q="¿Qué dice el plan de ordenación de San Juan?">San Juan</a>
+<a data-q="¿Dónde hay riesgo de deslizamiento?">deslizamientos</a>
+</div>
+<div id="out"></div>
+<div class="disc" id="disc"></div>
+</section>
+<div id="map" class="panel"></div>
+</main>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
