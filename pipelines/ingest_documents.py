@@ -45,6 +45,20 @@ class Chunk:
 
 
 def load_source_documents(path: Path) -> list[dict]:
+    """Load a corpus from either a single JSON array file or a directory of
+    per-document JSON files (the default output of pipelines/parse_documents.py).
+    A `corpus.json` array inside the directory, if present, is used directly.
+    """
+    if path.is_dir():
+        combined = path / "corpus.json"
+        if combined.exists():
+            with combined.open(encoding="utf-8") as f:
+                return json.load(f)
+        docs: list[dict] = []
+        for doc_path in sorted(path.glob("*.json")):
+            with doc_path.open(encoding="utf-8") as f:
+                docs.append(json.load(f))
+        return docs
     with path.open(encoding="utf-8") as f:
         return json.load(f)
 

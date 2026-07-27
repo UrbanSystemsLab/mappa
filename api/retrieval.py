@@ -6,7 +6,10 @@ from typing import Any
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "documents.json"
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_PATH = DATA_DIR / "documents.json"
+# Extra local corpora merged in if present (e.g. documents pulled from Drive).
+EXTRA_PATHS = [DATA_DIR / "planning_docs.json", DATA_DIR / "drive_docs.json"]
 
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
@@ -26,7 +29,16 @@ def _strip(text: str) -> str:
 
 def load_documents() -> list[dict[str, Any]]:
     with DATA_PATH.open(encoding="utf-8") as f:
-        return json.load(f)
+        docs = json.load(f)
+    seen = {d["id"] for d in docs}
+    for extra in EXTRA_PATHS:
+        if extra.exists():
+            with extra.open(encoding="utf-8") as f:
+                for d in json.load(f):
+                    if d["id"] not in seen:
+                        docs.append(d)
+                        seen.add(d["id"])
+    return docs
 
 
 def _doc_text_for_embedding(doc: dict[str, Any]) -> str:

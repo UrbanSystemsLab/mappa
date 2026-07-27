@@ -1,0 +1,32 @@
+[
+  {
+    "id": "drive-prd-mappa",
+    "title": "PRD: MAPPA — Asistente Geoespacial para Comunidades de Puerto Rico (La Maraña)",
+    "jurisdiction": "Puerto Rico",
+    "doc_type": "documento_producto",
+    "year": 2026,
+    "url": "https://docs.google.com/document/d/1up7BpxqDypL7HJQznEkBi3PJ2XDxbDb7u3fR2lPQG2g",
+    "tags": ["mappa", "producto", "requisitos", "planificacion"],
+    "text": "MAPPA es un producto digital de acceso público que permite a las personas hacer preguntas sobre uso de terrenos, peligros ambientales e información de planificación en Puerto Rico. El producto recupera y sintetiza información de documentos de planificación, conjuntos de datos geoespaciales y marcos regulatorios, y presenta los resultados mediante respuestas en lenguaje sencillo, apoyadas por visualización en mapas y fuentes citadas. Usuarios principales: líderes comunitarios, residentes, organizaciones ambientales y educadores; profesionales de la planificación (consultores, arquitectos, ingenieros, investigadores); y autoridades regulatorias como la Junta de Planificación, entidades gubernamentales y municipios. Requisitos clave: interfaz de consulta en lenguaje natural (chat), recuperación y análisis de documentos con citación de planes territoriales y reglamentos, soporte en español como idioma principal, exportación de resultados en PDF o mapas, visualización geoespacial con búsqueda por dirección y capas de peligros y zonificación, y extensibilidad para subir nuevos documentos."
+  },
+  {
+    "id": "drive-techstack-mappa",
+    "title": "MAPPA — Arquitectura y Stack Técnico (Recuperación Consciente de la Ubicación)",
+    "jurisdiction": "Puerto Rico",
+    "doc_type": "documento_tecnico",
+    "year": 2026,
+    "url": "https://docs.google.com/document/d/1up7BpxqDypL7HJQznEkBi3PJ2XDxbDb7u3fR2lPQG2g",
+    "tags": ["arquitectura", "fastapi", "pgvector", "postgis", "mistral"],
+    "text": "La arquitectura de MAPPA es un sistema de recuperación y razonamiento en varias etapas. Una consulta del usuario se envía por una API REST gestionada por una capa FastAPI que coordina los servicios: extrae restricciones geográficas (parcela, radio, jurisdicción) y enruta a los pipelines. El pipeline geoespacial procesa datos vectoriales y raster con GeoPandas, Rasterio, rasterstats, PySAL y pandas para derivar indicadores como exposición a inundación y clasificación de uso de suelo. El pipeline de documentos regulatorios usa PyMuPDF y python-docx para leer PDF y Word, PostgreSQL con pgvector para recuperación semántica sobre documentos embebidos, y recuperación consciente de la ubicación que combina similitud semántica con relevancia geográfica. La capa de ensamblaje de contexto fusiona indicadores espaciales, extractos de zonificación y restricciones de política en un paquete de evidencia estructurado. Finalmente, un modelo de lenguaje instruido como Mistral genera una explicación en lenguaje sencillo con citas, identificando conflictos entre riesgos y regulaciones (por ejemplo, desarrollo urbano permitido en zona de alto riesgo de inundación)."
+  },
+  {
+    "id": "drive-dataformats-mappa",
+    "title": "MAPPA — Formatos de Datos Preferidos y Requisitos",
+    "jurisdiction": "Puerto Rico",
+    "doc_type": "documento_tecnico",
+    "year": 2026,
+    "url": "https://docs.google.com/document/d/1up7BpxqDypL7HJQznEkBi3PJ2XDxbDb7u3fR2lPQG2g",
+    "tags": ["formatos", "datos", "crs", "metadatos"],
+    "text": "Formatos de datos preferidos para MAPPA. Datos espaciales: GeoPackage (.gpkg), GeoJSON (.geojson), NetCDF (.nc), GeoParquet (.parquet), ASCII Grid (.asc), Shapefile (.shp), GeoTIFF (.tif/.tiff). Datos tabulares: CSV (.csv), Excel (.xlsx), Parquet (.parquet), JSON (.json). Documentos: PDF (.pdf), Word (.docx), texto plano (.txt), Markdown (.md), JSON (.json). Requisitos: todos los datos espaciales deben incluir un Sistema de Referencia de Coordenadas (CRS) definido; se debe proveer metadatos o diccionarios de datos cuando estén disponibles; se deben evitar formatos propietarios como las geodatabases de Esri (.gdb); si se usa JSON, proveer un esquema o ejemplo de la estructura; y cualquier formato no listado debe notificarse por adelantado para revisión."
+  }
+]

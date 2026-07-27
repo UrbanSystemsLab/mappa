@@ -29,13 +29,9 @@ Thumbs.db
 *.pem
 *.key
 
-# Raw partner data (too large / redistribution unclear)
-data/raw/*.gpkg
-data/raw/*.gdb
-data/raw/*.ppkx
-data/raw/*.zip
-data/raw/*.tif
-data/raw/*.tiff
+# Raw partner data (too large / redistribution unclear) — ignore the whole folder,
+# including downloaded PDFs and the GeoPackage. Regenerate locally from source.
+data/raw/
 
 # Docker volumes (if bind-mounted)
 mappa-db-data/
