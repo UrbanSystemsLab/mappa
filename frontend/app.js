@@ -14,6 +14,20 @@ const clearBtn = document.getElementById('clear');
 
 // The conversation persists here until the page is refreshed.
 let conversation = [];
+// When set (by clicking a town on the map), questions are scoped to this municipio.
+let activeLocation = null;
+const locEl = document.getElementById('loc');
+
+function renderLoc() {
+  if (activeLocation) {
+    locEl.style.display = 'inline-block';
+    locEl.innerHTML = `📍 ${esc(activeLocation)} <span class="x" title="Quitar filtro">✕</span>`;
+    locEl.querySelector('.x').onclick = () => { activeLocation = null; renderLoc(); };
+  } else {
+    locEl.style.display = 'none';
+    locEl.innerHTML = '';
+  }
+}
 
 document.querySelectorAll('.samples a').forEach(a => {
   a.onclick = () => { q.value = a.dataset.q; ask(); };
@@ -56,6 +70,7 @@ async function ask() {
       body: JSON.stringify({
         question,
         history: conversation.slice(0, -1).map(t => ({ question: t.question, answer: t.answer })),
+        location: activeLocation,
       }),
     });
     const d = await r.json();
@@ -174,6 +189,8 @@ map.on('click', async (e) => {
   setTimeout(() => {
     const b = document.getElementById('askhere');
     if (b) b.onclick = () => {
+      activeLocation = info.municipio;  // scope subsequent questions to this town
+      renderLoc();
       q.value = `What are the flood and landslide risks and planning rules in ${muni}?`;
       popup.remove();
       ask();

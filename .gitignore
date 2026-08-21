@@ -40,3 +40,4 @@ mappa-db-data/
 data/generated/
 data/inventory/
 logs/
+.mappa_db_pw

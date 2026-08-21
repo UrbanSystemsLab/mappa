@@ -31,27 +31,75 @@ def _vector_literal(vec: Any) -> str:
     return "[" + ",".join(f"{float(v):.6f}" for v in vec) + "]"
 
 
-def retrieve_cloud(query: str, top_k: int = 5, min_score: float = 0.15) -> list[tuple[float, dict[str, Any]]]:
-    """Semantic search over document_chunks in Cloud SQL (pgvector cosine). Returns (score, doc)."""
+def _rows_to_results(rows, min_score: float) -> list[tuple[float, dict[str, Any]]]:
+    out: list[tuple[float, dict[str, Any]]] = []
+    for source_id, title, year, url, text, score in rows:
+        score = float(score) if score is not None else 0.0
+        if score < min_score:
+            continue
+        out.append((score, {"id": source_id, "title": title, "year": year, "url": url or "", "text": text}))
+    return out
+
+
+def retrieve_cloud(
+    query: str, top_k: int = 5, min_score: float = 0.15, jurisdiction: str | None = None
+) -> list[tuple[float, dict[str, Any]]]:
+    """Semantic search over document_chunks in Cloud SQL (pgvector cosine).
+
+    If `jurisdiction` (a municipio) is given, results are scoped to that municipio's
+    documents plus island-wide ("Puerto Rico") documents. Falls back to an unscoped
+    search if the scoped one finds nothing, so it always answers.
+    """
     import psycopg2
 
     qvec = _get_query_model().encode([query], normalize_embeddings=True, show_progress_bar=False)[0]
     lit = _vector_literal(qvec)
-    sql = (
+    base = (
         "SELECT d.source_id, d.title, d.year, d.url, c.text, "
         "1 - (c.embedding <=> %s::vector) AS score "
         "FROM document_chunks c JOIN documents d ON c.document_id = d.id "
-        "ORDER BY c.embedding <=> %s::vector LIMIT %s"
     )
-    results: list[tuple[float, dict[str, Any]]] = []
+    tail = "ORDER BY c.embedding <=> %s::vector LIMIT %s"
     with psycopg2.connect(DB_URL) as conn, conn.cursor() as cur:
-        cur.execute(sql, (lit, lit, top_k))
-        for source_id, title, year, url, text, score in cur.fetchall():
-            score = float(score) if score is not None else 0.0
-            if score < min_score:
-                continue
-            results.append((score, {"id": source_id, "title": title, "year": year, "url": url or "", "text": text}))
-    return results
+        rows = []
+        if jurisdiction:
+            cur.execute(
+                base + "WHERE d.jurisdiction ILIKE %s OR d.jurisdiction ILIKE 'Puerto Rico' " + tail,
+                (lit, jurisdiction, lit, top_k),
+            )
+            rows = cur.fetchall()
+        if not rows:  # no scope, or scoped search found nothing -> unscoped
+            cur.execute(base + tail, (lit, lit, top_k))
+            rows = cur.fetchall()
+    return _rows_to_results(rows, min_score)
+
+
+_jurisdictions_cache: list[str] | None = None
+
+
+def _corpus_jurisdictions() -> list[str]:
+    global _jurisdictions_cache
+    if _jurisdictions_cache is None:
+        import psycopg2
+
+        with psycopg2.connect(DB_URL) as conn, conn.cursor() as cur:
+            cur.execute("SELECT DISTINCT jurisdiction FROM documents WHERE jurisdiction IS NOT NULL")
+            _jurisdictions_cache = [r[0] for r in cur.fetchall()]
+    return _jurisdictions_cache
+
+
+def detect_municipio(text: str) -> str | None:
+    """Return a municipio jurisdiction mentioned in the text, if the corpus has docs
+    for it (accent-insensitive). Island-wide 'Puerto Rico' is not a scope."""
+    if not DB_URL:
+        return None
+    t = _strip(text)
+    for j in _corpus_jurisdictions():
+        if j.strip().lower() == "puerto rico":
+            continue
+        if _strip(j) in t:
+            return j
+    return None
 
 LAYER_KEYWORDS: dict[str, list[str]] = {
     "inundacion": ["inundacion", "inundable", "flood", "firm", "fema", "rio", "marejada"],
@@ -128,16 +176,18 @@ def _get_index() -> SemanticIndex:
     return _index
 
 
-def retrieve(query: str, top_k: int = 3) -> list[dict[str, Any]]:
+def retrieve(query: str, top_k: int = 3, jurisdiction: str | None = None) -> list[dict[str, Any]]:
     if DB_URL:
-        return [doc for _, doc in retrieve_cloud(query, top_k=top_k)]
+        return [doc for _, doc in retrieve_cloud(query, top_k=top_k, jurisdiction=jurisdiction)]
     index = _get_index()
     return [doc for _, doc in index.search(query, top_k=top_k)]
 
 
-def retrieve_with_scores(query: str, top_k: int = 3) -> list[tuple[float, dict[str, Any]]]:
+def retrieve_with_scores(
+    query: str, top_k: int = 3, jurisdiction: str | None = None
+) -> list[tuple[float, dict[str, Any]]]:
     if DB_URL:
-        return retrieve_cloud(query, top_k=top_k)
+        return retrieve_cloud(query, top_k=top_k, jurisdiction=jurisdiction)
     index = _get_index()
     return index.search(query, top_k=top_k)
 

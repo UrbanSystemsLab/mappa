@@ -28,6 +28,8 @@ button:disabled{opacity:.6}
 .samples{font-size:12px;margin-top:8px}
 .samples a{color:#0b5d4b;margin-right:10px;cursor:pointer;text-decoration:underline}
 #clear{cursor:pointer;color:#0b5d4b;font-size:12px;text-decoration:underline;margin-left:10px}
+.locchip{display:none;background:#0d9488;color:#fff;padding:3px 10px;border-radius:12px;font-size:12px;margin-left:10px}
+.locchip .x{cursor:pointer;margin-left:8px;font-weight:bold}
 .mappanel{display:flex;flex-direction:column;padding:0;overflow:hidden}
 #layerctl{padding:10px 12px;font-size:12.5px;max-height:170px;overflow:auto;border-bottom:1px solid #eee;background:#fbfbf7}
 #layerctl b{font-size:13px}
@@ -47,6 +49,7 @@ button:disabled{opacity:.6}
 <textarea id="q" placeholder="Ej: ¿Puedo construir en una zona inundable en San Juan?"></textarea>
 <button id="go">Preguntar</button>
 <a id="clear">Nueva conversación</a>
+<span id="loc" class="locchip"></span>
 <div class="samples">Ejemplos:
 <a data-q="¿Puedo construir en una zona inundable?">inundación</a>
 <a data-q="¿Qué regula el Reglamento Conjunto?">permisos</a>
@@ -65,6 +68,6 @@ button:disabled{opacity:.6}
 </section>
 </main>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="/static/app.js?v=4"></script>
+<script src="/static/app.js?v=5"></script>
 </body>
 </html>

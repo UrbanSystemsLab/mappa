@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import llm, spatial
-from .retrieval import compose_answer, infer_layers, retrieve_with_scores
+from .retrieval import compose_answer, detect_municipio, infer_layers, retrieve_with_scores
 
 # Minimum retrieval relevance (cosine similarity) to attempt an answer. Below this,
 # nothing in the corpus is genuinely relevant (gibberish / off-topic), so we decline
@@ -50,6 +50,8 @@ class AskRequest(BaseModel):
     question: str = Field(min_length=3, max_length=1000)
     # Prior turns in this conversation (for follow-up / "deeper" questions).
     history: list[Turn] = Field(default_factory=list)
+    # Optional municipio to scope the answer to (e.g. set by clicking the map).
+    location: str | None = None
 
 
 class Citation(BaseModel):
@@ -79,7 +81,9 @@ def ask(req: AskRequest) -> AskResponse:
     retrieval_query = req.question
     if req.history:
         retrieval_query = f"{req.history[-1].question} {req.question}"
-    scored = retrieve_with_scores(retrieval_query, top_k=3)
+    # Location-aware: scope to the clicked municipio, or one named in the question.
+    municipio = req.location or detect_municipio(req.question)
+    scored = retrieve_with_scores(retrieval_query, top_k=3, jurisdiction=municipio)
     layers = infer_layers(req.question)
 
     # Relevance gate: if nothing is genuinely relevant, decline instead of fabricating.
