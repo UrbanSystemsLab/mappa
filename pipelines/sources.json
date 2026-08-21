@@ -1,0 +1,27 @@
+{
+  "_comment": "Single source of truth for what gets synced from Drive into the raw GCS bucket. Add/edit/remove a source here — no code changes needed. Each source mirrors a Drive folder (tree-faithful, incremental) into the given bucket prefix.",
+  "raw_bucket": "mappa-lamarana-aecc-raw",
+  "sources": [
+    {
+      "name": "planning_documents",
+      "type": "documents",
+      "drive_folder_id": "1KwTUP7IvGUVVB9B_Cm7Kr3vYJuKMr7DJ",
+      "prefix": "documents/",
+      "note": "La Mara's 'Documentos de planificacion' folder (regulatory + planning PDFs)."
+    },
+    {
+      "name": "gis_layers_final",
+      "type": "spatial",
+      "drive_folder_id": "1ub9CcQRi2BN083DqVbZ5KCwZKXIa2w7p",
+      "prefix": "spatial/",
+      "note": "CAPAS GIS FINAL — curated spatial layers (shapefiles, .gdb, GeoPackage)."
+    },
+    {
+      "name": "data_dictionaries",
+      "type": "tabular",
+      "drive_folder_id": "1HG1NIPQSZRHsXSDkQ642x9W-7UE_5K1b",
+      "prefix": "metadata/",
+      "note": "Data dictionaries (field definitions + include/exclude)."
+    }
+  ]
+}

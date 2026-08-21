@@ -40,7 +40,9 @@ from __future__ import annotations
 import argparse
 import base64
 import io
+import json
 import os
+from pathlib import Path
 
 # Google client imports are done lazily in main() so --help / import work without them.
 
@@ -146,35 +148,15 @@ def _md5_matches(gcs_b64_md5: str | None, drive_hex_md5: str) -> bool:
         return False
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Mirror a Drive folder into the GCS raw zone.")
-    parser.add_argument("--folder-id", required=True, help="Drive folder ID to mirror (recursive).")
-    parser.add_argument("--bucket", default=os.environ.get("RAW_BUCKET"), help="Target GCS bucket.")
-    parser.add_argument("--prefix", default="", help="Object key prefix (e.g. 'capas_gis/').")
-    parser.add_argument("--commit", action="store_true", help="Actually download + upload. Else dry run.")
-    args = parser.parse_args()
-
-    if not args.bucket:
-        raise SystemExit("Set --bucket or the RAW_BUCKET env var.")
-
-    from google.cloud import storage
-    from googleapiclient.discovery import build
-
-    drive = build("drive", "v3")  # uses ADC / GOOGLE_APPLICATION_CREDENTIALS
-    bucket = storage.Client().bucket(args.bucket)
-
-    print(f"[sync-drive] walking folder {args.folder_id}")
-    files = walk(drive, args.folder_id)
-    print(f"[sync-drive] found {len(files)} files")
-
-    zones: dict[str, int] = {}
+def sync_folder(drive, bucket, bucket_name: str, folder_id: str, prefix: str, commit: bool) -> tuple[int, int]:
+    """Mirror one Drive folder into bucket/prefix. Returns (uploaded, skipped)."""
+    print(f"[sync-drive] walking folder {folder_id} -> gs://{bucket_name}/{prefix}")
+    files = walk(drive, folder_id)
+    print(f"[sync-drive]   found {len(files)} files")
     uploaded = skipped = 0
     for f in files:
         ext = EXPORT_MAP[f["mimeType"]][1] if f["mimeType"] in EXPORT_MAP else ""
-        rel = f["rel_path"] + ext
-        zone = zone_for(rel)
-        zones[zone] = zones.get(zone, 0) + 1
-        blob_path = args.prefix + rel
+        blob_path = prefix + f["rel_path"] + ext
         blob = bucket.blob(blob_path)
 
         drive_md5 = f.get("md5Checksum")
@@ -184,21 +166,55 @@ def main() -> None:
                 skipped += 1
                 continue
 
-        if not args.commit:
-            print(f"[sync-drive] DRY would upload gs://{args.bucket}/{blob_path}")
+        if not commit:
+            print(f"[sync-drive]   DRY would upload gs://{bucket_name}/{blob_path}")
             continue
 
         data, _ = download_bytes(drive, f["id"], f["mimeType"])
         blob.upload_from_string(data)
         uploaded += 1
-        print(f"[sync-drive] uploaded gs://{args.bucket}/{blob_path} ({len(data)} bytes)")
+        print(f"[sync-drive]   uploaded gs://{bucket_name}/{blob_path} ({len(data)} bytes)")
+    return uploaded, skipped
 
-    print(f"[sync-drive] by zone: {zones}")
-    if args.commit:
-        print(f"[sync-drive] done. uploaded={uploaded} skipped(unchanged)={skipped}")
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Mirror Drive folder(s) into the GCS raw zone.")
+    parser.add_argument("--config", type=str, help="Path to sources.json (syncs every source listed).")
+    parser.add_argument("--folder-id", help="Single Drive folder ID (alternative to --config).")
+    parser.add_argument("--bucket", default=os.environ.get("RAW_BUCKET"), help="Target GCS bucket.")
+    parser.add_argument("--prefix", default="", help="Object key prefix for --folder-id mode.")
+    parser.add_argument("--commit", action="store_true", help="Actually download + upload. Else dry run.")
+    args = parser.parse_args()
+
+    # Build the list of (folder_id, prefix) jobs from either the config or a single folder.
+    if args.config:
+        cfg = json.loads(Path(args.config).read_text(encoding="utf-8"))
+        bucket_name = args.bucket or cfg.get("raw_bucket")
+        jobs = [(s["drive_folder_id"], s.get("prefix", ""), s["name"]) for s in cfg["sources"]]
+    elif args.folder_id:
+        bucket_name = args.bucket
+        jobs = [(args.folder_id, args.prefix, "folder")]
     else:
-        print(f"[sync-drive] dry run — {len(files)} files would sync, {skipped} already current. "
-              "Use --commit to write.")
+        raise SystemExit("Provide --config <sources.json> or --folder-id <id>.")
+    if not bucket_name:
+        raise SystemExit("No target bucket (set raw_bucket in config, --bucket, or RAW_BUCKET).")
+
+    from google.cloud import storage
+    from googleapiclient.discovery import build
+
+    drive = build("drive", "v3")  # uses ADC / GOOGLE_APPLICATION_CREDENTIALS
+    bucket = storage.Client().bucket(bucket_name)
+
+    total_up = total_skip = 0
+    for folder_id, prefix, name in jobs:
+        print(f"[sync-drive] === source: {name} ===")
+        up, skip = sync_folder(drive, bucket, bucket_name, folder_id, prefix, args.commit)
+        total_up += up
+        total_skip += skip
+
+    verb = "done" if args.commit else "dry run"
+    print(f"[sync-drive] {verb}. uploaded={total_up} skipped(unchanged)={total_skip}"
+          + ("" if args.commit else "  — use --commit to write."))
 
 
 if __name__ == "__main__":

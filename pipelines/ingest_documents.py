@@ -57,7 +57,9 @@ def load_source_documents(path: Path) -> list[dict]:
         docs: list[dict] = []
         for doc_path in sorted(path.glob("*.json")):
             with doc_path.open(encoding="utf-8") as f:
-                docs.append(json.load(f))
+                data = json.load(f)
+            # each file may be a single document (dict) or an array of documents
+            docs.extend(data) if isinstance(data, list) else docs.append(data)
         return docs
     with path.open(encoding="utf-8") as f:
         return json.load(f)

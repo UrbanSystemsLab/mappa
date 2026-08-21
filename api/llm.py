@@ -74,10 +74,16 @@ def _sources_block(docs: list[dict[str, Any]]) -> str:
     return "\n\n".join(lines)
 
 
-def narrate(question: str, docs: list[dict[str, Any]], layers: list[str]) -> dict[str, Any]:
-    """Call the local LLM to write a cited Spanish answer over the retrieved docs.
+def narrate(
+    question: str,
+    docs: list[dict[str, Any]],
+    layers: list[str],
+    history: list[tuple[str, str]] | None = None,
+) -> dict[str, Any]:
+    """Call the local LLM to write a cited answer over the retrieved docs.
 
-    Raises on transport/parse errors so the caller can fall back.
+    `history` is prior (question, answer) turns so follow-up / "deeper" questions
+    keep context. Raises on transport/parse errors so the caller can fall back.
     """
     lang = RESPONSE_LANG if RESPONSE_LANG in SYSTEM_PROMPTS else "en"
     user = (
@@ -85,12 +91,15 @@ def narrate(question: str, docs: list[dict[str, Any]], layers: list[str]) -> dic
         f"SOURCES:\n{_sources_block(docs)}\n\n"
         f"{_USER_INSTRUCTION[lang]}"
     )
+    messages = [{"role": "system", "content": SYSTEM_PROMPTS[lang]}]
+    # Include recent conversation so the model can answer follow-ups in context.
+    for prev_q, prev_a in (history or [])[-4:]:
+        messages.append({"role": "user", "content": prev_q})
+        messages.append({"role": "assistant", "content": prev_a})
+    messages.append({"role": "user", "content": user})
     payload = {
         "model": LLM_MODEL,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPTS[lang]},
-            {"role": "user", "content": user},
-        ],
+        "messages": messages,
         "stream": False,
         "options": {"temperature": 0.2},
     }

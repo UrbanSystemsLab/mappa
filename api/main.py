@@ -1,12 +1,26 @@
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import llm
-from .retrieval import compose_answer, infer_layers, retrieve
+from . import llm, spatial
+from .retrieval import compose_answer, infer_layers, retrieve_with_scores
+
+# Minimum retrieval relevance (cosine similarity) to attempt an answer. Below this,
+# nothing in the corpus is genuinely relevant (gibberish / off-topic), so we decline
+# instead of fabricating. Calibrated: real questions score ~0.6+, gibberish ~0.3.
+MIN_RELEVANCE = 0.45
+
+NO_MATCH = {
+    "en": ("I couldn't find relevant information in the available documents for that "
+           "question. Try rephrasing it, or ask about land use, permits, flood or "
+           "landslide risk, or planning in Puerto Rico."),
+    "es": ("No encontré información relevante en los documentos disponibles para esa "
+           "pregunta. Intente reformularla o pregunte sobre uso de terrenos, permisos, "
+           "riesgo de inundación o deslizamiento, o planificación en Puerto Rico."),
+}
 
 DISCLAIMER_ES = (
     "Esta herramienta ofrece orientación informativa basada en los documentos y datos "
@@ -27,8 +41,15 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 app = FastAPI(title="Mappa — Asistente Geoespacial de Puerto Rico (MVP)")
 
 
+class Turn(BaseModel):
+    question: str
+    answer: str
+
+
 class AskRequest(BaseModel):
     question: str = Field(min_length=3, max_length=1000)
+    # Prior turns in this conversation (for follow-up / "deeper" questions).
+    history: list[Turn] = Field(default_factory=list)
 
 
 class Citation(BaseModel):
@@ -53,18 +74,58 @@ def health() -> dict[str, str]:
 
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest) -> AskResponse:
-    docs = retrieve(req.question, top_k=3)
+    # For follow-up questions, fold the previous question into the retrieval query
+    # so "what about in Ponce?" still finds the right documents.
+    retrieval_query = req.question
+    if req.history:
+        retrieval_query = f"{req.history[-1].question} {req.question}"
+    scored = retrieve_with_scores(retrieval_query, top_k=3)
     layers = infer_layers(req.question)
+
+    # Relevance gate: if nothing is genuinely relevant, decline instead of fabricating.
+    if not scored or scored[0][0] < MIN_RELEVANCE:
+        lang = "es" if llm.RESPONSE_LANG == "es" else "en"
+        return AskResponse(
+            answer_es=NO_MATCH[lang],
+            citations=[],
+            suggested_layers=layers,
+            confidence="baja" if lang == "es" else "low",
+            disclaimer=DISCLAIMER,
+        )
+
+    docs = [doc for _, doc in scored]
+    history = [(t.question, t.answer) for t in req.history]
     # Prefer the local LLM for narration; fall back to the templated composer
     # if Ollama is unreachable or errors, so the app always responds.
     if docs and llm.is_available():
         try:
-            result = llm.narrate(req.question, docs, layers)
+            result = llm.narrate(req.question, docs, layers, history=history)
         except Exception:
             result = compose_answer(req.question, docs, layers)
     else:
         result = compose_answer(req.question, docs, layers)
     return AskResponse(disclaimer=DISCLAIMER, **result)
+
+
+@app.get("/layers")
+def layers() -> list[dict]:
+    """Catalog of spatial layers available to toggle on the map."""
+    return spatial.list_layers()
+
+
+@app.get("/locate")
+def locate(lng: float, lat: float) -> dict:
+    """What municipio + hazards apply at a clicked point."""
+    return spatial.locate(lng, lat)
+
+
+@app.get("/layer/{name}")
+def layer(name: str) -> dict:
+    """One spatial layer as GeoJSON (simplified, capped)."""
+    gj = spatial.layer_geojson(name)
+    if gj is None:
+        raise HTTPException(status_code=404, detail=f"unknown layer: {name}")
+    return gj
 
 
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")

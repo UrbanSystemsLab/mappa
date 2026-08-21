@@ -1,4 +1,5 @@
 import json
+import os
 import unicodedata
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,45 @@ DATA_PATH = DATA_DIR / "documents.json"
 EXTRA_PATHS = [DATA_DIR / "planning_docs.json", DATA_DIR / "drive_docs.json"]
 
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+
+# When DATABASE_URL is set, retrieval runs against Cloud SQL (pgvector) over the full
+# corpus; otherwise it falls back to the in-memory index over the local JSON corpus.
+DB_URL = os.environ.get("DATABASE_URL")
+_query_model: SentenceTransformer | None = None
+
+
+def _get_query_model() -> SentenceTransformer:
+    global _query_model
+    if _query_model is None:
+        _query_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    return _query_model
+
+
+def _vector_literal(vec: Any) -> str:
+    return "[" + ",".join(f"{float(v):.6f}" for v in vec) + "]"
+
+
+def retrieve_cloud(query: str, top_k: int = 5, min_score: float = 0.15) -> list[tuple[float, dict[str, Any]]]:
+    """Semantic search over document_chunks in Cloud SQL (pgvector cosine). Returns (score, doc)."""
+    import psycopg2
+
+    qvec = _get_query_model().encode([query], normalize_embeddings=True, show_progress_bar=False)[0]
+    lit = _vector_literal(qvec)
+    sql = (
+        "SELECT d.source_id, d.title, d.year, d.url, c.text, "
+        "1 - (c.embedding <=> %s::vector) AS score "
+        "FROM document_chunks c JOIN documents d ON c.document_id = d.id "
+        "ORDER BY c.embedding <=> %s::vector LIMIT %s"
+    )
+    results: list[tuple[float, dict[str, Any]]] = []
+    with psycopg2.connect(DB_URL) as conn, conn.cursor() as cur:
+        cur.execute(sql, (lit, lit, top_k))
+        for source_id, title, year, url, text, score in cur.fetchall():
+            score = float(score) if score is not None else 0.0
+            if score < min_score:
+                continue
+            results.append((score, {"id": source_id, "title": title, "year": year, "url": url or "", "text": text}))
+    return results
 
 LAYER_KEYWORDS: dict[str, list[str]] = {
     "inundacion": ["inundacion", "inundable", "flood", "firm", "fema", "rio", "marejada"],
@@ -89,11 +129,15 @@ def _get_index() -> SemanticIndex:
 
 
 def retrieve(query: str, top_k: int = 3) -> list[dict[str, Any]]:
+    if DB_URL:
+        return [doc for _, doc in retrieve_cloud(query, top_k=top_k)]
     index = _get_index()
     return [doc for _, doc in index.search(query, top_k=top_k)]
 
 
 def retrieve_with_scores(query: str, top_k: int = 3) -> list[tuple[float, dict[str, Any]]]:
+    if DB_URL:
+        return retrieve_cloud(query, top_k=top_k)
     index = _get_index()
     return index.search(query, top_k=top_k)
 
