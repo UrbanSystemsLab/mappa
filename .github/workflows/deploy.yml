@@ -1,0 +1,63 @@
+# CI/CD: build the MAPPA container and deploy it to Cloud Run.
+#
+# READY TO RUN once these exist (blocked on the IAM grants in the Minh request):
+#   GitHub repo secrets:
+#     WIF_PROVIDER   Workload Identity Federation provider resource name
+#     DEPLOY_SA      deploy service account email (needs run.admin + iam.serviceAccountUser)
+#     DATABASE_URL   postgresql://mappa:PW@/mappa?host=/cloudsql/mappa-lamarana-aecc:us-central1:mappa-pg
+#     OPENAI_BASE_URL, LLM_MODEL   for the hosted model (Gemini OpenAI-compat / Mistral API)
+#   Secret Manager: OPENAI_API_KEY (mounted below)
+#   Runtime SA (mappa-pipeline@...): cloudsql.client + secretmanager.secretAccessor (+ aiplatform.user if Vertex)
+
+name: Deploy to Cloud Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['api/**', 'frontend/**', 'requirements-api.txt', 'Dockerfile']
+
+env:
+  PROJECT_ID: mappa-lamarana-aecc
+  REGION: us-central1
+  SERVICE: mappa
+  RUNTIME_SA: mappa-pipeline@mappa-lamarana-aecc.iam.gserviceaccount.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build & push image
+        run: |
+          gcloud auth configure-docker $REGION-docker.pkg.dev -q
+          IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/mappa/$SERVICE:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --image "$IMAGE" \
+            --region "$REGION" \
+            --platform managed \
+            --service-account "$RUNTIME_SA" \
+            --add-cloudsql-instances "$PROJECT_ID:$REGION:mappa-pg" \
+            --set-env-vars "RESPONSE_LANG=es,LLM_PROVIDER=openai,OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }},LLM_MODEL=${{ secrets.LLM_MODEL }},DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --set-secrets "OPENAI_API_KEY=OPENAI_API_KEY:latest" \
+            --memory 2Gi \
+            --cpu 2 \
+            --allow-unauthenticated

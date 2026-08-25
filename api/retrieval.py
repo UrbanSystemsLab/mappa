@@ -107,6 +107,11 @@ LAYER_KEYWORDS: dict[str, list[str]] = {
     "zonificacion": ["zonificacion", "zona", "distrito", "calificacion", "uso", "permiso", "construccion"],
     "costa": ["costa", "costanera", "playa", "zmt", "maritimo", "manglar"],
     "humedal": ["humedal", "pantano", "cienaga", "wetland"],
+    "uso_de_terrenos": ["uso de terreno", "uso de suelo", "land use", "clasificacion"],
+    "educacion": ["escuela", "escuelas", "school", "schools", "educacion", "education", "colegio"],
+    "salud": ["hospital", "hospitals", "salud", "health", "cdt", "clinica"],
+    "refugios": ["refugio", "refugios", "shelter", "shelters", "evacuation"],
+    "vias": ["carretera", "carreteras", "road", "roads", "highway", "vial"],
 }
 
 

@@ -1,0 +1,14 @@
+.git
+venv/
+.venv/
+__pycache__/
+*.pyc
+data/raw/
+data/_cloud_corpus/
+.mappa_db_pw
+docs/
+pipelines/
+db/
+infra/
+*.md
+.github/

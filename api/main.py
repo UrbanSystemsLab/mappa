@@ -52,6 +52,9 @@ class AskRequest(BaseModel):
     history: list[Turn] = Field(default_factory=list)
     # Optional municipio to scope the answer to (e.g. set by clicking the map).
     location: str | None = None
+    # Optional map facts for the clicked point (municipio + hazard flags), so the
+    # answer can reason over real spatial conditions, not just documents.
+    spatial: dict | None = None
 
 
 class Citation(BaseModel):
@@ -86,8 +89,17 @@ def ask(req: AskRequest) -> AskResponse:
     scored = retrieve_with_scores(retrieval_query, top_k=3, jurisdiction=municipio)
     layers = infer_layers(req.question)
 
-    # Relevance gate: if nothing is genuinely relevant, decline instead of fabricating.
-    if not scored or scored[0][0] < MIN_RELEVANCE:
+    # Facility questions (schools/hospitals/shelters/roads) are answered from the map
+    # data, not the hazard documents. Build a combined context for the model.
+    facilities = spatial.facility_counts(req.question, municipio)
+    context = dict(req.spatial or {})
+    if facilities:
+        context["facilities"] = facilities
+    has_context = bool(req.spatial) or bool(facilities)
+
+    # Relevance gate: decline gibberish/off-topic questions. If we have real map
+    # context (a click or facility counts), we always answer.
+    if not has_context and (not scored or scored[0][0] < MIN_RELEVANCE):
         lang = "es" if llm.RESPONSE_LANG == "es" else "en"
         return AskResponse(
             answer_es=NO_MATCH[lang],
@@ -101,9 +113,9 @@ def ask(req: AskRequest) -> AskResponse:
     history = [(t.question, t.answer) for t in req.history]
     # Prefer the local LLM for narration; fall back to the templated composer
     # if Ollama is unreachable or errors, so the app always responds.
-    if docs and llm.is_available():
+    if (docs or has_context) and llm.is_available():
         try:
-            result = llm.narrate(req.question, docs, layers, history=history)
+            result = llm.narrate(req.question, docs, layers, history=history, spatial=context or None)
         except Exception:
             result = compose_answer(req.question, docs, layers)
     else:
@@ -137,4 +149,5 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 @app.get("/")
 def index() -> FileResponse:
-    return FileResponse(FRONTEND_DIR / "index.html")
+    # Never cache the HTML, so the browser always picks up the current app.js version.
+    return FileResponse(FRONTEND_DIR / "index.html", headers={"Cache-Control": "no-store"})

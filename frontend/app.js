@@ -1,8 +1,24 @@
 const map = new maplibregl.Map({
   container: 'map',
-  style: 'https://demotiles.maplibre.org/style.json',
-  center: [-66.4, 18.22],
-  zoom: 8.2,
+  // Free, no-key basemap (Carto Voyager) — real streets + municipio labels.
+  style: {
+    version: 8,
+    sources: {
+      basemap: {
+        type: 'raster',
+        tiles: [
+          'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+          'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+          'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        ],
+        tileSize: 256,
+        attribution: '© OpenStreetMap contributors, © CARTO',
+      },
+    },
+    layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }],
+  },
+  center: [-66.25, 18.22],
+  zoom: 8.4,
 });
 map.addControl(new maplibregl.NavigationControl());
 
@@ -14,15 +30,18 @@ const clearBtn = document.getElementById('clear');
 
 // The conversation persists here until the page is refreshed.
 let conversation = [];
-// When set (by clicking a town on the map), questions are scoped to this municipio.
+// When set (by clicking a town on the map), questions are scoped to this municipio,
+// and the clicked point's map facts (flood/landslide) are sent as context.
 let activeLocation = null;
+let activeSpatial = null;
 const locEl = document.getElementById('loc');
 
 function renderLoc() {
+  if (!locEl) return;
   if (activeLocation) {
     locEl.style.display = 'inline-block';
     locEl.innerHTML = `📍 ${esc(activeLocation)} <span class="x" title="Quitar filtro">✕</span>`;
-    locEl.querySelector('.x').onclick = () => { activeLocation = null; renderLoc(); };
+    locEl.querySelector('.x').onclick = () => { activeLocation = null; activeSpatial = null; renderLoc(); };
   } else {
     locEl.style.display = 'none';
     locEl.innerHTML = '';
@@ -38,19 +57,37 @@ q.addEventListener('keydown', e => {
 });
 if (clearBtn) clearBtn.onclick = () => { conversation = []; disc.textContent = ''; render(); };
 
+function confClass(c) {
+  c = (c || '').toLowerCase();
+  if (c === 'alta' || c === 'high') return 'ok';
+  if (c === 'media' || c === 'medium') return 'warn';
+  return 'low';
+}
+
 function render() {
+  if (!conversation.length) {
+    out.innerHTML = `<div class="empty">
+      <div class="icon">🗺️</div>
+      <h3>Pregúntale a MAPPA</h3>
+      <p>Uso de terrenos, riesgo de inundación o deslizamiento, permisos y planificación en Puerto Rico. También puedes hacer clic en el mapa para preguntar sobre un lugar.</p>
+    </div>`;
+    return;
+  }
   out.innerHTML = conversation.map(t => {
-    const layers = (t.suggested_layers || []).map(l => `<span class="tag">${l}</span>`).join('');
+    const layers = (t.suggested_layers || []).map(l => `<span class="tag">${esc(l)}</span>`).join('');
     const cites = (t.citations || []).map(c =>
-      `<div class="cite">• <a href="${c.url}" target="_blank">${esc(c.title)}</a>${c.year ? ` (${c.year})` : ''}</div>`
+      `<div class="cite">📄 <a href="${c.url}" target="_blank">${esc(c.title)}</a>${c.year ? ` · ${c.year}` : ''}</div>`
     ).join('');
+    const thinking = t.answer === '…';
+    const conf = (t.confidence && !thinking) ? `<span class="badge ${confClass(t.confidence)}">${esc(t.confidence)}</span>` : '';
     return `
-      <div class="msg user">${esc(t.question)}</div>
-      <div class="msg bot">
-        <div class="answer">${esc(t.answer)}</div>
-        ${t.confidence ? `<div class="meta">Confianza: <b>${t.confidence}</b> ${layers}</div>` : ''}
-        ${cites ? `<div class="cites"><b>Fuentes</b>${cites}</div>` : ''}
-      </div>`;
+      <div class="row user"><div class="bubble">${esc(t.question)}</div></div>
+      <div class="row bot"><div class="bubble">
+        <div class="who">MAPPA ${conf}</div>
+        <div class="answer${thinking ? ' typing' : ''}">${thinking ? 'Consultando…' : esc(t.answer)}</div>
+        ${cites ? `<div class="cites"><div class="cites-h">Fuentes</div>${cites}</div>` : ''}
+        ${layers ? `<div class="layers">${layers}</div>` : ''}
+      </div></div>`;
   }).join('');
   out.scrollTop = out.scrollHeight;
 }
@@ -71,6 +108,7 @@ async function ask() {
         question,
         history: conversation.slice(0, -1).map(t => ({ question: t.question, answer: t.answer })),
         location: activeLocation,
+        spatial: activeSpatial,
       }),
     });
     const d = await r.json();
@@ -80,6 +118,7 @@ async function ask() {
     turn.confidence = d.confidence || '';
     disc.textContent = d.disclaimer || '';
     render();
+    autoShowLayers(turn.suggested_layers);  // surface relevant layers on the map
   } catch (e) {
     turn.answer = 'Error: ' + e.message;
     render();
@@ -146,6 +185,14 @@ async function toggleLayer(cb) {
   }
 }
 
+function featurePopup(e) {
+  const p = (e.features && e.features[0] && e.features[0].properties) || {};
+  const title = p.name || 'Sin nombre';
+  const sub = p.sub ? `<br><span style="color:#667">${esc(p.sub)}</span>` : '';
+  new maplibregl.Popup({ closeOnClick: true, maxWidth: '240px' })
+    .setLngLat(e.lngLat).setHTML(`<div style="font-size:13px"><b>${esc(title)}</b>${sub}</div>`).addTo(map);
+}
+
 function addStyledLayer(lyrId, srcId, gtype, color) {
   if (gtype.includes('Polygon')) {
     map.addLayer({ id: lyrId, type: 'fill', source: srcId, paint: { 'fill-color': color, 'fill-opacity': 0.35 } });
@@ -153,17 +200,38 @@ function addStyledLayer(lyrId, srcId, gtype, color) {
   } else if (gtype.includes('LineString')) {
     map.addLayer({ id: lyrId, type: 'line', source: srcId, paint: { 'line-color': color, 'line-width': 1.4 } });
   } else {
-    map.addLayer({ id: lyrId, type: 'circle', source: srcId, paint: { 'circle-radius': 4, 'circle-color': color, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1 } });
+    map.addLayer({ id: lyrId, type: 'circle', source: srcId, paint: { 'circle-radius': 5, 'circle-color': color, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
+    // Click a point (hospital/school/shelter) → show its name, not the flood popup.
+    map.on('click', lyrId, featurePopup);
+    map.on('mouseenter', lyrId, () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', lyrId, () => { map.getCanvas().style.cursor = ''; });
   }
 }
 
 map.on('load', loadLayerList);
+
+// When an answer references themes (flood, landslide, zoning...), auto-show those
+// layers on the map so the chat and map stay in sync.
+function autoShowLayers(themes) {
+  const alias = { zonificacion: 'uso_de_terrenos' };
+  const wanted = new Set((themes || []).map(t => alias[t] || t));
+  document.querySelectorAll('#layerlist input').forEach(cb => {
+    if (wanted.has(cb.dataset.theme) && !cb.checked) {
+      cb.checked = true;
+      toggleLayer(cb);
+    }
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Click the map -> which municipio + hazards apply here, and ask about it.
 // ---------------------------------------------------------------------------
 let locMarker = null;
 map.on('click', async (e) => {
+  // If a loaded data feature was clicked, its own popup handles it — skip the location popup.
+  const onFeature = map.queryRenderedFeatures(e.point)
+    .some(f => f.layer && (f.layer.id || '').startsWith('lyr_'));
+  if (onFeature) return;
   const { lng, lat } = e.lngLat;
   let info;
   try {
@@ -171,6 +239,7 @@ map.on('click', async (e) => {
   } catch (err) { return; }
   if (locMarker) locMarker.remove();
   locMarker = new maplibregl.Marker({ color: '#0b5d4b' }).setLngLat([lng, lat]).addTo(map);
+  map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 10), duration: 800 });
 
   const muni = info.municipio || '(fuera de Puerto Rico)';
   const h = info.hazards || {};
@@ -186,14 +255,22 @@ map.on('click', async (e) => {
   const popup = new maplibregl.Popup({ closeOnClick: true, maxWidth: '260px' })
     .setLngLat([lng, lat]).setHTML(html).addTo(map);
 
-  setTimeout(() => {
-    const b = document.getElementById('askhere');
-    if (b) b.onclick = () => {
-      activeLocation = info.municipio;  // scope subsequent questions to this town
-      renderLoc();
-      q.value = `What are the flood and landslide risks and planning rules in ${muni}?`;
-      popup.remove();
-      ask();
-    };
-  }, 30);
+  // Attach the button handler via the popup's own DOM element (reliable, no timing race).
+  const el = popup.getElement();
+  const btnAsk = el && el.querySelector('#askhere');
+  if (btnAsk) btnAsk.addEventListener('click', () => {
+    if (info.municipio) { activeLocation = info.municipio; renderLoc(); }
+    activeSpatial = info;  // send this point's flood/landslide facts as context
+    // Build a question specific to this place and the hazards actually found there.
+    const hz = [];
+    if (h.flood_2009 || h.flood_0_2pct_2018) hz.push('flood');
+    if (h.landslide) hz.push('landslide');
+    const risk = hz.length ? hz.join(' and ') + ' risks' : 'natural hazard risks';
+    q.value = `What are the ${risk} and building/planning rules in ${muni}?`;
+    popup.remove();
+    ask();
+  });
 });
+
+// initial paint (welcome state)
+render();

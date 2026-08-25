@@ -17,6 +17,14 @@ DB_URL = os.environ.get("DATABASE_URL")
 _SIMPLIFY = {"MultiPolygon": 0.0005, "MultiLineString": 0.0003}
 _MAX_FEATURES = 6000
 
+# Per-layer (name column, subtitle column) so features carry a label for click popups.
+_NAME_COLUMNS = {
+    "layer_hospitales": ("nombre", "muni"),
+    "layer_refugios_2023": ("instalacio", "municipio"),
+    "layer_dotacional_educacion_escuelas_2021": ("escuela", "municipio"),
+    "layer_g03_legales_municipios_2015": ("municipio", None),
+}
+
 
 def _conn():
     import psycopg2
@@ -43,6 +51,55 @@ def list_layers() -> list[dict[str, Any]]:
             }
             for r in cur.fetchall()
         ]
+
+
+# Facility layers we can answer "how many / where" questions about, from the map data.
+FACILITY_LAYERS = {
+    "school":   {"table": "layer_dotacional_educacion_escuelas_2021", "label": "public schools (2021)",
+                 "kw": ["school", "schools", "escuela", "escuelas", "educacion", "education", "colegio"]},
+    "hospital": {"table": "layer_hospitales", "label": "hospitals / CDTs",
+                 "kw": ["hospital", "hospitals", "cdt", "salud", "health", "clinic", "clinica"]},
+    "shelter":  {"table": "layer_refugios_2023", "label": "emergency shelters (2023)",
+                 "kw": ["shelter", "shelters", "refugio", "refugios", "evacuation"]},
+    "road":     {"table": "layer_carreteras_estatales_segmentadas_agosto_2021", "label": "state roads",
+                 "kw": ["road", "roads", "carretera", "carreteras", "highway", "vial"]},
+}
+
+
+def _norm(text: str) -> str:
+    import unicodedata
+    t = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in t if not unicodedata.combining(c))
+
+
+def detect_facilities(text: str) -> list[str]:
+    t = _norm(text)
+    return [k for k, v in FACILITY_LAYERS.items() if any(w in t for w in v["kw"])]
+
+
+def facility_counts(text: str, municipio: str | None = None) -> dict[str, int]:
+    """Count facility features the question asks about — within a municipio if given,
+    else island-wide. Answers 'how many schools / hospitals' from real map data."""
+    keys = detect_facilities(text)
+    if not keys:
+        return {}
+    out: dict[str, int] = {}
+    with _conn() as conn, conn.cursor() as cur:
+        for k in keys:
+            v = FACILITY_LAYERS[k]
+            table = v["table"]  # from a fixed whitelist above, safe to interpolate
+            if municipio:
+                cur.execute(
+                    f'SELECT count(*) FROM "{table}" f '
+                    "JOIN reference_units r ON r.unit_type='municipio' "
+                    "AND ST_Intersects(f.geom, r.geom) WHERE r.name ILIKE %s",
+                    (municipio,),
+                )
+            else:
+                cur.execute(f'SELECT count(*) FROM "{table}"')
+            label = v["label"] + (f" in {municipio}" if municipio else " (Puerto Rico)")
+            out[label] = cur.fetchone()[0]
+    return out
 
 
 def locate(lng: float, lat: float) -> dict[str, Any]:
@@ -83,6 +140,16 @@ def layer_geojson(name: str) -> dict[str, Any] | None:
         geom_type = row[0]
         tol = _SIMPLIFY.get(geom_type)
         geom_expr = f"ST_SimplifyPreserveTopology(geom, {tol})" if tol else "geom"
+        # name/sub columns come from a fixed map (not user input), safe to interpolate.
+        name_col, sub_col = _NAME_COLUMNS.get(name, (None, None))
+        props = "'id', id"
+        select_cols = "id, geom"
+        if name_col:
+            props += f", 'name', {name_col}"
+            select_cols += f", {name_col}"
+        if sub_col:
+            props += f", 'sub', {sub_col}"
+            select_cols += f", {sub_col}"
         # name is whitelisted above (must exist in spatial_layers), safe to interpolate.
         sql = f"""
             SELECT jsonb_build_object(
@@ -90,10 +157,10 @@ def layer_geojson(name: str) -> dict[str, Any] | None:
                 'features', COALESCE(jsonb_agg(jsonb_build_object(
                     'type', 'Feature',
                     'geometry', ST_AsGeoJSON({geom_expr})::jsonb,
-                    'properties', jsonb_build_object('id', id)
+                    'properties', jsonb_build_object({props})
                 )), '[]'::jsonb)
             )
-            FROM (SELECT id, geom FROM "{name}" WHERE geom IS NOT NULL LIMIT {_MAX_FEATURES}) s
+            FROM (SELECT {select_cols} FROM "{name}" WHERE geom IS NOT NULL LIMIT {_MAX_FEATURES}) s
         """
         cur.execute(sql)
         return cur.fetchone()[0]
