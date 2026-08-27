@@ -146,22 +146,42 @@ const THEME = {
 const themeColor = t => (THEME[t] || { color: '#0b5d4b' }).color;
 const themeLabel = t => (THEME[t] || { label: t }).label;
 
+const CATEGORY = {
+  inundacion: 'Riesgos', deslizamiento: 'Riesgos',
+  salud: 'Servicios', educacion: 'Servicios', refugios: 'Servicios',
+  uso_de_terrenos: 'Planificación', vias: 'Infraestructura',
+  political: 'Límites',
+};
+const CAT_ORDER = ['Riesgos', 'Servicios', 'Planificación', 'Infraestructura', 'Límites'];
+
 async function loadLayerList() {
+  const list = document.getElementById('layerlist');
   try {
     const layers = await (await fetch('/layers')).json();
-    const list = document.getElementById('layerlist');
-    list.innerHTML = layers.map(l => {
-      const yr = l.year ? ` (${l.year})` : '';
-      const name = l.description || l.layer_name;
-      return `<label>
-        <input type="checkbox" data-layer="${l.layer_name}" data-theme="${l.theme}" data-gtype="${l.geometry_type}">
-        <span class="swatch" style="background:${themeColor(l.theme)}"></span>
-        ${esc(themeLabel(l.theme))} — ${esc(name)}${yr}
-      </label>`;
-    }).join('');
+    const groups = {};
+    layers.forEach(l => { const c = CATEGORY[l.theme] || 'Otros'; (groups[c] = groups[c] || []).push(l); });
+    const cats = CAT_ORDER.filter(c => groups[c]).concat(Object.keys(groups).filter(c => !CAT_ORDER.includes(c)));
+    list.innerHTML = cats.map(cat => `
+      <div class="lyr-group">
+        <div class="lyr-group-title">${esc(cat)}</div>
+        ${groups[cat].map(l => {
+          const nm = l.description || themeLabel(l.theme);
+          const yr = l.year ? ` <span style="color:var(--muted)">· ${l.year}</span>` : '';
+          return `<div class="lyr-row">
+            <span class="swatch" style="background:${themeColor(l.theme)}"></span>
+            <span class="name">${esc(nm)}${yr}</span>
+            <label class="switch"><input type="checkbox" data-layer="${l.layer_name}" data-theme="${l.theme}" data-gtype="${l.geometry_type}"><span class="slider"></span></label>
+          </div>`;
+        }).join('')}
+      </div>`).join('');
     list.querySelectorAll('input').forEach(cb => cb.onchange = () => toggleLayer(cb));
+    // Clicking anywhere on a row toggles its switch.
+    list.querySelectorAll('.lyr-row').forEach(row => row.onclick = (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      const cb = row.querySelector('input'); cb.checked = !cb.checked; toggleLayer(cb);
+    });
   } catch (e) {
-    document.getElementById('layerlist').textContent = 'No se pudieron cargar las capas.';
+    list.textContent = 'No se pudieron cargar las capas.';
   }
 }
 

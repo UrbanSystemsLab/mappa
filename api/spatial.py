@@ -13,9 +13,14 @@ from typing import Any
 
 DB_URL = os.environ.get("DATABASE_URL")
 
-# Simplification tolerance in degrees (~0.0005 ≈ 55 m) by geometry type; points unchanged.
-_SIMPLIFY = {"MultiPolygon": 0.0005, "MultiLineString": 0.0003}
+# Simplification tolerance in degrees by geometry type; points unchanged. Bigger =
+# smaller/faster payloads (island-wide overview doesn't need street-level precision).
+_SIMPLIFY = {"MultiPolygon": 0.0009, "MultiLineString": 0.0005}
 _MAX_FEATURES = 6000
+
+# In-memory cache of built layer GeoJSON — layers rarely change, so this makes
+# repeat toggles instant instead of re-querying PostGIS each time.
+_LAYER_CACHE: dict[str, Any] = {}
 
 # Per-layer (name column, subtitle column) so features carry a label for click popups.
 _NAME_COLUMNS = {
@@ -132,6 +137,8 @@ def layer_geojson(name: str) -> dict[str, Any] | None:
 
     Returns None if the layer isn't in the catalog (also the whitelist check).
     """
+    if name in _LAYER_CACHE:
+        return _LAYER_CACHE[name]
     with _conn() as conn, conn.cursor() as cur:
         cur.execute("SELECT geometry_type FROM spatial_layers WHERE layer_name = %s", (name,))
         row = cur.fetchone()
@@ -163,4 +170,6 @@ def layer_geojson(name: str) -> dict[str, Any] | None:
             FROM (SELECT {select_cols} FROM "{name}" WHERE geom IS NOT NULL LIMIT {_MAX_FEATURES}) s
         """
         cur.execute(sql)
-        return cur.fetchone()[0]
+        gj = cur.fetchone()[0]
+    _LAYER_CACHE[name] = gj
+    return gj

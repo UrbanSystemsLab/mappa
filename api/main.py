@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -124,9 +124,9 @@ def ask(req: AskRequest) -> AskResponse:
 
 
 @app.get("/layers")
-def layers() -> list[dict]:
+def layers() -> JSONResponse:
     """Catalog of spatial layers available to toggle on the map."""
-    return spatial.list_layers()
+    return JSONResponse(spatial.list_layers(), headers={"Cache-Control": "public, max-age=3600"})
 
 
 @app.get("/locate")
@@ -136,12 +136,12 @@ def locate(lng: float, lat: float) -> dict:
 
 
 @app.get("/layer/{name}")
-def layer(name: str) -> dict:
-    """One spatial layer as GeoJSON (simplified, capped)."""
+def layer(name: str) -> JSONResponse:
+    """One spatial layer as GeoJSON (simplified, capped, cached)."""
     gj = spatial.layer_geojson(name)
     if gj is None:
         raise HTTPException(status_code=404, detail=f"unknown layer: {name}")
-    return gj
+    return JSONResponse(gj, headers={"Cache-Control": "public, max-age=86400"})
 
 
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
