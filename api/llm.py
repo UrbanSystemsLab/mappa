@@ -16,9 +16,40 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 from typing import Any
+
+# Matches markdown links [text](url), bare http(s):// URLs, and www.* addresses.
+_MD_LINK = re.compile(r"\[([^\]]+)\]\((?:https?://|www\.)[^)]+\)")
+_BARE_URL = re.compile(r"\(?\b(?:https?://|www\.)\S+\)?")
+
+
+# Phrases the model uses when the sources don't answer the question (both languages).
+_DECLINE_MARKERS = (
+    "not enough information", "isn't enough information", "is not enough information",
+    "there is not enough", "do not contain", "does not contain", "couldn't find",
+    "could not find", "no hay información suficiente", "no hay suficiente información",
+    "no cuento con", "no encontré", "no se encontró", "no contienen", "no contiene",
+    "información suficiente en los documentos",
+)
+
+
+def _is_decline(text: str) -> bool:
+    """True if the answer is a 'the sources don't cover this' non-answer."""
+    t = text.lower()
+    return any(m in t for m in _DECLINE_MARKERS)
+
+
+def _strip_urls(text: str) -> str:
+    """Remove any link/URL the model may have emitted. All source links come from the
+    database citations shown in the UI, never from the model's prose — this enforces
+    that the LLM contributes no resources of its own."""
+    text = _MD_LINK.sub(r"\1", text)  # keep the link text, drop the URL
+    text = _BARE_URL.sub("", text)
+    text = re.sub(r"(?m)^\s*[\*\-]\s+", "• ", text)  # normalize markdown bullets to •
+    return re.sub(r"[ \t]{2,}", " ", text).strip()
 
 # Provider: "ollama" (local, default), "gemini" (Vertex AI — GCP-native, no key,
 # auth via the service account), or "openai" (any OpenAI-compatible API).
@@ -36,25 +67,35 @@ _GEN_TIMEOUT = 120
 
 SYSTEM_PROMPTS = {
     "es": (
-        "Eres MAPPA, un asistente de planificación y riesgos para comunidades de Puerto Rico. "
-        "Responde en español. Empieza con una respuesta directa y útil en la primera oración, "
-        "luego los detalles clave — conciso (2 a 5 oraciones), sin relleno ni repetición. "
-        "Fundamenta TODO únicamente en las FUENTES y los DATOS DEL LUGAR proporcionados; nunca "
-        "inventes datos ni cites leyes que no aparezcan en ellos. "
-        "Cuando uses una fuente o capa con fecha, menciona su año para que se sepa qué tan actual es "
-        "(por ejemplo, «según la capa FEMA de 2018»). Cita las fuentes por número, p. ej. [1]. "
-        "Si las fuentes no responden, dilo brevemente y remite a la Junta de Planificación, la OGPe, "
-        "el DRNA o el municipio. No brindas asesoría legal vinculante."
+        "Eres Mappealo, un asistente de planificación y riesgos para comunidades de Puerto Rico. "
+        "Responde en español. Empieza con UNA oración de respuesta directa. Luego, si la respuesta "
+        "es una lista (metas, riesgos, requisitos, pasos, categorías), añade una lista con viñetas "
+        "usando «• » al inicio de cada línea (máximo 6 viñetas), y cita la fuente [n] en cada una; "
+        "de lo contrario añade 1 a 3 oraciones concisas. Sin relleno ni repetición. "
+        "REGLA ESTRICTA: fundamenta TODO únicamente en las FUENTES y los DATOS DEL LUGAR "
+        "proporcionados. Está prohibido usar conocimiento propio o externo. Nunca inventes datos, "
+        "cifras, agencias ni leyes que no aparezcan literalmente en las FUENTES. Nunca escribas "
+        "enlaces, URLs ni direcciones web — las fuentes se muestran aparte con su enlace. "
+        "Cuando uses una fuente o capa con fecha, menciona su año (por ejemplo, «según la capa FEMA "
+        "de 2018»). Cita las fuentes por número, p. ej. [1]. "
+        "Si las FUENTES no contienen la respuesta, di exactamente que no hay información suficiente "
+        "en los documentos disponibles y remite a la Junta de Planificación, la OGPe, el DRNA o el "
+        "municipio — sin inventar una respuesta. No brindas asesoría legal vinculante."
     ),
     "en": (
-        "You are MAPPA, a planning and hazard assistant for Puerto Rico communities. Answer in English. "
-        "Lead with a direct, useful answer in the first sentence, then the key specifics — concise "
-        "(2–5 sentences), no filler or repetition. "
-        "Ground EVERYTHING only in the provided SOURCES and MAP FACTS; never invent facts or cite laws "
-        "not in them. When you rely on a dated source or map layer, note its year so the reader knows how "
-        "current it is (e.g., 'per the 2018 FEMA layer'). Cite sources by number, e.g. [1]. "
-        "If the sources don't answer the question, say so briefly and point to the Junta de Planificación, "
-        "OGPe, DRNA, or the municipality. Do not give binding legal advice."
+        "You are Mappealo, a planning and hazard assistant for Puerto Rico communities. Answer in English. "
+        "Lead with ONE direct-answer sentence. Then, if the answer is a list (goals, hazards, requirements, "
+        "steps, categories), add a bullet list using '• ' at the start of each line (max 6 bullets), each "
+        "citing its source [n]; otherwise add 1–3 tight sentences. No filler or repetition. "
+        "STRICT RULE: ground EVERYTHING only in the provided SOURCES and MAP FACTS. Using your own or "
+        "outside knowledge is forbidden. Never invent facts, numbers, agencies, or laws that are not "
+        "literally in the SOURCES. Never write links, URLs, or web addresses — sources are shown "
+        "separately with their link. "
+        "When you rely on a dated source or map layer, note its year (e.g., 'per the 2018 FEMA layer'). "
+        "Cite sources by number, e.g. [1]. "
+        "If the SOURCES do not contain the answer, say exactly that there isn't enough information in the "
+        "available documents and point to the Junta de Planificación, OGPe, DRNA, or the municipality — "
+        "do not make up an answer. Do not give binding legal advice."
     ),
 }
 
@@ -92,7 +133,7 @@ def _chat_gemini(messages: list[dict[str, str]]) -> str:
     resp = client.models.generate_content(
         model=LLM_MODEL,
         contents=contents,
-        config=types.GenerateContentConfig(system_instruction=system, temperature=0.2, max_output_tokens=800),
+        config=types.GenerateContentConfig(system_instruction=system, temperature=0.2, max_output_tokens=900),
     )
     return (resp.text or "").strip()
 
@@ -167,15 +208,17 @@ def narrate(
     layers: list[str],
     history: list[tuple[str, str]] | None = None,
     spatial: dict[str, Any] | None = None,
+    lang: str | None = None,
 ) -> dict[str, Any]:
     """Call the local LLM to write a cited answer over the retrieved docs.
 
     `history` is prior (question, answer) turns so follow-ups keep context.
     `spatial` is the clicked point's map facts, folded in so the answer can reason
-    over real conditions (flood/landslide) alongside the documents. Raises on
-    transport/parse errors so the caller can fall back.
+    over real conditions (flood/landslide) alongside the documents. `lang` is the
+    UI-selected answer language. Raises on transport/parse errors so callers fall back.
     """
-    lang = RESPONSE_LANG if RESPONSE_LANG in SYSTEM_PROMPTS else "en"
+    lang = (lang or RESPONSE_LANG)
+    lang = lang if lang in SYSTEM_PROMPTS else "en"
     loc = _spatial_block(spatial, lang) if spatial else ""
     user = (
         f"QUESTION:\n{question.strip()}\n\n"
@@ -192,14 +235,28 @@ def narrate(
     answer = _chat(messages)
     if not answer:
         raise RuntimeError("empty LLM response")
+    answer = _strip_urls(answer)
 
-    citations = [
-        {"id": d["id"], "title": d["title"], "year": d.get("year"), "url": d.get("url", "")}
-        for d in docs
-    ]
+    # If the model declined (couldn't answer from the sources), don't present the
+    # retrieved docs as if they backed an answer — show no citations and low
+    # confidence, so "sources" always match what was actually answered.
+    declined = _is_decline(answer)
+    if declined:
+        citations: list[dict[str, Any]] = []
+    else:
+        citations = [
+            {"id": d["id"], "title": d["title"], "year": d.get("year"), "url": d.get("url", "")}
+            for d in docs
+        ]
+    if declined:
+        confidence = "baja" if lang == "es" else "low"
+    elif lang == "es":
+        confidence = "alta" if len(docs) >= 2 else "media"
+    else:
+        confidence = "high" if len(docs) >= 2 else "medium"
     return {
         "answer_es": answer,
         "citations": citations,
         "suggested_layers": layers,
-        "confidence": "alta" if len(docs) >= 2 else "media",
+        "confidence": confidence,
     }
