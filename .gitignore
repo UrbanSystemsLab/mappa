@@ -41,3 +41,6 @@ data/generated/
 data/inventory/
 logs/
 .mappa_db_pw
+
+# Extracted document text produced by pipelines/fetch_parse_local.py (derived, large)
+data/corpus_*.json
