@@ -1,11 +1,11 @@
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import llm, spatial
+from . import llm, spatial, tiles
 from .retrieval import compose_answer, detect_municipio, infer_layers, retrieve_with_scores
 
 # Minimum retrieval relevance (cosine similarity) to attempt an answer. Below this,
@@ -55,6 +55,8 @@ class AskRequest(BaseModel):
     # Optional map facts for the clicked point (municipio + hazard flags), so the
     # answer can reason over real spatial conditions, not just documents.
     spatial: dict | None = None
+    # Answer language chosen in the UI ("es" or "en").
+    lang: str | None = None
 
 
 class Citation(BaseModel):
@@ -70,6 +72,9 @@ class AskResponse(BaseModel):
     suggested_layers: list[str]
     confidence: str
     disclaimer: str
+    # Municipio the answer is scoped to + its bbox, so the map can fly there.
+    municipio: str | None = None
+    focus: list[float] | None = None
 
 
 @app.get("/health")
@@ -79,6 +84,8 @@ def health() -> dict[str, str]:
 
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest) -> AskResponse:
+    lang = "es" if (req.lang or llm.RESPONSE_LANG or "en").lower() == "es" else "en"
+    disclaimer = DISCLAIMER_ES if lang == "es" else DISCLAIMER_EN
     # For follow-up questions, fold the previous question into the retrieval query
     # so "what about in Ponce?" still finds the right documents.
     retrieval_query = req.question
@@ -86,7 +93,7 @@ def ask(req: AskRequest) -> AskResponse:
         retrieval_query = f"{req.history[-1].question} {req.question}"
     # Location-aware: scope to the clicked municipio, or one named in the question.
     municipio = req.location or detect_municipio(req.question)
-    scored = retrieve_with_scores(retrieval_query, top_k=3, jurisdiction=municipio)
+    scored = retrieve_with_scores(retrieval_query, top_k=6, jurisdiction=municipio)
     layers = infer_layers(req.question)
 
     # Facility questions (schools/hospitals/shelters/roads) are answered from the map
@@ -97,16 +104,19 @@ def ask(req: AskRequest) -> AskResponse:
         context["facilities"] = facilities
     has_context = bool(req.spatial) or bool(facilities)
 
+    focus = spatial.municipio_bbox(municipio)
+
     # Relevance gate: decline gibberish/off-topic questions. If we have real map
     # context (a click or facility counts), we always answer.
     if not has_context and (not scored or scored[0][0] < MIN_RELEVANCE):
-        lang = "es" if llm.RESPONSE_LANG == "es" else "en"
         return AskResponse(
             answer_es=NO_MATCH[lang],
             citations=[],
             suggested_layers=layers,
             confidence="baja" if lang == "es" else "low",
-            disclaimer=DISCLAIMER,
+            disclaimer=disclaimer,
+            municipio=municipio,
+            focus=focus,
         )
 
     docs = [doc for _, doc in scored]
@@ -115,12 +125,12 @@ def ask(req: AskRequest) -> AskResponse:
     # if Ollama is unreachable or errors, so the app always responds.
     if (docs or has_context) and llm.is_available():
         try:
-            result = llm.narrate(req.question, docs, layers, history=history, spatial=context or None)
+            result = llm.narrate(req.question, docs, layers, history=history, spatial=context or None, lang=lang)
         except Exception:
             result = compose_answer(req.question, docs, layers)
     else:
         result = compose_answer(req.question, docs, layers)
-    return AskResponse(disclaimer=DISCLAIMER, **result)
+    return AskResponse(disclaimer=disclaimer, municipio=municipio, focus=focus, **result)
 
 
 @app.get("/layers")
@@ -133,6 +143,30 @@ def layers() -> JSONResponse:
 def locate(lng: float, lat: float) -> dict:
     """What municipio + hazards apply at a clicked point."""
     return spatial.locate(lng, lat)
+
+
+@app.get("/tiles/{name}/{z}/{x}/{y}.mvt")
+def tile(name: str, z: int, x: int, y: int) -> Response:
+    """One vector tile. Carries the whole layer (generalized per zoom), unlike
+    /layer/{name}, which caps features and ships the entire layer at once."""
+    data = tiles.tile(name, z, x, y)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"unknown layer: {name}")
+    return Response(
+        content=data,
+        media_type="application/vnd.mapbox-vector-tile",
+        # Tiles are immutable for a given layer version — safe to cache hard.
+        headers={"Cache-Control": "public, max-age=86400, immutable"},
+    )
+
+
+@app.get("/tiles/{name}.json")
+def tile_json(name: str) -> JSONResponse:
+    """TileJSON descriptor for a layer, so MapLibre can register it as a source."""
+    tj = tiles.tilejson(name, "")
+    if tj is None:
+        raise HTTPException(status_code=404, detail=f"unknown layer: {name}")
+    return JSONResponse(tj, headers={"Cache-Control": "public, max-age=3600"})
 
 
 @app.get("/layer/{name}")

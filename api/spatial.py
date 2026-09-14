@@ -132,6 +132,24 @@ def locate(lng: float, lat: float) -> dict[str, Any]:
     return {"municipio": municipio, "hazards": hazards}
 
 
+def municipio_bbox(name: str | None) -> list[float] | None:
+    """Bounding box [west, south, east, north] of a municipio, so the map can fly to
+    the place the chat is answering about. None if the name isn't a known municipio."""
+    if not name:
+        return None
+    with _conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT ST_XMin(e), ST_YMin(e), ST_XMax(e), ST_YMax(e) FROM "
+            "(SELECT ST_Extent(geom) e FROM reference_units "
+            " WHERE unit_type='municipio' AND name ILIKE %s) t",
+            (name,),
+        )
+        r = cur.fetchone()
+        if r and r[0] is not None:
+            return [float(r[0]), float(r[1]), float(r[2]), float(r[3])]
+    return None
+
+
 def layer_geojson(name: str) -> dict[str, Any] | None:
     """Return one layer as a GeoJSON FeatureCollection, simplified + capped.
 
