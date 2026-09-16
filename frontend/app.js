@@ -1,4 +1,6 @@
-const map = new maplibregl.Map({
+let map = null;
+try {
+  map = new maplibregl.Map({
   container: 'map',
   // Free, no-key basemap (Carto Voyager) — real streets + municipio labels.
   style: {
@@ -18,10 +20,17 @@ const map = new maplibregl.Map({
     },
     layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }],
   },
-  center: [-66.25, 18.22],
-  zoom: 8.4,
-});
-map.addControl(new maplibregl.NavigationControl());
+    center: [-66.25, 18.22],
+    zoom: 8.4,
+  });
+  map.addControl(new maplibregl.NavigationControl());
+} catch (err) {
+  // No WebGL (old browser, blocklisted GPU, headless). Degrade to chat + catalog
+  // rather than taking the whole page down.
+  const el = document.getElementById('map');
+  if (el) el.innerHTML = '<div style="padding:20px;color:#6b7770;font-size:13px">' +
+    'El mapa no está disponible en este navegador. / Map unavailable in this browser.</div>';
+}
 
 const q = document.getElementById('q');
 const out = document.getElementById('out');
@@ -56,20 +65,6 @@ const CATS = {
   'Límites': { es: 'Límites', en: 'Boundaries' }, Otros: { es: 'Otros', en: 'Other' },
 };
 const catLabel = c => (CATS[c] ? CATS[c][LANG] : c);
-const LAYER_LABELS = {
-  layer_g03_legales_municipios_2015: { es: 'Municipios', en: 'Municipalities' },
-  layer_barrios_2015_geoid_corrected_16_nov17: { es: 'Barrios', en: 'Barrios (wards)' },
-  layer_g23_riesgo_inundacion_fema_firms_2009: { es: 'Zonas inundables FEMA 2009', en: 'FEMA flood zones 2009' },
-  layer_g23_riesgo_inundacion_floodzone_0_2pct_seamless_2018: { es: 'Inundación 0.2% anual FEMA 2018', en: 'FEMA 0.2% flood zone 2018' },
-  layer_landsl_monroe_plus_slop50pct: { es: 'Susceptibilidad a deslizamientos', en: 'Landslide susceptibility' },
-  layer_plan_uso_terrenos_2015: { es: 'Plan de Uso de Terrenos 2015', en: 'Land Use Plan 2015' },
-  layer_hospitales: { es: 'Hospitales y CDTs', en: 'Hospitals & CDTs' },
-  layer_dotacional_educacion_escuelas_2021: { es: 'Escuelas públicas 2021', en: 'Public schools 2021' },
-  layer_refugios_2023: { es: 'Refugios de emergencia 2023', en: 'Emergency shelters 2023' },
-  layer_carreteras_estatales_segmentadas_agosto_2021: { es: 'Carreteras estatales 2021', en: 'State roads 2021' },
-};
-const layerLabel = l => (LAYER_LABELS[l.layer_name] ? LAYER_LABELS[l.layer_name][LANG] : (l.description || themeLabel(l.theme)));
-
 function applyLang() {
   const tag = document.querySelector('.topbar .tag');
   if (tag) tag.textContent = t('tagline');
@@ -81,7 +76,9 @@ function applyLang() {
   // Relabel the map-layer panel. Rebuilt from state, so active layers are preserved.
   const h = document.querySelector('#layerctl .h');
   if (h) h.textContent = t('layersTitle');
-  if (CATALOG.length) renderLayerPanel();
+  // Layer names are resolved server-side per language, so re-fetch rather than
+  // relabel in place. Active layers are keyed by id and survive the reload.
+  loadCatalog();
   render();
 }
 
@@ -189,208 +186,296 @@ function esc(s) { return (s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': 
 // ---------------------------------------------------------------------------
 // Map layers: toggle the PostGIS layers on/off, styled by theme + geometry.
 // ---------------------------------------------------------------------------
-const THEME = {
-  political:       { color: '#555555', label: 'Límites' },
-  inundacion:      { color: '#2b6cb0', label: 'Inundación' },
-  deslizamiento:   { color: '#b7791f', label: 'Deslizamiento' },
-  uso_de_terrenos: { color: '#2f855a', label: 'Uso de terrenos' },
-  salud:           { color: '#c53030', label: 'Salud' },
-  educacion:       { color: '#6b46c1', label: 'Educación' },
-  refugios:        { color: '#0d9488', label: 'Refugios' },
-  vias:            { color: '#333333', label: 'Vías' },
-};
-const themeColor = t => (THEME[t] || { color: '#0b5d4b' }).color;
-const themeLabel = t => (THEME[t] || { label: t }).label;
-
-const CATEGORY = {
-  inundacion: 'Riesgos', deslizamiento: 'Riesgos',
-  salud: 'Servicios', educacion: 'Servicios', refugios: 'Servicios',
-  uso_de_terrenos: 'Planificación', vias: 'Infraestructura',
-  political: 'Límites',
-};
-const CAT_ORDER = ['Riesgos', 'Servicios', 'Planificación', 'Infraestructura', 'Límites'];
-
 // ---------------------------------------------------------------------------
-// Layer panel. State lives here (not in the DOM), and every click goes through
-// ONE delegated handler — so a click can never fire two competing toggles.
+// Layers: catalog-driven (server search/facets) + vector tiles.
+// Nothing about a layer is hardcoded here any more - names, colours, categories
+// and provenance all come from /catalog, which is what makes 600 layers workable
+// and lets La Marana add layers without a frontend deploy.
 // ---------------------------------------------------------------------------
-let CATALOG = [];                       // all layers from /layers
-const ACTIVE = new Map();               // layer_name -> { layer, opacity }
-const GEOJSON_CACHE = {};               // layer_name -> geojson (fetch once)
-const BUSY = new Set();                 // layer_names mid-fetch
-let layerQuery = '';                    // search box text
+const ACTIVE = new Map();        // layerId -> catalog row (+ opacity)
+const EXPANDED = new Set();      // categories the user has opened
+let CATEGORIES = [];             // [{category, count}]
+let RESULTS = [];                // current catalog page
+let RESULT_TOTAL = 0;
+let layerQuery = '';
+let searchTimer = null;
 
-const layerByName = n => CATALOG.find(l => l.layer_name === n);
+const SRC = id => 'src_' + id;
+const LYR = id => 'lyr_' + id;
+const paintKey = type => (type === 'fill' ? 'fill-opacity'
+                        : type === 'line' ? 'line-opacity' : 'circle-opacity');
 
-async function loadLayerList() {
-  const list = document.getElementById('layerlist');
+async function loadCatalog() {
   try {
-    CATALOG = await (await fetch('/layers')).json();
-    renderLayerPanel();
+    CATEGORIES = await (await fetch(`/catalog/categories?lang=${LANG}`)).json();
+    await fetchLayers();
   } catch (e) {
-    list.textContent = LANG === 'es' ? 'No se pudieron cargar las capas.' : 'Could not load layers.';
+    document.getElementById('layerlist').textContent =
+      LANG === 'es' ? 'No se pudieron cargar las capas.' : 'Could not load layers.';
   }
 }
 
-function renderLayerPanel() {
-  const list = document.getElementById('layerlist');
-  if (!list) return;
-  const es = LANG === 'es';
-  const filter = layerQuery.trim().toLowerCase();
-
-  // Active layers first, so you always see what's on.
-  let html = `<div class="lyr-search">
-      <input id="lyrq" type="text" placeholder="${es ? 'Buscar capas…' : 'Search layers…'}" value="${esc(layerQuery)}">
-    </div>`;
-
-  if (ACTIVE.size) {
-    html += `<div class="lyr-sec">
-      <div class="lyr-sec-h">
-        <span>${es ? 'Activas' : 'Active'} (${ACTIVE.size})</span>
-        <a data-act="clear">${es ? 'Quitar todas' : 'Clear all'}</a>
-      </div>`;
-    for (const [name, st] of ACTIVE) {
-      const l = st.layer;
-      html += `<div class="lyr-item on">
-        <span class="swatch" style="background:${themeColor(l.theme)}"></span>
-        <span class="lyr-name">${esc(layerLabel(l))}${l.year ? `<span class="yr"> · ${l.year}</span>` : ''}</span>
-        <input class="op" type="range" min="10" max="100" value="${Math.round(st.opacity * 100)}"
-               data-act="opacity" data-name="${esc(name)}" title="${es ? 'Opacidad' : 'Opacity'}">
-        <button class="lyr-btn rm" data-act="remove" data-name="${esc(name)}"
-                title="${es ? 'Quitar' : 'Remove'}">✕</button>
-      </div>`;
-    }
-    html += `</div>`;
-  }
-
-  // Catalog of everything not active, grouped by category, filtered by search.
-  const avail = CATALOG.filter(l => !ACTIVE.has(l.layer_name))
-    .filter(l => !filter || layerLabel(l).toLowerCase().includes(filter) || catLabel(CATEGORY[l.theme] || 'Otros').toLowerCase().includes(filter));
-  const groups = {};
-  avail.forEach(l => { const c = CATEGORY[l.theme] || 'Otros'; (groups[c] = groups[c] || []).push(l); });
-  const cats = CAT_ORDER.filter(c => groups[c]).concat(Object.keys(groups).filter(c => !CAT_ORDER.includes(c)));
-
-  if (!avail.length) {
-    html += `<div class="lyr-none">${filter ? (es ? 'Sin resultados' : 'No matches') : (es ? 'Todas las capas están activas' : 'All layers active')}</div>`;
-  }
-  cats.forEach(cat => {
-    html += `<div class="lyr-sec">
-      <div class="lyr-sec-h"><span>${esc(catLabel(cat))}</span></div>
-      ${groups[cat].map(l => {
-        const busy = BUSY.has(l.layer_name);
-        return `<div class="lyr-item${busy ? ' loading' : ''}" data-act="add" data-name="${esc(l.layer_name)}">
-          <span class="swatch off" style="border-color:${themeColor(l.theme)}"></span>
-          <span class="lyr-name">${esc(layerLabel(l))}${l.year ? `<span class="yr"> · ${l.year}</span>` : ''}</span>
-          <span class="lyr-btn add">${busy ? '<span class="spin"></span>' : '+'}</span>
-        </div>`;
-      }).join('')}
-    </div>`;
-  });
-
-  list.innerHTML = html;
-}
-
-// Single delegated handler for the whole panel — no competing listeners.
-document.getElementById('layerlist').addEventListener('click', (e) => {
-  const el = e.target.closest('[data-act]');
-  if (!el) return;
-  const act = el.dataset.act;
-  if (act === 'add') addLayer(el.dataset.name);
-  else if (act === 'remove') removeLayer(el.dataset.name);
-  else if (act === 'clear') { [...ACTIVE.keys()].forEach(removeLayer); }
-});
-document.getElementById('layerlist').addEventListener('input', (e) => {
-  if (e.target.id === 'lyrq') {
-    layerQuery = e.target.value;
-    renderLayerPanel();
-    const box = document.getElementById('lyrq');
-    if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
-  } else if (e.target.dataset.act === 'opacity') {
-    setLayerOpacity(e.target.dataset.name, e.target.value / 100);
-  }
-});
-
-async function addLayer(name) {
-  if (ACTIVE.has(name) || BUSY.has(name)) return;   // idempotent
-  const l = layerByName(name);
-  if (!l) return;
-  const srcId = 'src_' + name, lyrId = 'lyr_' + name;
-  BUSY.add(name); renderLayerPanel();
-  try {
-    if (!GEOJSON_CACHE[name]) GEOJSON_CACHE[name] = await (await fetch('/layer/' + name)).json();
-    if (!map.getSource(srcId)) map.addSource(srcId, { type: 'geojson', data: GEOJSON_CACHE[name] });
-    addStyledLayer(lyrId, srcId, l.geometry_type, themeColor(l.theme), l.theme);
-    ACTIVE.set(name, { layer: l, opacity: l.geometry_type.includes('Polygon') && l.theme !== 'political' ? 0.35 : 1 });
-  } catch (err) {
-    console.error('layer add failed', name, err);
-  } finally {
-    BUSY.delete(name); renderLayerPanel();
-  }
-}
-
-function removeLayer(name) {
-  const lyrId = 'lyr_' + name, srcId = 'src_' + name;
-  [lyrId, lyrId + '_outline'].forEach(id => { if (map.getLayer(id)) map.removeLayer(id); });
-  if (map.getSource(srcId)) map.removeSource(srcId);
-  ACTIVE.delete(name);
+async function fetchLayers() {
+  const p = new URLSearchParams({ lang: LANG, limit: '200' });
+  if (layerQuery) p.set('q', layerQuery);
+  const d = await (await fetch('/catalog/layers?' + p)).json();
+  RESULTS = d.layers || [];
+  RESULT_TOTAL = d.total || 0;
+  // Collapsed groups are the right default for a large catalog, but pointless when
+  // there are only a few layers - open everything while the catalog is small, and
+  // while searching, so matches are visible without extra clicks.
+  if (layerQuery || RESULT_TOTAL <= 25) RESULTS.forEach(l => EXPANDED.add(l.category));
   renderLayerPanel();
 }
 
-function setLayerOpacity(name, val) {
-  const st = ACTIVE.get(name);
-  if (!st) return;
-  st.opacity = val;
-  ['lyr_' + name, 'lyr_' + name + '_outline'].forEach(id => {
-    if (!map.getLayer(id)) return;
-    const type = map.getLayer(id).type;
-    const prop = type === 'fill' ? 'fill-opacity' : type === 'line' ? 'line-opacity' : 'circle-opacity';
-    // Polygon fills top out at 0.35 so the basemap stays readable.
-    const cap = type === 'fill' ? 0.35 : 1;
-    map.setPaintProperty(id, prop, val * cap);
+function statusChip(st) {
+  const L = {
+    confirmed:     { es: 'confirmado', en: 'confirmed', c: 'ok' },
+    inferred:      { es: 'inferido', en: 'inferred', c: 'mid' },
+    reconstructed: { es: 'reconstruido', en: 'reconstructed', c: 'mid' },
+    unknown:       { es: 'sin documentar', en: 'undocumented', c: 'low' },
+  }[st] || { es: st, en: st, c: 'low' };
+  return `<span class="mstat ${L.c}">${esc(L[LANG] || st)}</span>`;
+}
+
+function layerRow(l, isActive) {
+  const yr = l.source && l.source.year ? ` · ${l.source.year}` : '';
+  const sw = `<span class="sw" style="background:${(l.style && l.style.color) || '#0b5d4b'}"></span>`;
+  const info = `<button class="ic info" data-act="info" data-id="${l.id}" title="${
+    LANG === 'es' ? 'Sobre esta capa' : 'About this layer'}">i</button>`;
+  if (isActive) {
+    const op = Math.round(((l.opacity != null ? l.opacity : 1)) * 100);
+    return `<div class="lrow on" data-id="${l.id}">
+      ${sw}<span class="nm">${esc(l.name)}</span>
+      <input class="op" type="range" min="10" max="100" value="${op}"
+             data-act="opacity" data-id="${l.id}" title="Opacidad">
+      ${info}
+      <button class="ic rm" data-act="remove" data-id="${l.id}" title="${
+        LANG === 'es' ? 'Quitar' : 'Remove'}">&times;</button></div>`;
+  }
+  return `<div class="lrow" data-act="add" data-id="${l.id}">
+    ${sw}<span class="nm">${esc(l.name)}<span class="yr">${yr}</span></span>
+    ${info}<button class="ic add" data-act="add" data-id="${l.id}">+</button></div>`;
+}
+
+function renderLayerPanel() {
+  const el = document.getElementById('layerlist');
+  const active = [...ACTIVE.values()];
+  const activeIds = new Set(ACTIVE.keys());
+  let html = '';
+
+  // Active layers pinned to the top - as more layers load, the ones in use stay
+  // reachable without scrolling (La Marana's feedback).
+  if (active.length) {
+    html += `<div class="lsec"><div class="lsec-h">
+        <span>${LANG === 'es' ? 'Activas' : 'Active'} (${active.length})</span>
+        <a data-act="clear">${LANG === 'es' ? 'Quitar todas' : 'Clear all'}</a>
+      </div>${active.map(l => layerRow(l, true)).join('')}</div>`;
+  }
+
+  const shown = RESULTS.filter(l => !activeIds.has(l.id));
+  const byCat = {};
+  shown.forEach(l => (byCat[l.category] = byCat[l.category] || []).push(l));
+  const cats = CATEGORIES.length
+    ? CATEGORIES.map(c => c.category).filter(c => byCat[c])
+    : Object.keys(byCat);
+
+  cats.forEach(c => {
+    const rows = byCat[c] || [];
+    const open = EXPANDED.has(c);
+    html += `<div class="lsec">
+      <div class="lsec-h clickable" data-act="cat" data-cat="${esc(c)}">
+        <span>${open ? '&#9662;' : '&#9656;'} ${esc(catLabel(c))}</span><span class="cnt">${rows.length}</span>
+      </div>${open ? rows.map(l => layerRow(l, false)).join('') : ''}</div>`;
   });
+
+  if (!shown.length && !active.length) {
+    html += `<div class="lempty">${LANG === 'es' ? 'Sin resultados' : 'No results'}</div>`;
+  }
+  if (RESULT_TOTAL > RESULTS.length) {
+    html += `<div class="lmore">${LANG === 'es' ? 'Mostrando' : 'Showing'} ${RESULTS.length} / ${RESULT_TOTAL}</div>`;
+  }
+  el.innerHTML = html;
+  renderLegend();
+}
+
+function renderLegend() {
+  const el = document.getElementById('legend');
+  if (!el) return;
+  const active = [...ACTIVE.values()];
+  if (!active.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `<div class="lg-h">${LANG === 'es' ? 'Leyenda' : 'Legend'}</div>` +
+    active.map(l => `<div class="lg-r">
+        <span class="lg-k" style="background:${(l.style && l.style.color) || '#0b5d4b'}"></span>
+        <span>${esc(l.name)}</span></div>`).join('') +
+    `<div class="lg-src">${LANG === 'es' ? 'Fuente' : 'Source'}: ${
+      esc(active[0].source && active[0].source.inventory || '')}</div>`;
+}
+
+// --- one delegated handler for the whole panel ---
+document.getElementById('layerlist').addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act, id = el.dataset.id;
+  if (act === 'add') addLayer(id);
+  else if (act === 'remove') removeLayer(id);
+  else if (act === 'info') showLayerInfo(id);
+  else if (act === 'clear') [...ACTIVE.keys()].forEach(removeLayer);
+  else if (act === 'cat') {
+    const c = el.dataset.cat;
+    EXPANDED.has(c) ? EXPANDED.delete(c) : EXPANDED.add(c);
+    renderLayerPanel();
+  }
+});
+document.getElementById('layerlist').addEventListener('input', (e) => {
+  const el = e.target.closest('[data-act="opacity"]');
+  if (el) setLayerOpacity(el.dataset.id, Number(el.value) / 100);
+});
+document.getElementById('lyrq').addEventListener('input', (e) => {
+  layerQuery = e.target.value.trim();
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(fetchLayers, 250);   // debounce: search runs server-side
+});
+
+// --- map wiring: vector tiles, not whole-layer GeoJSON ---
+function addLayer(id) {
+  if (!map) return;
+  if (ACTIVE.has(id)) return;
+  const l = RESULTS.find(x => x.id === id);
+  if (!l) return;
+  if (!mapReady) { if (!pendingAdds.includes(id)) pendingAdds.push(id); return; }
+  const srcId = SRC(id), base = LYR(id);
+  if (!map.getSource(srcId)) {
+    map.addSource(srcId, {
+      type: 'vector',
+      tiles: [location.origin + l.tiles_url],
+      minzoom: l.min_zoom != null ? l.min_zoom : 0,
+      maxzoom: l.max_zoom != null ? l.max_zoom : 14,
+    });
+  }
+  const color = (l.style && l.style.color) || '#0b5d4b';
+  const g = (l.geometry_type || '').toLowerCase();
+  const common = { source: srcId, 'source-layer': 'layer' };
+  if (g.includes('polygon')) {
+    const fillOp = l.style && l.style.fillOpacity != null ? l.style.fillOpacity : 0.35;
+    if (fillOp > 0) map.addLayer({ id: base, type: 'fill', ...common,
+      paint: { 'fill-color': color, 'fill-opacity': fillOp } });
+    map.addLayer({ id: base + '_ln', type: 'line', ...common,
+      paint: { 'line-color': color, 'line-width': (l.style && l.style.lineWidth) || 0.8 } });
+  } else if (g.includes('line')) {
+    map.addLayer({ id: base, type: 'line', ...common,
+      paint: { 'line-color': color, 'line-width': 1.4 } });
+  } else {
+    map.addLayer({ id: base, type: 'circle', ...common,
+      paint: { 'circle-radius': 5, 'circle-color': color,
+               'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
+    map.on('click', base, featurePopup);
+    map.on('mouseenter', base, () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', base, () => { map.getCanvas().style.cursor = ''; });
+  }
+  ACTIVE.set(id, { ...l, opacity: 1 });
+  renderLayerPanel();
+}
+
+function removeLayer(id) {
+  if (!map) { ACTIVE.delete(id); renderLayerPanel(); return; }
+  [LYR(id), LYR(id) + '_ln'].forEach(x => { if (map.getLayer(x)) map.removeLayer(x); });
+  if (map.getSource(SRC(id))) map.removeSource(SRC(id));
+  ACTIVE.delete(id);
+  renderLayerPanel();
+}
+
+function setLayerOpacity(id, v) {
+  const rec = ACTIVE.get(id);
+  if (!rec || !map) return;
+  rec.opacity = v;
+  [LYR(id), LYR(id) + '_ln'].forEach(x => {
+    if (!map.getLayer(x)) return;
+    const type = map.getLayer(x).type;
+    const base = type === 'fill'
+      ? (rec.style && rec.style.fillOpacity != null ? rec.style.fillOpacity : 0.35) : 1;
+    map.setPaintProperty(x, paintKey(type), base * v);
+  });
+}
+
+// Per-layer provenance card - what the layer is, where it came from, and how
+// confident that metadata is.
+async function showLayerInfo(id) {
+  try {
+    const l = await (await fetch(`/catalog/layers/${id}?lang=${LANG}`)).json();
+    const s = l.source || {};
+    const box = document.getElementById('layerinfo');
+    box.innerHTML = `<div class="li-h"><b>${esc(l.name)}</b>
+        <button class="ic" data-close="1">&times;</button></div>
+      ${l.description ? `<p>${esc(l.description)}</p>` : ''}
+      <dl>
+        <dt>${LANG === 'es' ? 'Agencia' : 'Agency'}</dt><dd>${esc(s.agency || '—')}</dd>
+        <dt>${LANG === 'es' ? 'Año' : 'Year'}</dt><dd>${s.year || '—'}</dd>
+        <dt>${LANG === 'es' ? 'Elementos' : 'Features'}</dt><dd>${(l.feature_count || 0).toLocaleString()}</dd>
+        <dt>${LANG === 'es' ? 'Procedencia' : 'Provenance'}</dt><dd>${esc(s.inventory || '—')}</dd>
+        <dt>${LANG === 'es' ? 'Metadatos' : 'Metadata'}</dt><dd>${statusChip(s.metadata_status)}</dd>
+      </dl>`;
+    box.style.display = 'block';
+    box.querySelector('[data-close]').onclick = () => { box.style.display = 'none'; };
+  } catch (e) { /* non-fatal */ }
 }
 
 function featurePopup(e) {
   const p = (e.features && e.features[0] && e.features[0].properties) || {};
-  const title = p.name || 'Sin nombre';
+  const title = p.name || (LANG === 'es' ? 'Sin nombre' : 'Unnamed');
   const sub = p.sub ? `<br><span style="color:#667">${esc(p.sub)}</span>` : '';
   new maplibregl.Popup({ closeOnClick: true, maxWidth: '240px' })
     .setLngLat(e.lngLat).setHTML(`<div style="font-size:13px"><b>${esc(title)}</b>${sub}</div>`).addTo(map);
 }
 
-function addStyledLayer(lyrId, srcId, gtype, color, theme) {
-  if (gtype.includes('Polygon')) {
-    // Boundaries (municipios/barrios) look best as clean outlines; hazards/land use get a fill.
-    if (theme !== 'political') {
-      map.addLayer({ id: lyrId, type: 'fill', source: srcId, paint: { 'fill-color': color, 'fill-opacity': 0.35 } });
-    }
-    map.addLayer({ id: lyrId + '_outline', type: 'line', source: srcId, paint: { 'line-color': color, 'line-width': theme === 'political' ? 1.1 : 0.8 } });
-  } else if (gtype.includes('LineString')) {
-    map.addLayer({ id: lyrId, type: 'line', source: srcId, paint: { 'line-color': color, 'line-width': 1.4 } });
-  } else {
-    map.addLayer({ id: lyrId, type: 'circle', source: srcId, paint: { 'circle-radius': 5, 'circle-color': color, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
-    // Click a point (hospital/school/shelter) → show its name, not the flood popup.
-    map.on('click', lyrId, featurePopup);
-    map.on('mouseenter', lyrId, () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', lyrId, () => { map.getCanvas().style.cursor = ''; });
-  }
+// Turn on layers the answer referenced, by matching catalog keywords.
+function autoShowLayers(themes) {
+  if (!themes || !themes.length) return;
+  const alias = { zonificacion: 'uso_de_terrenos' };
+  const want = new Set((themes || []).map(x => alias[x] || x));
+  RESULTS.forEach(l => {
+    if (ACTIVE.has(l.id)) return;
+    if (want.has(l.theme) || (l.keywords || []).some(k => want.has(k))) addLayer(l.id);
+  });
 }
 
-map.on('load', loadLayerList);
+// The layer catalog is just data, so it loads independently of the map. If WebGL
+// is slow or unavailable the panel still works, and anything the user turns on
+// before the map is ready is queued and applied on load.
+let mapReady = false;
+const pendingAdds = [];
+if (map) map.on('load', () => {
+  mapReady = true;
+  const queued = pendingAdds.splice(0);
+  queued.forEach(addLayer);
+});
+loadCatalog();
+
+// --- panel toggles: give the map more room (La Marana's feedback) ---
+{
+  const ct = document.getElementById('chattoggle');
+  if (ct) ct.onclick = () => {
+    document.querySelector('main').classList.toggle('chat-hidden');
+    setTimeout(() => { if (map) map.resize(); }, 210);   // let the grid settle, then re-measure
+  };
+  const lt = document.getElementById('lyrtoggle');
+  if (lt) lt.onclick = () => {
+    const list = document.getElementById('layerlist');
+    const q2 = document.getElementById('lyrq');
+    const hidden = list.style.display === 'none';
+    list.style.display = hidden ? '' : 'none';
+    if (q2) q2.style.display = hidden ? '' : 'none';
+    lt.innerHTML = hidden ? '&#9662;' : '&#9656;';
+    setTimeout(() => { if (map) map.resize(); }, 210);
+  };
+}
+
 
 // Fly/zoom the map to a bbox [w,s,e,n] the chat is answering about.
 function focusBBox(bbox) {
-  if (!bbox || bbox.length !== 4) return;
+  if (!map || !bbox || bbox.length !== 4) return;
   map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 1600, maxZoom: 11 });
-}
-
-// When an answer references themes (flood, landslide, zoning...), auto-show those
-// layers on the map so the chat and map stay in sync.
-function autoShowLayers(themes) {
-  const alias = { zonificacion: 'uso_de_terrenos' };
-  const wanted = new Set((themes || []).map(t => alias[t] || t));
-  CATALOG.filter(l => wanted.has(l.theme) && !ACTIVE.has(l.layer_name))
-    .forEach(l => addLayer(l.layer_name));
 }
 
 // ---------------------------------------------------------------------------
@@ -399,7 +484,7 @@ function autoShowLayers(themes) {
 let locMarker = null;
 let pending = null;
 
-map.on('click', async (e) => {
+if (map) map.on('click', async (e) => {
   // Only a point feature (hospital/school/shelter dot) shows its own popup; clicking
   // empty land, a boundary, or a hazard area still gives the location card.
   const onPoint = map.queryRenderedFeatures(e.point)
