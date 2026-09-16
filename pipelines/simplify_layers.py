@@ -27,9 +27,14 @@ import time
 import psycopg2
 
 # ~30m at Puerto Rico's latitude; below zoom 12 a screen pixel is coarser than this.
-TOLERANCE_DEG = 0.0003
+# Two levels, because one tolerance cannot serve both an island-wide view and a
+# city block. geom_simple is read at mid zooms; geom_coarse at zoomed-out views
+# where a screen pixel covers hundreds of metres. This is a small tile pyramid -
+# the same thing a pre-rendered tile build would produce per zoom level.
+TOLERANCE_DEG = 0.0003     # ~30m  — zooms 10-13
+COARSE_DEG    = 0.0035     # ~350m — zooms below 10
 MIN_VERTICES = 200_000
-BATCH = 200          # rows per transaction; small because single polygons can be huge
+BATCH = 200          # rows per transaction; single polygons can be huge
 
 
 def connect():
@@ -39,6 +44,7 @@ def connect():
 def simplify_layer(conn, lid: str, table: str, tol: float) -> None:
     cur = conn.cursor()
     cur.execute(f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS geom_simple geometry')
+    cur.execute(f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS geom_coarse geometry')
     conn.commit()
 
     cur.execute(f'SELECT count(*) FROM "{table}" WHERE geom IS NOT NULL AND geom_simple IS NULL')
@@ -55,11 +61,12 @@ def simplify_layer(conn, lid: str, table: str, tol: float) -> None:
             # ST_MakeValid guards against self-intersections simplification can
             # introduce; one invalid geometry fails ST_AsMVTGeom for the whole tile.
             cur.execute(
-                f'UPDATE "{table}" SET geom_simple = '
-                f'ST_MakeValid(ST_SimplifyPreserveTopology(geom, %s)) '
+                f'UPDATE "{table}" SET '
+                f'  geom_simple = ST_MakeValid(ST_SimplifyPreserveTopology(geom, %s)), '
+                f'  geom_coarse = ST_MakeValid(ST_SimplifyPreserveTopology(geom, %s)) '
                 f'WHERE id IN (SELECT id FROM "{table}" '
                 f'             WHERE geom IS NOT NULL AND geom_simple IS NULL LIMIT %s)',
-                (tol, BATCH),
+                (tol, COARSE_DEG, BATCH),
             )
             n = cur.rowcount
             conn.commit()
@@ -75,12 +82,15 @@ def simplify_layer(conn, lid: str, table: str, tol: float) -> None:
 
     cur = conn.cursor()
     cur.execute(f'CREATE INDEX IF NOT EXISTS idx_{table}_geom_simple ON "{table}" USING gist (geom_simple)')
-    cur.execute(f'SELECT coalesce(sum(ST_NPoints(geom)),0), coalesce(sum(ST_NPoints(geom_simple)),0) FROM "{table}"')
-    before, after = cur.fetchone()
+    cur.execute(f'SELECT coalesce(sum(ST_NPoints(geom)),0), coalesce(sum(ST_NPoints(geom_simple)),0), '
+                f'       coalesce(sum(ST_NPoints(geom_coarse)),0) FROM "{table}"')
+    before, after, coarse = cur.fetchone()
     cur.execute("UPDATE layer_registry SET simplified = true WHERE id = %s", (lid,))
     conn.commit()
     pct = (1 - after / before) * 100 if before else 0
-    print(f"[done] {lid:22} {before:,} -> {after:,} vertices ({pct:.1f}% smaller)")
+    pctc = (1 - coarse / before) * 100 if before else 0
+    print(f"[done] {lid:22} {before:,} -> simple {after:,} ({pct:.1f}%) "
+          f"-> coarse {coarse:,} ({pctc:.1f}%)")
 
 
 def main() -> None:

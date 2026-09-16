@@ -20,13 +20,24 @@ _POOL = None
 POOL_MIN = int(os.environ.get("DB_POOL_MIN", "1"))
 POOL_MAX = int(os.environ.get("DB_POOL_MAX", "4"))
 
+# Hard ceiling on every pooled connection, applied at connect time rather than per
+# query. Postgres keeps executing a statement even after its client goes away, so a
+# server restart during a slow query leaves it running server-side, holding CPU on a
+# small instance. Setting this on the connection means no request path can outlive
+# it, whatever a caller forgets to set.
+STATEMENT_TIMEOUT_MS = int(os.environ.get("DB_STATEMENT_TIMEOUT_MS", "20000"))
+# Also reap connections whose client has vanished mid-transaction.
+IDLE_TX_TIMEOUT_MS = int(os.environ.get("DB_IDLE_TX_TIMEOUT_MS", "30000"))
+
 
 def _get_pool():
     global _POOL
     if _POOL is None:
         from psycopg2.pool import ThreadedConnectionPool
 
-        _POOL = ThreadedConnectionPool(POOL_MIN, POOL_MAX, DB_URL)
+        opts = (f"-c statement_timeout={STATEMENT_TIMEOUT_MS} "
+                f"-c idle_in_transaction_session_timeout={IDLE_TX_TIMEOUT_MS}")
+        _POOL = ThreadedConnectionPool(POOL_MIN, POOL_MAX, DB_URL, options=opts)
     return _POOL
 
 

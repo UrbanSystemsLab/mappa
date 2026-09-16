@@ -130,7 +130,12 @@ def tile(name: str, z: int, x: int, y: int) -> bytes | None:
     # Heavy layers carry a pre-simplified copy built at ingest. Zoomed out, detail
     # finer than a pixel is invisible anyway, so reading the cheap column there is
     # the difference between a tile that renders and one that times out.
-    geom_col = "l.geom_simple" if (meta.get("simplified") and z < 12) else "l.geom"
+    if meta.get("simplified"):
+        # Pick the pyramid level the zoom can actually resolve. Full precision is
+        # only worth reading once the viewer is close enough to see it.
+        geom_col = "l.geom_coarse" if z < 10 else ("l.geom_simple" if z < 14 else "l.geom")
+    else:
+        geom_col = "l.geom"
 
     # Drop features too small to see at this zoom — sub-pixel shapes cost bytes and
     # render nothing. Area compared in degrees² against the tile's own area, so no
