@@ -24,6 +24,7 @@ import math
 import os
 import re
 import threading
+from collections import OrderedDict
 from typing import Any
 
 from . import db
@@ -38,6 +39,18 @@ _SAFE_COL = re.compile(r"^[a-z_][a-z0-9_]*$", re.I)
 # Short on purpose: a slow tile should give up quickly and return empty rather than
 # hold a pooled connection while the map waits on it.
 TILE_TIMEOUT_MS = int(os.environ.get("TILE_TIMEOUT_MS", "8000"))
+# Zoomed-out tiles cover far more ground and legitimately take longer to build.
+# There are only a handful of them per layer and they are cached below, so giving
+# them room is cheap — and a timeout here means a blank half of the island.
+TILE_TIMEOUT_LOWZOOM_MS = int(os.environ.get("TILE_TIMEOUT_LOWZOOM_MS", "45000"))
+
+# Small in-process cache. Tiles are immutable for a layer version, and the few
+# low-zoom tiles are both the most expensive to build and the most requested, so
+# caching them turns a repeated multi-second query into a dictionary lookup. A CDN
+# does this properly in front; this keeps a single instance sane without one.
+_CACHE: "OrderedDict[str, bytes]" = OrderedDict()
+_CACHE_MAX = int(os.environ.get("TILE_CACHE_ENTRIES", "600"))
+_CACHE_LOCK = threading.Lock()
 
 # A single map view requests many tiles at once. Without a gate they all try to
 # borrow a connection at the same moment and drain the pool, which then fails
@@ -160,16 +173,26 @@ def tile(name: str, z: int, x: int, y: int) -> bytes | None:
               {area_filter}
         ) AS t WHERE t.geom IS NOT NULL
     """
-    try:
-        with _TILE_GATE, db.connection() as conn:
-            cur = conn.cursor()
-            cur.execute(f"SET LOCAL statement_timeout = '{TILE_TIMEOUT_MS}ms'")
-            cur.execute(sql, {"z": z, "x": x, "y": y, "w": w, "s": s, "e": e, "n": n})
-            row = cur.fetchone()
-        return bytes(row[0]) if row and row[0] else b""
-    except Exception as exc:
-        log.warning("tile %s %s/%s/%s failed: %s", name, z, x, y, exc)
-        return b""
+    key = f"{name}/{z}/{x}/{y}"
+    with _CACHE_LOCK:
+        hit = _CACHE.get(key)
+        if hit is not None:
+            _CACHE.move_to_end(key)
+            return hit
+
+    timeout = TILE_TIMEOUT_LOWZOOM_MS if z < 10 else TILE_TIMEOUT_MS
+    with _TILE_GATE, db.connection() as conn:
+        cur = conn.cursor()
+        cur.execute(f"SET LOCAL statement_timeout = '{timeout}ms'")
+        cur.execute(sql, {"z": z, "x": x, "y": y, "w": w, "s": s, "e": e, "n": n})
+        row = cur.fetchone()
+    data = bytes(row[0]) if row and row[0] else b""
+
+    with _CACHE_LOCK:
+        _CACHE[key] = data
+        while len(_CACHE) > _CACHE_MAX:
+            _CACHE.popitem(last=False)
+    return data
 
 
 def tilejson(name: str, base_url: str) -> dict[str, Any] | None:

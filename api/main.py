@@ -184,7 +184,13 @@ def catalog_layer(layer_id: str, lang: str = "es") -> JSONResponse:
 def tile(name: str, z: int, x: int, y: int) -> Response:
     """One vector tile. Carries the whole layer (generalized per zoom), unlike
     /layer/{name}, which caps features and ships the entire layer at once."""
-    data = tiles.tile(name, z, x, y)
+    try:
+        data = tiles.tile(name, z, x, y)
+    except Exception as exc:
+        # Returning an empty tile here would render as "no features here", which on
+        # a hazard layer is indistinguishable from "no hazard here". A 503 makes the
+        # client retry and keeps missing data visible rather than silent.
+        raise HTTPException(status_code=503, detail=f"tile temporarily unavailable: {exc}") from exc
     if data is None:
         raise HTTPException(status_code=404, detail=f"unknown layer: {name}")
     return Response(
