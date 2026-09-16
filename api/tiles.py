@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import math
 import os
+import re
 import threading
 from typing import Any
 
@@ -30,6 +31,9 @@ from . import db
 DB_URL = os.environ.get("DATABASE_URL")
 
 log = logging.getLogger(__name__)
+
+# Registry-supplied column names are still validated before interpolation.
+_SAFE_COL = re.compile(r"^[a-z_][a-z0-9_]*$", re.I)
 
 # Short on purpose: a slow tile should give up quickly and return empty rather than
 # hold a pooled connection while the map waits on it.
@@ -87,13 +91,18 @@ def layer_meta(name: str) -> dict[str, Any] | None:
         cur = conn.cursor()
         
         cur.execute(
-            "SELECT layer_name, geometry_type, feature_count FROM spatial_layers WHERE layer_name = %s",
+            """SELECT s.layer_name, s.geometry_type, s.feature_count,
+                      coalesce(r.tile_properties, '{}') , r.simplified
+               FROM spatial_layers s
+               LEFT JOIN layer_registry r ON r.table_name = s.layer_name
+               WHERE s.layer_name = %s""",
             (name,),
         )
         row = cur.fetchone()
     if row is None:
         return None
-    meta = {"layer_name": row[0], "geometry_type": row[1], "feature_count": row[2]}
+    meta = {"layer_name": row[0], "geometry_type": row[1], "feature_count": row[2],
+            "tile_properties": list(row[3] or []), "simplified": bool(row[4])}
     _LAYER_META[name] = meta
     return meta
 
@@ -110,16 +119,18 @@ def tile(name: str, z: int, x: int, y: int) -> bytes | None:
     if not (0 <= z <= 22) or not (0 <= x < 2 ** z) or not (0 <= y < 2 ** z):
         return None
 
-    from . import catalog
-    name_col, sub_col = catalog.tile_columns(name)
-    cols = ["id"]
-    if name_col:
-        cols.append(f'l.{name_col} AS "name"')
-    if sub_col:
-        cols.append(f'l.{sub_col} AS "sub"')
-    select_extra = ", " + ", ".join(cols[1:]) if len(cols) > 1 else ""
+    # Attributes to carry into the tile, from layer_registry. Every property is
+    # repeated per feature per tile, so the registry keeps this list deliberately
+    # short rather than shipping the whole row.
+    props = [c for c in (meta.get("tile_properties") or []) if _SAFE_COL.match(c)]
+    select_extra = ("， " if False else ", ") + ", ".join(f'l."{c}"' for c in props) if props else ""
 
     w, s, e, n = tile_bounds_4326(z, x, y)
+
+    # Heavy layers carry a pre-simplified copy built at ingest. Zoomed out, detail
+    # finer than a pixel is invisible anyway, so reading the cheap column there is
+    # the difference between a tile that renders and one that times out.
+    geom_col = "l.geom_simple" if (meta.get("simplified") and z < 12) else "l.geom"
 
     # Drop features too small to see at this zoom — sub-pixel shapes cost bytes and
     # render nothing. Area compared in degrees² against the tile's own area, so no
@@ -134,7 +145,7 @@ def tile(name: str, z: int, x: int, y: int) -> bytes | None:
         SELECT ST_AsMVT(t, 'layer', {_EXTENT}, 'geom') FROM (
             SELECT
                 ST_AsMVTGeom(
-                    ST_Transform(l.geom, 3857),
+                    ST_Transform({geom_col}, 3857),
                     ST_TileEnvelope(%(z)s, %(x)s, %(y)s), {_EXTENT}, {_BUFFER}, true
                 ) AS geom
                 {select_extra}

@@ -376,10 +376,14 @@ function addLayer(id) {
     map.addLayer({ id: base, type: 'circle', ...common,
       paint: { 'circle-radius': 5, 'circle-color': color,
                'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
-    map.on('click', base, featurePopup);
-    map.on('mouseenter', base, () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', base, () => { map.getCanvas().style.cursor = ''; });
   }
+  // Clicking any feature - polygon, line or point - shows its attributes.
+  [base, base + '_ln'].forEach(lid => {
+    if (!map.getLayer(lid)) return;
+    map.on('click', lid, featurePopup);
+    map.on('mouseenter', lid, () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', lid, () => { map.getCanvas().style.cursor = ''; });
+  });
   ACTIVE.set(id, { ...l, opacity: 1 });
   renderLayerPanel();
 }
@@ -428,11 +432,26 @@ async function showLayerInfo(id) {
 }
 
 function featurePopup(e) {
-  const p = (e.features && e.features[0] && e.features[0].properties) || {};
-  const title = p.name || (LANG === 'es' ? 'Sin nombre' : 'Unnamed');
-  const sub = p.sub ? `<br><span style="color:#667">${esc(p.sub)}</span>` : '';
-  new maplibregl.Popup({ closeOnClick: true, maxWidth: '240px' })
-    .setLngLat(e.lngLat).setHTML(`<div style="font-size:13px"><b>${esc(title)}</b>${sub}</div>`).addTo(map);
+  const f = e.features && e.features[0];
+  if (!f) return;
+  const props = f.properties || {};
+  // Which layer was clicked, so the popup can say what the feature belongs to.
+  const lid = (f.layer && f.layer.id || '').replace(/^lyr_/, '').replace(/_ln$/, '');
+  const rec = ACTIVE.get(lid);
+  const rows = Object.entries(props)
+    .filter(([k, v]) => v !== null && v !== '' && v !== undefined)
+    .slice(0, 8)
+    .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(String(v))}</td></tr>`)
+    .join('');
+  const head = rec ? `<div class="fp-h">${esc(rec.name)}${
+    rec.source && rec.source.year ? ` · ${rec.source.year}` : ''}</div>` : '';
+  const body = rows
+    ? `<table class="fp">${rows}</table>`
+    : `<div class="fp-none">${LANG === 'es'
+        ? 'Esta capa no trae atributos para este elemento.'
+        : 'This layer carries no attributes for this feature.'}</div>`;
+  new maplibregl.Popup({ closeOnClick: true, maxWidth: '280px' })
+    .setLngLat(e.lngLat).setHTML(head + body).addTo(map);
 }
 
 // Turn on layers the answer referenced, by matching catalog keywords.
