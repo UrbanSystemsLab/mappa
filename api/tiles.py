@@ -23,6 +23,8 @@ import math
 import os
 from typing import Any
 
+from . import db
+
 DB_URL = os.environ.get("DATABASE_URL")
 
 
@@ -59,47 +61,6 @@ _TILE_PROPS = {
 }
 
 
-# A tile request is tiny work (~20ms) but a fresh Postgres connection costs seconds
-# over the Cloud SQL connector. A map view asks for dozens of tiles at once, so the
-# pool is what makes tile serving viable at all — without it, connection setup
-# dominates by two orders of magnitude.
-_POOL = None
-_POOL_MIN = 2
-_POOL_MAX = 16
-
-
-def _get_pool():
-    global _POOL
-    if _POOL is None:
-        from psycopg2.pool import ThreadedConnectionPool
-
-        _POOL = ThreadedConnectionPool(_POOL_MIN, _POOL_MAX, DB_URL)
-    return _POOL
-
-
-class _pooled:
-    """Context manager yielding a pooled connection, returned on exit."""
-
-    def __enter__(self):
-        self._pool = _get_pool()
-        self._conn = self._pool.getconn()
-        return self._conn
-
-    def __exit__(self, exc_type, exc, tb):
-        try:
-            if exc_type is not None:
-                self._conn.rollback()
-            else:
-                self._conn.commit()
-        finally:
-            self._pool.putconn(self._conn)
-        return False
-
-
-def _conn():
-    return _pooled()
-
-
 _LAYER_META: dict[str, dict[str, Any]] = {}
 
 
@@ -108,7 +69,7 @@ def layer_meta(name: str) -> dict[str, Any] | None:
     layer name is interpolated into SQL."""
     if name in _LAYER_META:
         return _LAYER_META[name]
-    with _conn() as conn:
+    with db.connection() as conn:
         cur = conn.cursor()
         
         cur.execute(
@@ -135,7 +96,8 @@ def tile(name: str, z: int, x: int, y: int) -> bytes | None:
     if not (0 <= z <= 22) or not (0 <= x < 2 ** z) or not (0 <= y < 2 ** z):
         return None
 
-    name_col, sub_col = _TILE_PROPS.get(name, (None, None))
+    from . import catalog
+    name_col, sub_col = catalog.tile_columns(name)
     cols = ["id"]
     if name_col:
         cols.append(f'l.{name_col} AS "name"')
@@ -176,7 +138,7 @@ def tile(name: str, z: int, x: int, y: int) -> bytes | None:
               {area_filter}
         ) AS t WHERE t.geom IS NOT NULL
     """
-    with _conn() as conn:
+    with db.connection() as conn:
         cur = conn.cursor()
         
         cur.execute("SET LOCAL statement_timeout = '25s'")

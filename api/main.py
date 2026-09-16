@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import llm, spatial, tiles
+from . import catalog, llm, spatial, tiles
 from .retrieval import compose_answer, detect_municipio, infer_layers, retrieve_with_scores
 
 # Minimum retrieval relevance (cosine similarity) to attempt an answer. Below this,
@@ -143,6 +143,34 @@ def layers() -> JSONResponse:
 def locate(lng: float, lat: float) -> dict:
     """What municipio + hazards apply at a clicked point."""
     return spatial.locate(lng, lat)
+
+
+@app.get("/catalog/layers")
+def catalog_layers(lang: str = "es", q: str | None = None, category: str | None = None,
+                   limit: int = 100, offset: int = 0) -> JSONResponse:
+    """Search/filter the layer catalog. Replaces the hardcoded layer list that used
+    to ship inside the frontend bundle."""
+    limit = max(1, min(limit, 500))
+    return JSONResponse(
+        catalog.list_layers(lang=lang, q=q, category=category, limit=limit, offset=offset),
+        headers={"Cache-Control": "public, max-age=300"},
+    )
+
+
+@app.get("/catalog/categories")
+def catalog_categories(lang: str = "es") -> JSONResponse:
+    return JSONResponse(catalog.categories(lang),
+                        headers={"Cache-Control": "public, max-age=300"})
+
+
+@app.get("/catalog/layers/{layer_id}")
+def catalog_layer(layer_id: str, lang: str = "es") -> JSONResponse:
+    """Full metadata for one layer, including provenance and how confident that
+    metadata is — this is what the per-layer info popup shows."""
+    row = catalog.get_layer(layer_id, lang)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"unknown layer: {layer_id}")
+    return JSONResponse(row, headers={"Cache-Control": "public, max-age=300"})
 
 
 @app.get("/tiles/{name}/{z}/{x}/{y}.mvt")
