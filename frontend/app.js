@@ -21,11 +21,11 @@ try {
     layers: [{
       id: 'basemap', type: 'raster', source: 'basemap',
       paint: {
-        'raster-saturation': -0.72,   // drain the colour out of the ground
-        'raster-contrast': -0.12,
-        'raster-brightness-min': 0.12,
-        'raster-brightness-max': 0.97,
-        'raster-opacity': 0.88,
+        'raster-saturation': -0.35,   // step the ground back without killing it
+        'raster-contrast': -0.05,
+        'raster-brightness-min': 0.04,
+        'raster-brightness-max': 1,
+        'raster-opacity': 0.94,
       },
     }],
   },
@@ -126,10 +126,14 @@ function confClass(c) {
 
 function render() {
   if (!conversation.length) {
+    const hint = LANG === 'es'
+      ? '<b>Cada respuesta cita su fuente.</b> Si los documentos cargados no lo dicen, Mappealo lo dirá en vez de inventarlo.'
+      : '<b>Every answer cites its source.</b> If the loaded documents do not say it, Mappealo will say so rather than fill the gap.';
     out.innerHTML = `<div class="empty">
       <div class="icon">🗺️</div>
       <h3 translate="no">${t('emptyT')}</h3>
       <p>${t('emptyB')}</p>
+      <div class="hint">${hint}</div>
     </div>`;
     return;
   }
