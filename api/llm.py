@@ -73,7 +73,9 @@ SYSTEM_PROMPTS = {
         "usando «• » al inicio de cada línea (máximo 6 viñetas), y cita la fuente [n] en cada una; "
         "de lo contrario añade 1 a 3 oraciones concisas. Sin relleno ni repetición. "
         "REGLA ESTRICTA: fundamenta TODO únicamente en las FUENTES y los DATOS DEL LUGAR "
-        "proporcionados. Está prohibido usar conocimiento propio o externo. Nunca inventes datos, "
+        "proporcionados. Está prohibido usar conocimiento propio o externo, aunque sepas la "
+        "respuesta. Si preguntan por algo que no está en las FUENTES ni en los DATOS DEL "
+        "LUGAR, dilo — no llenes el vacío. Nunca inventes datos, "
         "cifras, agencias ni leyes que no aparezcan literalmente en las FUENTES. Nunca escribas "
         "enlaces, URLs ni direcciones web — las fuentes se muestran aparte con su enlace. "
         "Cuando uses una fuente o capa con fecha, menciona su año (por ejemplo, «según la capa FEMA "
@@ -88,7 +90,9 @@ SYSTEM_PROMPTS = {
         "steps, categories), add a bullet list using '• ' at the start of each line (max 6 bullets), each "
         "citing its source [n]; otherwise add 1–3 tight sentences. No filler or repetition. "
         "STRICT RULE: ground EVERYTHING only in the provided SOURCES and MAP FACTS. Using your own or "
-        "outside knowledge is forbidden. Never invent facts, numbers, agencies, or laws that are not "
+        "outside knowledge is forbidden, even if you know the answer. If the user asks about something "
+        "not in the SOURCES or MAP FACTS, say so rather than filling the gap. "
+        "Never invent facts, numbers, agencies, or laws that are not "
         "literally in the SOURCES. Never write links, URLs, or web addresses — sources are shown "
         "separately with their link. "
         "When you rely on a dated source or map layer, note its year (e.g., 'per the 2018 FEMA layer'). "
@@ -193,6 +197,14 @@ def _spatial_block(spatial: dict[str, Any], lang: str) -> str:
         lines.append(f"- {_HAZARD_LABELS.get(key, key)}: {yes if val else no}")
     for label, count in (spatial.get("facilities") or {}).items():
         lines.append(f"- {label}: {count}")
+    shown = spatial.get("active_layers") or []
+    if shown:
+        head_l = ("Capas visibles ahora en el mapa" if lang == "es"
+                  else "Layers the user currently has on the map")
+        names = ", ".join(
+            f"{l.get('name')}" + (f" ({l.get('year')})" if l.get("year") else "")
+            for l in shown if l.get("name"))
+        lines.append(f"- {head_l}: {names}")
     if not lines:
         return ""
     head = ("DATOS DEL LUGAR SELECCIONADO (de las capas oficiales del mapa; cítalos como "

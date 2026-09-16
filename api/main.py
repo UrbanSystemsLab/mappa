@@ -57,6 +57,9 @@ class AskRequest(BaseModel):
     spatial: dict | None = None
     # Answer language chosen in the UI ("es" or "en").
     lang: str | None = None
+    # Layers currently displayed on the map, so the answer can reference what the
+    # user is actually looking at rather than guessing.
+    active_layers: list[dict] = Field(default_factory=list)
 
 
 class Citation(BaseModel):
@@ -102,7 +105,11 @@ def ask(req: AskRequest) -> AskResponse:
     context = dict(req.spatial or {})
     if facilities:
         context["facilities"] = facilities
-    has_context = bool(req.spatial) or bool(facilities)
+    if req.active_layers:
+        context["active_layers"] = req.active_layers
+    # Layers on screen count as context too: 'what am I looking at?' is a real
+    # question and should not be turned away by the relevance gate.
+    has_context = bool(req.spatial) or bool(facilities) or bool(req.active_layers)
 
     focus = spatial.municipio_bbox(municipio)
 

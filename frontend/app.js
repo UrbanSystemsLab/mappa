@@ -161,6 +161,12 @@ async function ask() {
         location: activeLocation,
         spatial: activeSpatial,
         lang: LANG,
+        // What the user is actually looking at, so the answer can speak to the
+        // layers on screen instead of guessing what they mean.
+        active_layers: [...ACTIVE.values()].map(l => ({
+          id: l.id, name: l.name, theme: l.theme,
+          year: l.source && l.source.year, agency: l.source && l.source.agency,
+        })),
       }),
     });
     const d = await r.json();

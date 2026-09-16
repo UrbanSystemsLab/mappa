@@ -19,13 +19,27 @@ to cache indefinitely at a CDN.
 
 from __future__ import annotations
 
+import logging
 import math
 import os
+import threading
 from typing import Any
 
 from . import db
 
 DB_URL = os.environ.get("DATABASE_URL")
+
+log = logging.getLogger(__name__)
+
+# Short on purpose: a slow tile should give up quickly and return empty rather than
+# hold a pooled connection while the map waits on it.
+TILE_TIMEOUT_MS = int(os.environ.get("TILE_TIMEOUT_MS", "8000"))
+
+# A single map view requests many tiles at once. Without a gate they all try to
+# borrow a connection at the same moment and drain the pool, which then fails
+# unrelated requests including /ask. Cap in-flight tile queries below the pool size
+# so there is always a connection left for everything else.
+_TILE_GATE = threading.Semaphore(int(os.environ.get("TILE_CONCURRENCY", "3")))
 
 
 def tile_bounds_4326(z: int, x: int, y: int) -> tuple[float, float, float, float]:
@@ -115,20 +129,12 @@ def tile(name: str, z: int, x: int, y: int) -> bytes | None:
     if "Polygon" in (meta["geometry_type"] or "") and z < 11:
         area_filter = f" AND ST_Area(l.geom) > {tile_area / 4_000_000.0:.12g}"
 
-    # Simplify before reprojecting at low zoom. Tolerance is ~1/4096th of the tile
-    # (one MVT unit), i.e. detail finer than a pixel — invisible at this zoom, but a
-    # large share of the vertices and therefore of the CPU cost.
-    geom_expr = "l.geom"
-    if z < 13:
-        tol = (e - w) / _EXTENT
-        geom_expr = f"ST_SimplifyPreserveTopology(l.geom, {tol:.12g})"
-
     # `name` is whitelisted via spatial_layers above; bounds are bound parameters.
     sql = f"""
         SELECT ST_AsMVT(t, 'layer', {_EXTENT}, 'geom') FROM (
             SELECT
                 ST_AsMVTGeom(
-                    ST_Transform({geom_expr}, 3857),
+                    ST_Transform(l.geom, 3857),
                     ST_TileEnvelope(%(z)s, %(x)s, %(y)s), {_EXTENT}, {_BUFFER}, true
                 ) AS geom
                 {select_extra}
@@ -138,13 +144,16 @@ def tile(name: str, z: int, x: int, y: int) -> bytes | None:
               {area_filter}
         ) AS t WHERE t.geom IS NOT NULL
     """
-    with db.connection() as conn:
-        cur = conn.cursor()
-        
-        cur.execute("SET LOCAL statement_timeout = '25s'")
-        cur.execute(sql, {"z": z, "x": x, "y": y, "w": w, "s": s, "e": e, "n": n})
-        row = cur.fetchone()
-    return bytes(row[0]) if row and row[0] else b""
+    try:
+        with _TILE_GATE, db.connection() as conn:
+            cur = conn.cursor()
+            cur.execute(f"SET LOCAL statement_timeout = '{TILE_TIMEOUT_MS}ms'")
+            cur.execute(sql, {"z": z, "x": x, "y": y, "w": w, "s": s, "e": e, "n": n})
+            row = cur.fetchone()
+        return bytes(row[0]) if row and row[0] else b""
+    except Exception as exc:
+        log.warning("tile %s %s/%s/%s failed: %s", name, z, x, y, exc)
+        return b""
 
 
 def tilejson(name: str, base_url: str) -> dict[str, Any] | None:
