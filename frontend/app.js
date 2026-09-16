@@ -1,43 +1,69 @@
+// ---------------------------------------------------------------------------
+// Basemap. A vector style rather than raster tiles: real cartographic hierarchy,
+// labels that stay sharp at every zoom, and a muted ground that lets data layers
+// read on top of it. OpenFreeMap serves OpenMapTiles-schema vector tiles with no
+// key and no per-view billing, which matters for a tool La Marana inherits.
+// Falls back to OSM raster if the vector style cannot be reached, so the map
+// always draws something.
+// ---------------------------------------------------------------------------
+const BASEMAPS = [
+  { id: 'claro',  es: 'Claro',  en: 'Light',    style: 'https://tiles.openfreemap.org/styles/positron' },
+  { id: 'detalle',es: 'Detalle',en: 'Detailed', style: 'https://tiles.openfreemap.org/styles/liberty' },
+  { id: 'calles', es: 'Calles', en: 'Streets',  style: null },   // null = raster fallback
+];
+let basemapId = localStorage.getItem('mappealo.basemap') || 'claro';
+const basemapStyle = id => {
+  const b = BASEMAPS.find(x => x.id === id) || BASEMAPS[0];
+  return b.style || RASTER_FALLBACK;
+};
+const VECTOR_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+const RASTER_FALLBACK = {
+  version: 8,
+  sources: {
+    basemap: {
+      type: 'raster',
+      tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256, maxzoom: 19,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{
+    id: 'basemap', type: 'raster', source: 'basemap',
+    paint: { 'raster-saturation': -0.35, 'raster-contrast': -0.05, 'raster-opacity': 0.94 },
+  }],
+};
+
 let map = null;
+let usingFallback = false;
 try {
   map = new maplibregl.Map({
-  container: 'map',
-  // Free, no-key basemap (Carto Voyager) — real streets + municipio labels.
-  style: {
-    version: 8,
-    sources: {
-      basemap: {
-        type: 'raster',
-        tiles: [
-          'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        ],
-        tileSize: 256,
-        maxzoom: 19,
-        attribution: '© OpenStreetMap contributors',
-      },
-    },
-    layers: [{
-      id: 'basemap', type: 'raster', source: 'basemap',
-      paint: {
-        'raster-saturation': -0.35,   // step the ground back without killing it
-        'raster-contrast': -0.05,
-        'raster-brightness-min': 0.04,
-        'raster-brightness-max': 1,
-        'raster-opacity': 0.94,
-      },
-    }],
-  },
+    container: 'map',
+    style: basemapStyle(basemapId),
     center: [-66.25, 18.22],
-    zoom: 8.4,
+    zoom: 8.3,
+    attributionControl: { compact: true },
   });
-  map.addControl(new maplibregl.NavigationControl());
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+  map.addControl(new maplibregl.ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-left');
+
+  // If the vector style never arrives, swap to raster once and re-apply any layers
+  // the user had turned on.
+  map.on('error', (ev) => {
+    const failedStyle = ev && ev.error && /style|sprite|glyph/i.test(String(ev.error.message || ''));
+    if (usingFallback || !failedStyle || map.isStyleLoaded()) return;
+    usingFallback = true;
+    map.setStyle(RASTER_FALLBACK);
+    map.once('styledata', () => {
+      const ids = [...ACTIVE.keys()];
+      ACTIVE.clear();
+      ids.forEach(addLayer);
+    });
+  });
 } catch (err) {
-  // No WebGL (old browser, blocklisted GPU, headless). Degrade to chat + catalog
-  // rather than taking the whole page down.
   const el = document.getElementById('map');
-  if (el) el.innerHTML = '<div style="padding:20px;color:#6b7770;font-size:13px">' +
+  if (el) el.innerHTML = '<div style="padding:20px;color:#68746e;font-size:13px">' +
     'El mapa no está disponible en este navegador. / Map unavailable in this browser.</div>';
 }
 
@@ -529,18 +555,26 @@ loadCatalog();
     document.querySelector('main').classList.toggle('chat-hidden');
     setTimeout(() => { if (map) map.resize(); }, 210);   // let the grid settle, then re-measure
   };
+  const bm = document.getElementById('basemapsel');
+  if (bm) {
+    bm.innerHTML = BASEMAPS.map(b =>
+      `<option value="${b.id}"${b.id === basemapId ? ' selected' : ''}>${b[LANG] || b.en}</option>`).join('');
+    bm.onchange = () => {
+      basemapId = bm.value;
+      try { localStorage.setItem('mappealo.basemap', basemapId); } catch (e) { /* private mode */ }
+      if (!map) return;
+      const keep = [...ACTIVE.keys()];
+      map.setStyle(basemapStyle(basemapId));
+      // A style swap drops every layer we added, so put them back once it settles.
+      map.once('styledata', () => { ACTIVE.clear(); keep.forEach(addLayer); });
+    };
+  }
   const lt = document.getElementById('lyrtoggle');
   if (lt) lt.onclick = () => {
-    const list = document.getElementById('layerlist');
-    const q2 = document.getElementById('lyrq');
-    const hidden = list.style.display === 'none';
-    list.style.display = hidden ? '' : 'none';
-    if (q2) q2.style.display = hidden ? '' : 'none';
-    lt.innerHTML = hidden ? '&#9662;' : '&#9656;';
+    document.querySelector('main').classList.toggle('layers-hidden');
     setTimeout(() => { if (map) map.resize(); }, 210);
   };
 }
-
 
 // Fly/zoom the map to a bbox [w,s,e,n] the chat is answering about.
 function focusBBox(bbox) {
