@@ -412,10 +412,10 @@ function addLayer(id) {
       paint: { 'circle-radius': 5, 'circle-color': color,
                'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
   }
-  // Clicking any feature - polygon, line or point - shows its attributes.
+  // Cursor feedback only — the click itself is handled once at map level, so
+  // overlapping layers report together instead of each replacing the other's popup.
   [base, base + '_ln'].forEach(lid => {
     if (!map.getLayer(lid)) return;
-    map.on('click', lid, featurePopup);
     map.on('mouseenter', lid, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', lid, () => { map.getCanvas().style.cursor = ''; });
   });
@@ -503,26 +503,33 @@ async function showLayerInfo(id) {
   } catch (e) { /* non-fatal */ }
 }
 
-function featurePopup(e) {
-  const f = e.features && e.features[0];
-  if (!f) return;
-  const props = f.properties || {};
-  // Which layer was clicked, so the popup can say what the feature belongs to.
-  const lid = (f.layer && f.layer.id || '').replace(/^lyr_/, '').replace(/_ln$/, '');
-  const rec = ACTIVE.get(lid);
-  const rows = Object.entries(props)
-    .filter(([k, v]) => v !== null && v !== '' && v !== undefined)
-    .slice(0, 8)
-    .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(String(v))}</td></tr>`)
+// Label a field and a value using the registry, never the raw column name.
+function fieldLabel(rec, key) {
+  const m = (rec && rec.property_labels) || {};
+  const l = m[key] || m[key.toLowerCase()];
+  return l ? (l[LANG] || l.en || key) : key.replace(/_/g, ' ');
+}
+function valueLabel(rec, val) {
+  const m = (rec && rec.value_labels) || {};
+  const l = m[String(val)] || m[String(val).toUpperCase()];
+  return l ? (l[LANG] || l.en || val) : val;
+}
+
+// One card per layer present at the clicked point.
+function featureCard(rec, props) {
+  const shown = (rec && rec.tile_properties_order) || Object.keys(props);
+  const rows = shown
+    .filter(k => k !== 'id' && props[k] !== null && props[k] !== '' && props[k] !== undefined)
+    .slice(0, 6)
+    .map(k => `<tr><th>${esc(fieldLabel(rec, k))}</th><td>${esc(String(valueLabel(rec, props[k])))}</td></tr>`)
     .join('');
-  const head = rec ? `<div class="fp-h">${esc(rec.name)}${
-    rec.source && rec.source.year ? ` · ${rec.source.year}` : ''}</div>` : '';
-  const body = rows
-    ? `<table class="fp">${rows}</table>`
-    : `<div class="fp-none">${LANG === 'es'
-        ? 'Esta capa no trae atributos para este elemento.'
-        : 'This layer carries no attributes for this feature.'}</div>`;
-  showPopup(e.lngLat, head + body);
+  const sw = `<span class="fp-sw" style="background:${(rec && rec.style && rec.style.color) || '#0b5d4b'}"></span>`;
+  const yr = rec && rec.source && rec.source.year ? ` · ${rec.source.year}` : '';
+  return `<div class="fp-card">
+      <div class="fp-h">${sw}${esc(rec ? rec.name : 'Capa')}${yr}</div>
+      ${rows ? `<table class="fp">${rows}</table>`
+             : `<div class="fp-none">${LANG === 'es' ? 'Sin atributos' : 'No attributes'}</div>`}
+    </div>`;
 }
 
 // Turn on layers the answer referenced, by matching catalog keywords.
@@ -598,37 +605,53 @@ function showPopup(lngLat, html) {
 }
 
 if (map) map.on('click', async (e) => {
-  // Only a point feature (hospital/school/shelter dot) shows its own popup; clicking
-  // empty land, a boundary, or a hazard area still gives the location card.
-  const onPoint = map.queryRenderedFeatures(e.point)
-    .some(f => f.layer && f.layer.type === 'circle' && (f.layer.id || '').startsWith('lyr_'));
-  if (onPoint) return;
+  // Everything the user actually clicked, across every active layer. Previously
+  // each layer had its own handler and they overwrote each other's popup, so the
+  // same layer appeared no matter where you clicked.
+  const ids = [];
+  ACTIVE.forEach((rec, id) => { [LYR(id), LYR(id) + '_ln'].forEach(x => {
+    if (map.getLayer(x)) ids.push(x); }); });
+  const hits = ids.length ? map.queryRenderedFeatures(e.point, { layers: ids }) : [];
+
+  // Collapse to one card per layer — a click often lands on both a polygon and its
+  // own outline, which is the same feature twice.
+  const byLayer = new Map();
+  hits.forEach(f => {
+    const lid = (f.layer && f.layer.id || '').replace(/^lyr_/, '').replace(/_ln$/, '');
+    if (!byLayer.has(lid)) byLayer.set(lid, f.properties || {});
+  });
+
+  const cards = [...byLayer.entries()]
+    .map(([lid, props]) => featureCard(ACTIVE.get(lid), props)).join('');
+
+  // Always include where this is and what the hazard layers say, so a click is
+  // useful even on empty ground.
   const { lng, lat } = e.lngLat;
   let info;
-  try {
-    info = await (await fetch(`/locate?lng=${lng}&lat=${lat}`)).json();
-  } catch (err) { info = { municipio: null, hazards: {} }; }
+  try { info = await (await fetch(`/locate?lng=${lng}&lat=${lat}`)).json(); }
+  catch (err) { info = { municipio: null, hazards: {} }; }
+
   if (locMarker) locMarker.remove();
   locMarker = new maplibregl.Marker({ color: '#0b5d4b' }).setLngLat([lng, lat]).addTo(map);
 
   const muni = info.municipio;
   const h = info.hazards || {};
   const es = LANG === 'es';
-  const yn = b => b ? `<b style="color:#c53030">${es ? 'Sí' : 'Yes'}</b>` : 'No';
+  const yn = b => b ? `<b class="yes">${es ? 'Sí' : 'Yes'}</b>` : `<span class="no">No</span>`;
   pending = muni ? { municipio: muni, spatial: info } : null;
-  const askTxt = es ? 'Preguntar sobre este lugar' : 'Ask about this place';
-  const floodTxt = es ? 'Zona inundable' : 'Flood zone';
-  const slideTxt = es ? 'Deslizamiento' : 'Landslide';
-  const action = muni
-    ? `<button class="askbtn" onclick="askHere()">${askTxt}</button>`
-    : `<div style="color:#888;margin-top:6px">${es ? 'Fuera de Puerto Rico' : 'Outside Puerto Rico'}</div>`;
-  const html = `<div style="font-size:13px;line-height:1.6">
-      <b>📍 ${esc(muni || '—')}</b><br>
-      ${floodTxt} — 2009: ${yn(h.flood_2009)} · 2018: ${yn(h.flood_0_2pct_2018)}<br>
-      ${slideTxt}: ${yn(h.landslide)}
-      <div style="margin-top:8px">${action}</div>
+
+  const place = `<div class="fp-card fp-place">
+      <div class="fp-h">📍 ${esc(muni || (es ? 'Fuera de Puerto Rico' : 'Outside Puerto Rico'))}</div>
+      <table class="fp">
+        <tr><th>${es ? 'Inundación 2009' : 'Flood 2009'}</th><td>${yn(h.flood_2009)}</td></tr>
+        <tr><th>${es ? 'Inundación 2018' : 'Flood 2018'}</th><td>${yn(h.flood_0_2pct_2018)}</td></tr>
+        <tr><th>${es ? 'Deslizamiento' : 'Landslide'}</th><td>${yn(h.landslide)}</td></tr>
+      </table>
+      ${muni ? `<button class="askbtn" onclick="askHere()">${
+        es ? 'Preguntar sobre este lugar' : 'Ask about this place'}</button>` : ''}
     </div>`;
-  showPopup([lng, lat], html);
+
+  showPopup([lng, lat], place + cards);
 });
 
 // Global so the popup button's onclick works with no DOM-timing issues.

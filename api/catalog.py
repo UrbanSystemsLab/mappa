@@ -22,14 +22,14 @@ _LIST_COLS = """
     source_agency, source_inventory, source_url, vintage_year, license,
     metadata_status, geometry_type, feature_count, srid,
     min_zoom, max_zoom, label_column, sublabel_column, style,
-    dataset_version, status
+    dataset_version, status, property_labels, value_labels
 """
 
 
 def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
     (lid, table, category, subcategory, theme, keywords, agency, inventory, src_url,
      year, license_, mstatus, gtype, fcount, srid, minz, maxz, label_col, sub_col,
-     style, version, status, name, description) = r
+     style, version, status, prop_labels, val_labels, name, description) = r
     return {
         "id": lid,
         "name": name,
@@ -55,6 +55,10 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
         "label_column": label_col,
         "sublabel_column": sub_col,
         "style": style or {},
+        # Human field names and decoded values, so the UI never shows a user a raw
+        # column like CLASIPUT or a bare code like SREP-EP.
+        "property_labels": prop_labels or {},
+        "value_labels": val_labels or {},
         "dataset_version": version,
         "status": status,
         # Version in the path means a republished layer gets fresh tile URLs, so
