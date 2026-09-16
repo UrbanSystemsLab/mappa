@@ -207,6 +207,46 @@
     #layerctl{position:static;width:auto;max-height:none;box-shadow:none;border-radius:0}
     #layerlist{max-height:220px}
   }
+
+  /* ---- panel docked beside the map, not floating on top of it ---- */
+  main{grid-template-columns:minmax(0,30%) minmax(0,44%) 260px;gap:12px}
+  .mappanel{position:relative;display:flex;flex-direction:column;min-height:0;
+            grid-column:2 / span 2}
+  #layerctl{position:absolute;top:0;right:0;bottom:0;z-index:3;width:252px;
+            background:var(--surface);border:1px solid var(--line);border-left:1px solid var(--line);
+            border-radius:0 14px 14px 0;box-shadow:-6px 0 18px rgba(20,40,34,.06);
+            padding:13px 12px;display:flex;flex-direction:column;min-height:0}
+  #layerctl .h{font-size:10px;letter-spacing:.1em;margin-bottom:8px;flex:0 0 auto}
+  .lyrq{flex:0 0 auto}
+  #layerlist{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain}
+  .mapwrap{position:relative;flex:1;min-height:0;display:flex;border-radius:14px 0 0 14px;
+           overflow:hidden;margin-right:252px}
+  .legend{right:264px;bottom:14px}
+
+  /* raise / remove controls */
+  .lrow .ic.up{font-size:12px;color:var(--accent)}
+  .lrow .ic.up:hover{background:var(--accent);color:#fff}
+  .lrow.on{border-left:3px solid var(--accent);padding-left:6px;
+           background:linear-gradient(90deg,rgba(13,148,136,.12),transparent)}
+  /* the filled layer is the first .on row after sorting - mark it */
+  .lrow.on:first-of-type .nm{font-weight:600}
+
+  /* popup: single, tidy, scrollable if long */
+  .maplibregl-popup-content{max-height:320px;overflow-y:auto;border-radius:10px;
+                            padding:12px 14px;box-shadow:0 6px 24px rgba(20,40,34,.18)}
+
+  @media(max-width:1200px){
+    main{grid-template-columns:minmax(0,34%) minmax(0,66%)}
+    .mappanel{grid-column:2}
+  }
+  @media(max-width:820px){
+    main{grid-template-columns:1fr}
+    .mappanel{grid-column:1}
+    #layerctl{position:static;width:auto;border-radius:12px;box-shadow:none}
+    .mapwrap{margin-right:0;border-radius:12px}
+    #layerlist{max-height:200px}
+    .legend{right:14px}
+  }
 </style>
 </head>
 <body>
@@ -247,6 +287,6 @@
   </section>
 </main>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="/static/app.js?v=36"></script>
+<script src="/static/app.js?v=40"></script>
 </body>
 </html>

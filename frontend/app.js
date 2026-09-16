@@ -18,7 +18,16 @@ try {
         attribution: '© OpenStreetMap contributors',
       },
     },
-    layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }],
+    layers: [{
+      id: 'basemap', type: 'raster', source: 'basemap',
+      paint: {
+        'raster-saturation': -0.72,   // drain the colour out of the ground
+        'raster-contrast': -0.12,
+        'raster-brightness-min': 0.12,
+        'raster-brightness-max': 0.97,
+        'raster-opacity': 0.88,
+      },
+    }],
   },
     center: [-66.25, 18.22],
     zoom: 8.4,
@@ -250,11 +259,10 @@ function layerRow(l, isActive) {
   const info = `<button class="ic info" data-act="info" data-id="${l.id}" title="${
     LANG === 'es' ? 'Sobre esta capa' : 'About this layer'}">i</button>`;
   if (isActive) {
-    const op = Math.round(((l.opacity != null ? l.opacity : 1)) * 100);
     return `<div class="lrow on" data-id="${l.id}">
       ${sw}<span class="nm">${esc(l.name)}</span>
-      <input class="op" type="range" min="10" max="100" value="${op}"
-             data-act="opacity" data-id="${l.id}" title="Opacidad">
+      <button class="ic up" data-act="raise" data-id="${l.id}" title="${
+        LANG === 'es' ? 'Traer al frente' : 'Bring to front'}">&#8593;</button>
       ${info}
       <button class="ic rm" data-act="remove" data-id="${l.id}" title="${
         LANG === 'es' ? 'Quitar' : 'Remove'}">&times;</button></div>`;
@@ -327,16 +335,13 @@ document.getElementById('layerlist').addEventListener('click', (e) => {
   if (act === 'add') addLayer(id);
   else if (act === 'remove') removeLayer(id);
   else if (act === 'info') showLayerInfo(id);
+  else if (act === 'raise') raiseLayer(id);
   else if (act === 'clear') [...ACTIVE.keys()].forEach(removeLayer);
   else if (act === 'cat') {
     const c = el.dataset.cat;
     EXPANDED.has(c) ? EXPANDED.delete(c) : EXPANDED.add(c);
     renderLayerPanel();
   }
-});
-document.getElementById('layerlist').addEventListener('input', (e) => {
-  const el = e.target.closest('[data-act="opacity"]');
-  if (el) setLayerOpacity(el.dataset.id, Number(el.value) / 100);
 });
 document.getElementById('lyrq').addEventListener('input', (e) => {
   layerQuery = e.target.value.trim();
@@ -384,7 +389,8 @@ function addLayer(id) {
     map.on('mouseenter', lid, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', lid, () => { map.getCanvas().style.cursor = ''; });
   });
-  ACTIVE.set(id, { ...l, opacity: 1 });
+  ACTIVE.set(id, { ...l });
+  restyle();
   renderLayerPanel();
 }
 
@@ -393,20 +399,56 @@ function removeLayer(id) {
   [LYR(id), LYR(id) + '_ln'].forEach(x => { if (map.getLayer(x)) map.removeLayer(x); });
   if (map.getSource(SRC(id))) map.removeSource(SRC(id));
   ACTIVE.delete(id);
+  restyle();
   renderLayerPanel();
 }
 
-function setLayerOpacity(id, v) {
-  const rec = ACTIVE.get(id);
-  if (!rec || !map) return;
-  rec.opacity = v;
-  [LYR(id), LYR(id) + '_ln'].forEach(x => {
-    if (!map.getLayer(x)) return;
-    const type = map.getLayer(x).type;
-    const base = type === 'fill'
-      ? (rec.style && rec.style.fillOpacity != null ? rec.style.fillOpacity : 0.35) : 1;
-    map.setPaintProperty(x, paintKey(type), base * v);
+// Stacking rules. Two flat 35% fills make mud and three are unreadable, so only the
+// topmost polygon layer is filled - everything under it keeps its outline and reads
+// as a boundary. Draw order follows meaning rather than the order things were
+// clicked: boundaries sit under hazards, hazards under facilities.
+const STACK_ORDER = { political: 0, uso_de_terrenos: 1, inundacion: 2, deslizamiento: 3,
+                      vias: 4, refugios: 5, educacion: 6, salud: 7 };
+
+function restyle() {
+  if (!map) return;
+  const actives = [...ACTIVE.values()];
+  // Sort by meaning, then by the order the user added them.
+  const ordered = actives
+    .map((l, i) => ({ l, i }))
+    .sort((a, b) => (STACK_ORDER[a.l.theme] ?? 2) - (STACK_ORDER[b.l.theme] ?? 2) || a.i - b.i)
+    .map(x => x.l);
+
+  const polys = ordered.filter(l => (l.geometry_type || '').toLowerCase().includes('polygon'));
+  const topPoly = polys.length ? polys[polys.length - 1].id : null;
+
+  ordered.forEach(l => {
+    const fillId = LYR(l.id);
+    if (map.getLayer(fillId) && map.getLayer(fillId).type === 'fill') {
+      const target = l.id === topPoly
+        ? (l.style && l.style.fillOpacity != null ? l.style.fillOpacity : 0.4)
+        : 0;                                  // underneath: outline only
+      map.setPaintProperty(fillId, 'fill-opacity', target);
+    }
+    // Outlines get heavier when a layer is not the filled one, so it still reads.
+    const lnId = fillId + '_ln';
+    if (map.getLayer(lnId)) {
+      map.setPaintProperty(lnId, 'line-width', l.id === topPoly ? 0.7 : 1.3);
+      map.setPaintProperty(lnId, 'line-opacity', l.id === topPoly ? 0.55 : 0.95);
+    }
+    // Re-assert draw order.
+    [fillId, lnId].forEach(x => { if (map.getLayer(x)) map.moveLayer(x); });
   });
+}
+
+// Bring a layer to the front: it becomes the filled one.
+function raiseLayer(id) {
+  const rec = ACTIVE.get(id);
+  if (!rec) return;
+  ACTIVE.delete(id);
+  ACTIVE.set(id, rec);     // re-insert last = most recently raised
+  restyle();
+  renderLayerPanel();
 }
 
 // Per-layer provenance card - what the layer is, where it came from, and how
@@ -450,8 +492,7 @@ function featurePopup(e) {
     : `<div class="fp-none">${LANG === 'es'
         ? 'Esta capa no trae atributos para este elemento.'
         : 'This layer carries no attributes for this feature.'}</div>`;
-  new maplibregl.Popup({ closeOnClick: true, maxWidth: '280px' })
-    .setLngLat(e.lngLat).setHTML(head + body).addTo(map);
+  showPopup(e.lngLat, head + body);
 }
 
 // Turn on layers the answer referenced, by matching catalog keywords.
@@ -508,6 +549,15 @@ function focusBBox(bbox) {
 // ---------------------------------------------------------------------------
 let locMarker = null;
 let pending = null;
+// Exactly one popup on the map at a time.
+let openPopup = null;
+function showPopup(lngLat, html) {
+  if (openPopup) openPopup.remove();
+  openPopup = new maplibregl.Popup({ closeOnClick: true, maxWidth: '290px' })
+    .setLngLat(lngLat).setHTML(html).addTo(map);
+  openPopup.on('close', () => { openPopup = null; });
+  return openPopup;
+}
 
 if (map) map.on('click', async (e) => {
   // Only a point feature (hospital/school/shelter dot) shows its own popup; clicking
@@ -540,8 +590,7 @@ if (map) map.on('click', async (e) => {
       ${slideTxt}: ${yn(h.landslide)}
       <div style="margin-top:8px">${action}</div>
     </div>`;
-  new maplibregl.Popup({ closeOnClick: true, maxWidth: '260px' })
-    .setLngLat([lng, lat]).setHTML(html).addTo(map);
+  showPopup([lng, lat], html);
 });
 
 // Global so the popup button's onclick works with no DOM-timing issues.

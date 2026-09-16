@@ -256,10 +256,18 @@ def narrate(
     if declined:
         citations: list[dict[str, Any]] = []
     else:
-        citations = [
-            {"id": d["id"], "title": d["title"], "year": d.get("year"), "url": d.get("url", "")}
-            for d in docs
-        ]
+        # One citation per document. Retrieval returns several chunks from the same
+        # plan, and listing each as its own source made one document appear six
+        # times in the sources panel.
+        citations = []
+        seen_docs: set[str] = set()
+        for d in docs:
+            key = (d.get("title") or "") + str(d.get("year") or "")
+            if key in seen_docs:
+                continue
+            seen_docs.add(key)
+            citations.append({"id": d["id"], "title": d["title"],
+                              "year": d.get("year"), "url": d.get("url", "")})
     if declined:
         confidence = "baja" if lang == "es" else "low"
     elif lang == "es":
