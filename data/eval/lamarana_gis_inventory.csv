@@ -1,0 +1,25 @@
+folder,drive_id,domain,fills_gap,notes
+pendiente a organizar,17jEkgK3K_DCpCLjsEyinuvUEGIbdYyVb,unsorted,,La Marana still organising this one
+g23_mapa_base_crim_ogp_hidrografia_areas_2006,13WVFBsovwEka3RZe9HoVadF3drEIAqLt,Water,YES,water bodies as areas
+g23_mapa_base_crim_ogp_hidrografia_2006,1Xhmeh-7FhkMCd-iTWcfS6pMHbwOlG6kX,Water,YES,hydrography base map
+Hidrografia_Areas_2006,1Y7SHHkiFyQv0Zvj9DOrjMGtwrHGew8cF,Water,YES,
+Hidrografia_2006,1-_PZBt-Nyli5hJla3QrSbzCDEp6SlhtE,Water,YES,rivers and streams
+Cuencas_NHDPLUS_H_2101_HU4_GPKG 2,1Wv0SUp-oYEnmo-F9JzGhw7vC-pOYCoFj,Water,YES,watersheds NHDPlus
+Areas_protegidas2018_PACAT 2,1HJ207z6Rj3InvAfy6_D8j8ERZhV96fds,Environment,YES,protected areas
+AreasNaturalesProtegidasMarinas_2019,1hu7nVYJuTP91Ym9xo7HUb40xAU1iHoqk,Environment,YES,marine protected areas
+DependenciasDRNA_2010,14FzrhACWgWglg1VN6StafdZds53t0L8n,Environment,YES,DRNA holdings
+Census2020.lpkx 2 2 2,1fHCRDM79a8x5bRIPSJaxoiq0umZ6sxpu,Demographics,YES,2020 census - ArcGIS package
+EstructurasCRIM-PR,1j-q6mlyEr4OLL3o0P6-voSQyAyK2nXmz,Cadastre,YES,CRIM structures
+corredor_agricola_del_sur,1DPLKokBhiB57fyUSfvmlve-5uShooTq9,Agriculture,YES,southern agricultural corridor
+fincas_autoridad_de_tierras_2010 (1),1K-TFxHhXj94fG5kdaYdxBq2TXzlpMH3L,Agriculture,YES,land authority farms
+Agroturismo_2021,1kPHMXBWX6dDvZfcqJcg150ET2KT6Vmw3,Agriculture,YES,agrotourism sites
+Deslizamientos_PRMaria.gdb 2,1n1gwTs93KSLDSovRF5ENzV1uEa9eIVl5,Hazards,,landslides after Maria
+DeslizamientosTerrenosActualizacion_2010,1yZs-DyjpN_wAQbo7vlmX2yTYnwU4USOP,Hazards,,landslide update 2010
+DesalojoTsunami_2003_2012.gdb,1AuHThmXwyVs9QA4gPPSfq_Q0fQh2P8hH,Hazards,,tsunami evacuation zones
+Areas_Desalojo_2003_2012.gdb 2,1AufgrtnXR2pNwq3vOFNPdyH4CAwqDxGE,Hazards,,evacuation areas
+ComunidadesEspeciales_2006,11fMd06GDaviJ_OLT3beREPVlFpkY3mEa,Communities,,special communities
+BARRIOS_Corrected_2015,108vU2R5WXg5sc5afOmmPkBsNUpRRVOBm,Boundaries,,already loaded
+EscuelasPublicas_2021 2,18dUo5tTi-Rf3aTMWipqHkozwXfo-AaNh,Services,,already loaded
+HospederiasEndosadas_2021,1K-2acnJNrXXioO1QPtcvri_WcDWc2RSh,Services,,endorsed lodging
+Finca Eolica de Santa Isabel,1g-hfzhNy4JsO2UckQitx_bNKCB4qW-En,Infrastructure,,wind farm
+Cataño,1rNQJfF7-TXPBBU1iUlEb7ArxNv-Xcmb0,Municipal,,municipality-specific data

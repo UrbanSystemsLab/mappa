@@ -1,0 +1,101 @@
+id	question	category	spec	target	context	persona	geo
+Q001	What information should I review to determine what can be built on a piece of land in Puerto Rico?	Land use	S1	Hybrid	None	Community leader	Puerto Rico
+Q002	What is the difference between urban land, developable land, and rural land?	Land use	S1	Document	None	Resident	Puerto Rico
+Q003	Where can I find current official zoning maps and documents?	Land use	S1	Hybrid	None	Student or researcher	Puerto Rico
+Q004	What community uses are generally permitted on land classified as rural in Caguas?	Land use	S2	Hybrid	None	Nonprofit	Caguas
+Q005	Which municipalities in western Puerto Rico have a current Territorial Plan, and where can those plans be found?	Land use	S2	Hybrid	None	Planning consultant	Western PR
+Q006	What parking rules might apply to a new small business in Rio Piedras?	Land use	S2	Document	None	Business owner	Rio Piedras
+Q007	Does the selected parcel in Santurce appear to allow a community center with an activity hall?	Land use	S3	Hybrid	Map selection	Community leader	Santurce
+Q008	At the selected address in Ponce, is multifamily housing permitted, and what major restrictions would apply?	Land use	S3	Hybrid	Address or pin	Architect	Ponce
+Q009	Is the uploaded architectural project for this Mayaguez parcel consistent with its classification under the Land Use Plan, the Territorial Plan, and applicable zoning?	Land use	S4	Hybrid	Upload+Map	Architect	Mayaguez
+Q010	Compare the two selected parcels, one in Cabo Rojo and one in Rincon, for an affordable housing project, considering permitted uses, density, protected areas, and permit requirements.	Land use	S4	Hybrid	Multi-selection	Community developer	Cabo Rojo/Rincon
+Q011	What official maps are available for understanding exposure to hurricanes, earthquakes, and landslides in Puerto Rico?	Hazards	S1	Spatial	None	Educator	Puerto Rico
+Q012	How should a landslide susceptibility map be interpreted before making a decision about a property?	Hazards	S1	Hybrid	None	Resident	Puerto Rico
+Q013	What information can this platform provide about climate risks to a proposed housing project in Puerto Rico?	Hazards	S1	Hybrid	None	Engineer	Puerto Rico
+Q014	Which barrios in Utuado show greater landslide susceptibility, and what critical facilities are located there?	Hazards	S2	Spatial	None	Municipal staff	Utuado
+Q015	Which areas of Loiza are exposed to storm surge and also have higher populations of older adults?	Hazards	S2	Hybrid	None	Community org	Loiza
+Q016	Where do liquefaction hazards and developed areas overlap in Guanica?	Hazards	S2	Spatial	None	Engineer	Guanica
+Q017	What natural hazards intersect the selected parcel next to PR-10 in Adjuntas?	Hazards	S3	Spatial	Map selection	Engineer	Adjuntas
+Q018	For the polygon drawn along the Humacao coast, show exposure to coastal flooding, erosion, and storm surge.	Hazards	S3	Spatial	Map polygon	Planning consultant	Humacao
+Q019	Do the actions proposed in the uploaded community plan for a Toa Baja barrio address the flood and heat risks identified in official layers and the municipal Mitigation Plan?	Hazards	S4	Hybrid	Upload+Map	Community leader	Toa Baja
+Q020	Prioritize the selected San Juan schools for resilience measures based on flooding, heat, student population, and proximity to shelters.	Hazards	S4	Hybrid	Multi-selection	Government agency	San Juan
+Q021	What territorial information is needed to assess a community's flood risk?	Water	S1	Hybrid	None	Community leader	Puerto Rico
+Q022	What is the difference between being near a river and being inside an official flood zone?	Water	S1	Hybrid	None	Resident	Puerto Rico
+Q023	Can I view Puerto Rico's rivers, reservoirs, canals, and dams together and download a map for a presentation?	Water	S1	Spatial	None	Educator	Puerto Rico
+Q024	Which communities in Carolina are near bodies of water and also inside flood zones?	Water	S2	Spatial	None	Nonprofit	Carolina
+Q025	How many public schools in Arecibo are in flood zones or within 500 meters of a river?	Water	S2	Spatial	None	Researcher	Arecibo
+Q026	Which urban sections of the La Plata River pass through areas with high population density?	Water	S2	Hybrid	None	Planner	La Plata watershed
+Q027	Is the home marked on the map inside a flood zone, and what is the nearest body of water?	Water	S3	Spatial	Pin or address	Resident	Marked location
+Q028	For the selected parcel in Vega Baja, what percentage lies within a flood zone, and what flood classification applies?	Water	S3	Spatial	Map selection	Architect	Vega Baja
+Q029	Compare the area drawn in Cano Martin Pena with the flood provisions of the applicable special plan and cite the relevant sections.	Water	S4	Hybrid	Map polygon	Community advocate	Cano Martin Pena
+Q030	Based on the uploaded hydrologic study and official layers, does the proposed project on this Dorado parcel adequately address river flooding, drainage, and sea-level rise?	Water	S4	Hybrid	Upload+Map	Environmental org	Dorado
+Q031	What types of protected natural areas appear on Puerto Rico's official maps?	Environment	S1	Hybrid	None	Student	Puerto Rico
+Q032	How can I determine whether a proposed activity may affect a wetland, forest, or protected habitat?	Environment	S1	Hybrid	None	Community leader	Puerto Rico
+Q033	Can I create a map of Puerto Rico's natural reserves, forests, beaches, and coastal areas for a class project?	Environment	S1	Spatial	None	Educator	Puerto Rico
+Q034	What protected natural areas and wetlands are located in Cabo Rojo?	Environment	S2	Spatial	None	Environmental org	Cabo Rojo
+Q035	Where do agriculturally valuable lands overlap with or lie near species observations recorded in iNaturalist in the Lajas Valley?	Environment	S2	Hybrid	None	Environmental scientist	Lajas Valley
+Q036	Which beaches in Rincon are near developed areas and coastal erosion zones?	Environment	S2	Spatial	None	Municipal planner	Rincon
+Q037	Does the selected parcel border a wetland or natural reserve, and how far away is it?	Environment	S3	Spatial	Map selection	Resident	Selected parcel
+Q038	Within the polygon drawn near La Parguera, identify mangroves, sensitive habitats, and land-use classifications.	Environment	S3	Hybrid	Map polygon	Environmental org	La Parguera
+Q039	What potential environmental conflicts does the uploaded project in this Cabo Rojo area present when compared with reserves, wetlands, habitats, and applicable regulations?	Environment	S4	Hybrid	Upload+Map	Environmental advocate	Cabo Rojo
+Q040	Compare three proposed road corridors in Puerto Rico's central region based on their potential effects on forests, rivers, slopes, and protected land.	Environment	S4	Hybrid	Multi-selection	Engineering firm	Central region
+Q041	What information about roads and transportation is available on the platform?	Roads	S1	Spatial	None	Resident	Puerto Rico
+Q042	How can I identify communities with limited access to major roads or public transportation?	Roads	S1	Hybrid	None	Social worker	Puerto Rico
+Q043	Can the platform generate a map of roads, bridges, and evacuation routes for community use?	Roads	S1	Spatial	None	Community leader	Puerto Rico
+Q044	How many toll plazas are there altogether in San Juan, Bayamon, and Caguas, and which roads are they on?	Roads	S2	Spatial	None	Researcher	San Juan/Bayamon/Caguas
+Q045	Which barrios in Maricao have primary roads that intersect areas of high landslide susceptibility?	Roads	S2	Spatial	None	Emergency manager	Maricao
+Q046	Which public schools in Bayamon are within 500 meters of an Urban Train station?	Roads	S2	Spatial	None	Transportation planner	Bayamon
+Q047	Does the boundary of the selected lot adjoin a public road shown on the map, and what is the nearest road?	Roads	S3	Spatial	Map selection	Architect	Selected lot
+Q048	For the community outlined on the map in Naranjito, identify bridges and road segments exposed to flooding or landslides.	Roads	S3	Spatial	Map polygon	Community leader	Naranjito
+Q049	Compare the two evacuation routes drawn from this coastal Loiza community based on the flood-prone segments, bridges, and nearby shelters shown along each route.	Roads	S4	Hybrid	Multi-selection	Emergency manager	Loiza
+Q050	Is the road improvement described in the uploaded document consistent with Territorial Plan priorities, and does it avoid impacts on waterways and vulnerable communities along the selected corridor?	Roads	S4	Hybrid	Upload+Map	Planner	Selected corridor
+Q051	What types of public facilities, such as schools and health centers, can I search for on the map?	Services	S1	Spatial	None	Resident	Puerto Rico
+Q052	How can I identify areas that are underserved by schools or health facilities?	Services	S1	Hybrid	None	Nonprofit	Puerto Rico
+Q053	How many hospitals and health centers are in Vieques, and in which barrios are they located?	Services	S2	Spatial	None	Researcher	Vieques
+Q054	Which communities in Salinas are more than five kilometers from a public school?	Services	S2	Spatial	None	Social worker	Salinas
+Q055	What are the three public schools nearest to the marked location, and what grade levels do they serve?	Services	S3	Hybrid	Pin or address	Parent	Marked location
+Q056	Within the selected polygon in Guayama, how many public schools, hospitals, and health centers are listed?	Services	S3	Spatial	Map polygon	Municipal staff	Guayama
+Q057	Which hospital or health center is closest in a straight line to this Yabucoa community, and is that facility inside a flood or landslide zone?	Services	S3	Hybrid	Map selection	Community leader	Yabucoa
+Q058	Prioritize areas of Culebra for a new clinic based on population, age, lack of vehicle access, distance to existing services, and coastal risk.	Services	S4	Hybrid	None	Health planner	Culebra
+Q059	Compare the two selected sites for a new school based on child population, road access, flooding, landslides, and permitted land uses.	Services	S4	Hybrid	Multi-selection	Municipality	Two sites
+Q060	Does the uploaded proposal to convert this building into a shelter meet the Mitigation Plan's criteria and address access gaps for nearby communities?	Services	S4	Hybrid	Upload+Map	Community org	Selected building
+Q061	What Census demographic data can be queried, and at what geographic scales are they available?	Demographics	S1	Hybrid	None	Student	Puerto Rico
+Q062	How can I use the map to identify communities with greater social vulnerability?	Demographics	S1	Hybrid	None	Nonprofit	Puerto Rico
+Q063	Which barrios in Ponce have a share of residents age 65 or older above the municipal average?	Demographics	S2	Hybrid	None	Researcher	Ponce
+Q064	How many public schools are located in Puerto Rico municipalities with populations of 30,000 or more?	Demographics	S2	Hybrid	None	Researcher	Municipalities
+Q065	What are the median age and median income in the selected map area?	Demographics	S3	Hybrid	Map polygon	Planning consultant	Selected area
+Q066	Based on the census units intersecting a one-kilometer radius around the marked location, what estimate is available for people without access to a vehicle?	Demographics	S3	Hybrid	Pin or address	Transportation planner	Marked location
+Q067	Within the outlined community, where do households below the poverty line, older adults, and extreme heat exposure overlap?	Demographics	S3	Hybrid	Map polygon	Social worker	Outlined community
+Q068	Compare the barrios of Canovanas to prioritize resilience investment using poverty, age, disability, vehicle access, flooding, and proximity to services.	Demographics	S4	Hybrid	None	Municipality	Canovanas
+Q069	For the two selected polygons, compare population, housing, tenure, language, internet access, and hazard exposure, identifying the year of each source.	Demographics	S4	Hybrid	Multi-selection	Researcher	Two polygons
+Q070	Do the communities prioritized in the uploaded recovery plan correspond to the areas that currently show the greatest social and climate vulnerabilities?	Demographics	S4	Hybrid	Uploaded document	Community advocate	Municipality in doc
+Q071	What does it mean for land to be classified as an agricultural reserve, and what official information should I review?	Agriculture	S1	Hybrid	None	Farmer	Puerto Rico
+Q072	What layers can help assess whether land is suitable for agriculture?	Agriculture	S1	Spatial	None	Farmer	Puerto Rico
+Q073	How much of Santa Isabel lies within agricultural reserves, and what are its primary soil classifications?	Agriculture	S2	Hybrid	None	Researcher	Santa Isabel
+Q074	Which agricultural areas in the southern region face both drought exposure and limited access to irrigation canals?	Agriculture	S2	Spatial	None	Agricultural org	Southern PR
+Q075	Is the selected farm entirely or partially within an agricultural reserve?	Agriculture	S3	Spatial	Map selection	Farmer	Selected farm
+Q076	For this marked property in Aibonito, show its slope, soil type, nearby bodies of water, and Land Use Plan classification.	Agriculture	S3	Hybrid	Map selection	Farmer	Aibonito
+Q077	What portion of the selected parcel may be suitable for cultivation if we exclude slopes over 20 percent, flood zones, and protected areas?	Agriculture	S3	Spatial	Map selection	Agricultural planner	Selected parcel
+Q078	Compare the three selected farms for community agriculture based on soil quality, slope, water availability, drought risk, road access, and land-use restrictions.	Agriculture	S4	Hybrid	Multi-selection	Community org	Three farms
+Q079	Is the agrivoltaic installation described in the uploaded proposal compatible with the agricultural reserve, Land Use Plan, and regulations applicable to this farm?	Agriculture	S4	Hybrid	Upload+Map	Environmental org	Selected farm
+Q080	Identify potential conflicts among urban expansion, agricultural land, and protected habitats in the selected corridor between Juana Diaz and Santa Isabel, and cite the relevant plans.	Agriculture	S4	Hybrid	Map polygon	Regional planner	Juana Diaz/Santa Isabel
+Q081	What non-personal information from the digital cadastre can I view about a parcel?	Cadastre	S1	Hybrid	None	Resident	Puerto Rico
+Q082	What should I review before proposing a garden, park, or community center on a vacant lot?	Cadastre	S1	Hybrid	None	Community leader	Puerto Rico
+Q083	Which parcels identified as vacant or undeveloped in the available layers are near schools in the municipality of Catano?	Cadastre	S2	Spatial	None	Community org	Catano
+Q084	What public, non-personal information is available about usufruct programs or agreements for community land in San Juan?	Cadastre	S2	Document	None	Nonprofit	San Juan
+Q085	What are the cadastral number, area, and land-use classification of the lot I marked?	Cadastre	S3	Hybrid	Pin or map selection	Resident	Marked lot
+Q086	Is the selected lot near a road, school, hospital, or health center, and which flood zones intersect it?	Cadastre	S3	Spatial	Map selection	Community leader	Selected lot
+Q087	Which parcels inside the community polygon have the largest areas, and what land-use classification is shown for each?	Cadastre	S3	Hybrid	Map polygon	Community org	Community polygon
+Q088	Compare the four selected lots for a community center based on size, permitted use, risks, pedestrian access, and proximity to schools and health centers.	Cadastre	S4	Hybrid	Multi-selection	Community leader	Four lots
+Q089	Do the cadastral number, area, and land-use classification of the selected parcel match the data described in the uploaded document, and what discrepancies can be observed?	Cadastre	S4	Hybrid	Upload+Map	Planner	Selected parcel
+Q090	Using the uploaded community plan, identify candidate parcels within the outlined area that meet the document's requirements for size, zoning, access, risk, and proximity.	Cadastre	S4	Hybrid	Upload+Map polygon	Community org	Outlined area
+Q091	What is the difference between a Territorial Plan, the Puerto Rico Land Use Plan, a Mitigation Plan, and a municipal recovery plan?	Regulations	S1	Document	None	Resident	Puerto Rico
+Q092	How can I verify whether a regulation or territorial plan is still in effect and whether it has been amended?	Regulations	S1	Document	None	Attorney	Puerto Rico
+Q093	Which San Juan municipal ordinances concern land use or community development?	Regulations	S2	Document	None	Community advocate	San Juan
+Q094	Which sections of the current Ponce Territorial Plan address flood-prone areas and community facilities?	Regulations	S2	Document	None	Planning consultant	Ponce
+Q095	Exactly which plans and regulations apply to the point I selected on the map?	Regulations	S3	Hybrid	Map pin	Resident	Selected point
+Q096	For the selected parcel, cite the sections governing the proposed use and explain in plain language what conditions they establish.	Regulations	S3	Hybrid	Map selection	Community leader	Selected parcel
+Q097	Is the drawn area covered by a special plan in addition to the municipal Territorial Plan and the Puerto Rico Land Use Plan?	Regulations	S3	Hybrid	Map polygon	Architect	Drawn area
+Q098	Does the uploaded Environmental Impact Statement address the flooding, habitat, and land-use conditions observed on the parcel, and which claims require verification?	Regulations	S4	Hybrid	Upload+Map	Government agency	Selected parcel
+Q099	Compare the provisions of the Territorial Plan, Mitigation Plan, and uploaded community plan for this area, and identify agreements, contradictions, and unaddressed issues.	Regulations	S4	Hybrid	Upload+Map	Planner	Selected area
+Q100	Does the uploaded project appear compatible with the local and federal laws and regulations applicable to the selected location, and what are the sources and limitations of this nonbinding assessment?	Regulations	S4	Hybrid	Upload+Map	Environmental org	Selected location

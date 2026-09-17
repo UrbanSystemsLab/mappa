@@ -1,0 +1,44 @@
+category,dataset,drive_folder,format,status,priority,theme,notes
+Political,Barrios,BARRIOS_Corrected_2015,shapefile,ready,P0,political,"Corrected barrio boundaries 2015; candidate reference_unit"
+Political,Municipalities,Municipios_2015,shapefile,ready,P0,political,"Candidate reference_unit (municipio)"
+Political,Municipalities (POT),Municipios-POT,shapefile,ready,P1,political,"Municipios with POT linkage"
+Political,Comunidades,ComunidadesEspeciales_2006,shapefile,ready,P1,political,"Comunidades Especiales 2006"
+Natural,Hidrography,Hidrografia_2006,shapefile,ready,P1,hidrografia,"Also g23_mapa_base_crim_ogp_hidrografia_2006"
+Natural,Hidrography (areas),Hidrografia_Areas_2006,shapefile,ready,P1,hidrografia,
+Natural,Watersheds,Watersheds,shapefile,ready,P1,cuencas,"See also Cuencas_NHDPLUS_H_2101_HU4_GPKG (gpkg)"
+Natural,Watersheds (NHDPlus),Cuencas_NHDPLUS_H_2101_HU4_GPKG,geopackage,ready,P1,cuencas,"Has data dictionary xlsx in parent"
+Natural,Topography,SHP-LIDAR,shapefile,partial,P2,topografia,"LIDAR-derived; also SHP-LIDAR.zip"
+Natural,Land Cover,,,missing,P2,cobertura,"Not yet located in Drive"
+Natural,Wetlands,,,missing,P1,humedales,"Not yet located; plan lists humedal layer"
+Natural,Coastline,,,missing,P1,costa,"linea de costas — not yet located"
+Planning,Plan de Uso de Terrenos,PlanUsoTerrenos_2015,shapefile,ready,P0,uso_de_terrenos,"Matches doc-pu-2015 in corpus"
+Planning,Planes de Ordenamiento Territorial,PUT,shapefile,partial,P1,ordenamiento,"PUT folder; confirm contents"
+Planning,Areas Planificacion Especial (Agricolas),ReservasAgricolas_2014,shapefile,ready,P1,agricola,
+Planning,Areas Planificacion Especial (Corredor Agricola),corredor_agricola_del_sur,shapefile,ready,P2,agricola,
+Planning,Parcels CRIM,ParcelarioCRIM-PR,shapefile,ready,P0,parcelas,"Candidate reference_unit (parcel); large"
+Planning,Parcels (Catastral 2024),Puerto Rico Mapa Catastral 2024 - SHP,shapefile,ready,P1,parcelas,"2024 cadastral"
+Planning,Natural Protected Areas (marine),AreasNaturalesProtegidasMarinas_2019,shapefile,ready,P1,areas_protegidas,
+Planning,Natural Protected Areas (PACAT),Areas_protegidas2018_PACAT,shapefile,ready,P1,areas_protegidas,
+Risks,Flood FEMA (1pct),Inundabilidad_1_FEMA_2017,shapefile,ready,P0,inundacion,"1% annual chance flood"
+Risks,Flood FEMA (0.2pct),Inundabilidad_0.2_FEMA_2017,shapefile,ready,P1,inundacion,"0.2% annual chance flood"
+Risks,Flood FEMA (SFHA 2009),g23_riesgo_inunda_s_fld_haz_ar_2009,zip,ready,P1,inundacion,"Zipped shapefile; matches ZonasInundables_2009"
+Risks,Flood zones 2009,ZonasInundables_2009,shapefile,ready,P1,inundacion,
+Risks,Deslizamientos (Maria),Deslizamientos_PRMaria.gdb,esri_gdb,convert,P0,deslizamiento,"Esri GDB — convert to gpkg via ogr2ogr"
+Risks,Deslizamientos (2010),DeslizamientosTerrenosActualizacion_2010,shapefile,ready,P1,deslizamiento,
+Risks,Deslizamientos (rainfall 2022-23),Deslizamientos_rainfall-induced_2022:2023.csv,csv,ready,P2,deslizamiento,"Point CSV lat/lon"
+Risks,Tsunami flood zone,Tsunami_Flood_Zone_2012.gdb,esri_gdb,convert,P1,tsunami,"Esri GDB — convert"
+Risks,Tsunami evacuation,DesalojoTsunami_2003:2012.gdb,esri_gdb,convert,P2,tsunami,"Esri GDB — convert"
+Risks,Coastal Erosion,,,missing,P1,erosion_costera,"Not yet located"
+Risks,Sea Level Rise,,,missing,P1,aumento_nivel_mar,"Not yet located"
+Risks,Heat Island Index,,,missing,P2,isla_calor,"Not yet located"
+Social,Census 2020,Census2020.lpkx 2 2,arcgis_lpkx,convert,P0,censo,"ArcGIS Layer Package — extract/convert; many INCOMPLETO census folders"
+Infrastructure,Roads,SistemaVial,shapefile,ready,P0,vias,
+Infrastructure,Hospitals,Hospitales_CDTs,shapefile,ready,P0,salud,
+Infrastructure,Schools,EscuelasPublicas_2021,shapefile,ready,P1,educacion,
+Infrastructure,Emergency Shelters (2023),Refugios_2023,shapefile,ready,P0,refugios,
+Infrastructure,Emergency Shelters (2015),Refugios_2015,shapefile,ready,P2,refugios,
+Infrastructure,Power grid (AEE),InfraestructuraAEE,shapefile,ready,P1,energia,
+Infrastructure,Water infra (AAA),InfraestructuraAAA,shapefile,ready,P1,agua,
+Infrastructure,Parks / plazas,PlazasPublicas_2010,shapefile,ready,P2,espacios_verdes,
+Infrastructure,Police,,,missing,P2,seguridad,"Not yet located"
+Infrastructure,Public transport,,,missing,P2,transporte,"Not yet located"

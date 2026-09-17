@@ -2,51 +2,314 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Mappa — Asistente Geoespacial de Puerto Rico (MVP)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google" content="notranslate">
+<title>Mappealo — Asistente Geoespacial de Puerto Rico</title>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <style>
-body{font-family:system-ui,sans-serif;margin:0;background:#f5f5f0;color:#222}
-header{background:#0b5d4b;color:#fff;padding:14px 20px}
-header h1{margin:0;font-size:18px}
-header p{margin:4px 0 0;font-size:13px;opacity:.85}
-main{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;height:calc(100vh - 70px)}
-.panel{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:14px;overflow:auto}
-#map{border-radius:8px;min-height:300px}
-textarea{width:100%;height:70px;padding:8px;font:inherit;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}
-button{background:#0b5d4b;color:#fff;border:0;padding:8px 16px;border-radius:6px;cursor:pointer;margin-top:6px}
-button:disabled{opacity:.6}
-.answer{white-space:pre-wrap;background:#fafaf3;padding:10px;border-left:3px solid #0b5d4b;border-radius:4px;margin-top:10px}
-.cite{font-size:13px;margin:4px 0}
-.tag{display:inline-block;background:#e3eee9;color:#0b5d4b;padding:2px 8px;border-radius:10px;font-size:12px;margin-right:4px}
-.meta{font-size:12px;color:#666;margin-top:6px}
-.disc{font-size:12px;color:#555;margin-top:14px;border-top:1px solid #eee;padding-top:8px}
-.samples{font-size:12px;margin-top:8px}
-.samples a{color:#0b5d4b;margin-right:10px;cursor:pointer;text-decoration:underline}
+  /* ============================================================
+     Mappealo — one declaration per selector. Three panes in a flex
+     row: conversation, map, layers. The map is the only flexible
+     one, so it always takes whatever space is left over.
+     ============================================================ */
+  :root{
+    --brand:#0B5D4B; --brand-ink:#08402F; --accent:#0D9488;
+    --bg:#EDEFEC; --surface:#FFFFFF; --surface-2:#F5F7F4; --sunk:#E8ECE8;
+    --ink:#16201C; --muted:#68746E; --faint:#97A19B;
+    --line:#DFE4DF; --line-2:#EDF0EC;
+    --ok:#137A4B; --ok-bg:#E3F3EA;
+    --warn:#96690C; --warn-bg:#F8EFD9;
+    --low:#7C847F; --low-bg:#EEF0EE;
+    --danger:#B3392A;
+    --shadow-sm:0 1px 2px rgba(20,40,34,.06);
+    --shadow:0 1px 2px rgba(20,40,34,.05), 0 6px 18px rgba(20,40,34,.07);
+    --font:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --topbar-h:52px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#101614; --surface:#171F1C; --surface-2:#1D2622; --sunk:#222C28;
+      --ink:#E7ECE8; --muted:#95A29C; --faint:#6D7A74;
+      --line:#2A3531; --line-2:#222C28;
+      --brand:#3E9E85; --brand-ink:#2F7F6A; --accent:#2FC7B4;
+      --ok:#4CC08A; --ok-bg:rgba(76,192,138,.14);
+      --warn:#D9AE4B; --warn-bg:rgba(217,174,75,.14);
+      --low:#7C877F; --low-bg:rgba(124,135,127,.14);
+      --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.34);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#101614; --surface:#171F1C; --surface-2:#1D2622; --sunk:#222C28;
+    --ink:#E7ECE8; --muted:#95A29C; --faint:#6D7A74;
+    --line:#2A3531; --line-2:#222C28;
+    --brand:#3E9E85; --brand-ink:#2F7F6A; --accent:#2FC7B4;
+    --ok:#4CC08A; --ok-bg:rgba(76,192,138,.14);
+    --warn:#D9AE4B; --warn-bg:rgba(217,174,75,.14);
+    --low:#7C877F; --low-bg:rgba(124,135,127,.14);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.34);
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);
+       -webkit-font-smoothing:antialiased;overflow:hidden}
+  button{font-family:inherit}
+
+  /* ---------- top bar ---------- */
+  .topbar{height:var(--topbar-h);display:flex;align-items:center;gap:12px;
+          background:var(--brand);color:#fff;padding:0 18px}
+  .topbar .brand{font-weight:700;font-size:18px;letter-spacing:.01em;white-space:nowrap}
+  .topbar .tag{font-size:12.5px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chattog{margin-left:auto;background:rgba(255,255,255,.14);border:0;color:#fff;cursor:pointer;
+           border-radius:7px;padding:5px 10px;font-size:13px;line-height:1}
+  .chattog:hover{background:rgba(255,255,255,.24)}
+  .langtog{display:flex;gap:2px;background:rgba(255,255,255,.14);border-radius:999px;padding:2px}
+  .langtog a{cursor:pointer;font-size:11.5px;font-weight:600;color:#fff;padding:3px 11px;
+             border-radius:999px;opacity:.82}
+  .langtog a.on{background:#fff;color:var(--brand);opacity:1}
+
+  /* ---------- shell: chat | map | layers ---------- */
+  main{display:flex;height:calc(100vh - var(--topbar-h));gap:12px;padding:12px;background:var(--bg)}
+  /* Insight panel — the answers are the product, so it gets real width. */
+  .chat{flex:0 0 clamp(360px,29vw,470px);min-width:0;display:flex;flex-direction:column;
+        background:var(--surface);border:1px solid var(--line);border-radius:14px;
+        box-shadow:var(--shadow);overflow:hidden}
+  /* One map surface. The layer list sits inside it, separated by a hairline, so it
+     reads as a control on the map rather than a third column of the app. */
+  .mappanel{flex:1 1 auto;min-width:0;display:flex;position:relative;background:var(--surface);
+            border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+  #map{flex:1 1 auto;min-width:0;min-height:0}
+  #layerctl{flex:0 0 256px;min-height:0;display:flex;flex-direction:column;
+            background:var(--surface);border-left:1px solid var(--line);padding:12px 11px}
+  main.chat-hidden .chat{display:none}
+  main.layers-hidden #layerctl{display:none}
+  /* Toggle for the layer list, floating on the map beside the zoom controls. */
+  .lyrbtn{position:absolute;top:10px;right:calc(256px + 10px);z-index:4;background:var(--surface);
+          border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm);cursor:pointer;
+          font-size:11.5px;font-weight:600;color:var(--ink);padding:6px 11px;line-height:1.2}
+  .lyrbtn:hover{background:var(--surface-2)}
+  /* location search, sitting on the map like any other map control */
+  .mapsearch{position:absolute;top:10px;left:10px;z-index:4;width:266px}
+  .mapsearch input{width:100%;padding:8px 12px 8px 30px;font:inherit;font-size:12.5px;
+                   border:1px solid var(--line);border-radius:9px;outline:none;
+                   background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm)}
+  .mapsearch input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(13,148,136,.13)}
+  .mapsearch::before{content:"⌕";position:absolute;left:11px;top:6px;font-size:15px;
+                     color:var(--faint);pointer-events:none;z-index:1}
+  .placeres{display:none;margin-top:5px;background:var(--surface);border:1px solid var(--line);
+            border-radius:9px;box-shadow:var(--shadow);overflow:hidden;max-height:260px;
+            overflow-y:auto}
+  .placeres.on{display:block}
+  .placeres button{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;border:0;
+                   background:none;cursor:pointer;padding:7px 11px;font:inherit;font-size:12.5px;
+                   color:var(--ink)}
+  .placeres button:hover{background:var(--surface-2)}
+  .placeres .kind{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;
+                  margin-left:auto}
+  .bmsel{font:inherit;font-size:10.5px;color:var(--muted);background:var(--surface-2);
+         border:1px solid var(--line);border-radius:6px;padding:2px 5px;cursor:pointer;
+         text-transform:none;letter-spacing:0;font-weight:500;max-width:96px}
+  main.layers-hidden .lyrbtn{right:10px}
+
+  /* ---------- conversation ---------- */
+  .messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:13px}
+  .empty{margin:auto 0 0;padding:4px 2px 0;color:var(--muted);max-width:none;text-align:left}
+  .empty .icon{font-size:22px;opacity:.85}
+  .empty h3{margin:8px 0 6px;color:var(--ink);font-size:16px;letter-spacing:-.01em}
+  .empty p{margin:0;font-size:12.5px;line-height:1.6}
+  .empty .hint{margin-top:13px;padding-top:11px;border-top:1px solid var(--line-2);
+               font-size:11.5px;color:var(--faint);line-height:1.65}
+  .empty .hint b{color:var(--muted);font-weight:600}
+  .row{display:flex}
+  .row.user{justify-content:flex-end}
+  .row.bot{justify-content:flex-start}
+  .bubble{max-width:90%;padding:10px 13px;border-radius:14px;line-height:1.55;font-size:13.5px;
+          white-space:pre-wrap;word-wrap:break-word}
+  .row.user .bubble{background:var(--brand);color:#fff;border-bottom-right-radius:4px}
+  .row.bot .bubble{background:var(--surface-2);border:1px solid var(--line);
+                   border-bottom-left-radius:4px}
+  .who{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:.07em;
+       text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .badge{font-size:10px;font-weight:700;text-transform:none;letter-spacing:0;padding:1px 8px;
+         border-radius:999px}
+  .badge.ok{background:var(--ok-bg);color:var(--ok)}
+  .badge.warn{background:var(--warn-bg);color:var(--warn)}
+  .badge.low{background:var(--low-bg);color:var(--low)}
+  .cites{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .cites-h{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+           color:var(--muted);margin-bottom:5px}
+  .cite{font-size:12px;margin:3px 0;line-height:1.45}
+  .cite a{color:var(--brand);text-decoration:none}
+  .cite a:hover{text-decoration:underline}
+  .layers{margin-top:8px;display:flex;flex-wrap:wrap;gap:4px}
+  .tag{display:inline-block;background:var(--ok-bg);color:var(--brand);padding:2px 9px;
+       border-radius:999px;font-size:11px}
+  .typing{color:var(--muted);font-style:italic}
+
+  /* ---------- composer ---------- */
+  .composer{border-top:1px solid var(--line);padding:11px 13px;background:var(--surface);flex:0 0 auto}
+  .samples{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+  .samples a{font-size:11.5px;color:var(--brand);background:var(--surface-2);
+             border:1px solid var(--line);padding:3px 10px;border-radius:999px;cursor:pointer}
+  .samples a:hover{background:var(--ok-bg)}
+  .inputrow{display:flex;gap:7px;align-items:flex-end}
+  textarea{flex:1;min-width:0;height:44px;max-height:120px;padding:11px 13px;font:inherit;
+           font-size:13.5px;border:1px solid var(--line);border-radius:11px;resize:none;outline:none;
+           background:var(--surface);color:var(--ink)}
+  textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(13,148,136,.13)}
+  #go{background:var(--brand);color:#fff;border:0;width:44px;height:44px;border-radius:11px;
+      cursor:pointer;font-size:17px;flex:0 0 auto}
+  #go:hover{background:var(--brand-ink)}
+  #go:disabled{opacity:.5;cursor:default}
+  .composer-meta{display:flex;align-items:center;gap:9px;margin-top:8px;font-size:11.5px}
+  #clear{cursor:pointer;color:var(--muted);text-decoration:underline}
+  .locchip{display:none;background:var(--accent);color:#fff;padding:3px 10px;border-radius:999px;
+           font-size:11.5px}
+  .locchip .x{cursor:pointer;margin-left:7px;font-weight:700}
+  .disc{font-size:10.5px;color:var(--muted);padding:8px 13px;border-top:1px solid var(--line);
+        background:var(--surface-2);line-height:1.5;flex:0 0 auto}
+
+  /* ---------- layer panel ---------- */
+  #layerctl .h{display:flex;align-items:center;justify-content:space-between;font-weight:700;
+               font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);
+               margin-bottom:9px;flex:0 0 auto}
+  #layerctl .h button{background:none;border:0;cursor:pointer;color:var(--muted);font-size:12px}
+  .lyrq{width:100%;padding:7px 11px;margin-bottom:9px;border:1px solid var(--line);border-radius:9px;
+        font:inherit;font-size:12.5px;outline:none;background:var(--surface-2);color:var(--ink);
+        flex:0 0 auto}
+  .lyrq:focus{border-color:var(--accent);background:var(--surface)}
+  #layerlist{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin:0 -3px}
+  #layerlist::-webkit-scrollbar{width:7px}
+  #layerlist::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+  .lsec{margin-bottom:3px}
+  .lsec-h{display:flex;align-items:center;justify-content:space-between;font-size:10px;
+          font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+          padding:6px 5px 4px}
+  .lsec-h.clickable{cursor:pointer;border-radius:6px}
+  .lsec-h.clickable:hover{background:var(--surface-2)}
+  .lsec-h .cnt{font-weight:600;opacity:.7}
+  .lsec-h a{cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;
+            text-decoration:underline;font-size:10.5px}
+  .lrow{display:flex;align-items:center;gap:7px;padding:6px 5px;border-radius:8px;font-size:12.5px;
+        cursor:pointer;line-height:1.3}
+  .lrow:hover{background:var(--surface-2)}
+  .lrow.on{cursor:default;background:var(--ok-bg);box-shadow:inset 2px 0 0 var(--accent)}
+  .lrow .sw{width:9px;height:9px;border-radius:2px;flex:0 0 auto;
+            box-shadow:0 0 0 1.5px var(--surface),0 0 0 2.5px rgba(0,0,0,.09)}
+  .lrow .nm{flex:1;min-width:0}
+  .lrow .yr{color:var(--faint)}
+  .lrow .ic{border:0;background:none;cursor:pointer;color:var(--faint);font-size:12px;width:19px;
+            height:19px;border-radius:5px;flex:0 0 auto;line-height:1;display:flex;
+            align-items:center;justify-content:center}
+  .lrow .ic:hover{background:var(--line);color:var(--ink)}
+  .lrow .ic.info{font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:11px}
+  .lrow .ic.add{font-size:15px;color:var(--brand)}
+  .lrow .ic.up{color:var(--accent);font-size:11px}
+  .lrow .ic.rm:hover{background:rgba(179,57,42,.12);color:var(--danger)}
+  .lempty,.lmore{font-size:11.5px;color:var(--faint);padding:9px 4px;text-align:center}
+  .mstat{font-size:9px;font-weight:700;padding:1px 7px;border-radius:999px;text-transform:uppercase;
+         letter-spacing:.04em}
+  .mstat.ok{background:var(--ok-bg);color:var(--ok)}
+  .mstat.mid{background:var(--warn-bg);color:var(--warn)}
+  .mstat.low{background:var(--low-bg);color:var(--low)}
+  .layerinfo{display:none;border-top:1px solid var(--line);margin-top:9px;padding-top:9px;
+             font-size:12px;flex:0 0 auto;max-height:230px;overflow-y:auto}
+  .layerinfo .li-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+                   margin-bottom:6px}
+  .layerinfo .li-h .ic{border:0;background:none;cursor:pointer;color:var(--faint);font-size:14px}
+  .layerinfo p{margin:0 0 8px;color:var(--muted);line-height:1.5}
+  .layerinfo dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px}
+  .layerinfo dt{color:var(--faint);font-size:10.5px}
+  .layerinfo dd{margin:0;font-size:11.5px}
+
+  /* ---------- map overlays ---------- */
+  .legend{display:none;position:absolute;right:calc(256px + 12px);bottom:12px;
+          background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 12px;
+          font-size:11px;box-shadow:var(--shadow);max-width:210px;z-index:2}
+  main.layers-hidden .legend{right:12px}
+  .legend .lg-h{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+                color:var(--muted);margin-bottom:6px}
+  .legend .lg-r{display:flex;align-items:center;gap:7px;margin:3px 0;line-height:1.3}
+  .legend .lg-k{width:13px;height:9px;border-radius:2px;flex:0 0 auto}
+  .legend .lg-src{margin-top:7px;padding-top:6px;border-top:1px solid var(--line-2);font-size:9.5px;
+                  color:var(--faint)}
+  .maplibregl-popup-content{max-height:300px;overflow-y:auto;border-radius:10px;padding:12px 14px;
+                            box-shadow:0 6px 24px rgba(20,40,34,.2)}
+  .askbtn{background:var(--brand);color:#fff;border:0;padding:6px 12px;border-radius:7px;
+          cursor:pointer;font-size:12px;font-family:inherit;margin-top:8px}
+  .askbtn:hover{background:var(--brand-ink)}
+  .fp-card{padding:9px 0;border-top:1px solid var(--line-2)}
+  .fp-card:first-child{padding-top:0;border-top:0}
+  .fp-place .fp-h{color:var(--ink)}
+  .fp-sw{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;
+         vertical-align:0px}
+  .fp-h{font-weight:700;font-size:12px;margin-bottom:6px;color:var(--brand);
+        display:flex;align-items:center}
+  .fp .yes{color:var(--danger);font-weight:700}
+  .fp .no{color:var(--faint)}
+  table.fp{border-collapse:collapse;font-size:11.5px;width:100%}
+  table.fp th{text-align:left;color:var(--faint);font-weight:600;padding:2px 9px 2px 0;
+              vertical-align:top;white-space:nowrap;font-size:10px;text-transform:uppercase;
+              letter-spacing:.03em}
+  table.fp td{padding:2px 0;word-break:break-word}
+  .fp-none{font-size:11.5px;color:var(--muted);font-style:italic}
+
+  /* ---------- narrow screens: stack ---------- */
+  @media(max-width:1000px){
+    body{overflow:auto}
+    main{flex-direction:column;height:auto}
+    .chat{flex:0 0 auto;max-height:52vh}
+    .mappanel{flex:0 0 auto;height:66vh}
+    #layerctl{flex:0 0 auto;max-height:44vh}
+    .legend{right:12px}
+  }
 </style>
 </head>
 <body>
-<header>
-<h1>Mappa — Asistente Geoespacial de Puerto Rico</h1>
-<p>Preguntas sobre uso de terrenos, riesgos ambientales y planificación en Puerto Rico</p>
-</header>
-<main>
-<section class="panel">
-<label><b>Pregunta (en español):</b></label>
-<textarea id="q" placeholder="Ej: ¿Puedo construir en una zona inundable en San Juan?"></textarea>
-<button id="go">Preguntar</button>
-<div class="samples">Ejemplos:
-<a data-q="¿Puedo construir en una zona inundable?">inundación</a>
-<a data-q="¿Qué regula el Reglamento Conjunto?">permisos</a>
-<a data-q="¿Cómo se protegen los humedales en Puerto Rico?">humedales</a>
-<a data-q="¿Qué dice el plan de ordenación de San Juan?">San Juan</a>
-<a data-q="¿Dónde hay riesgo de deslizamiento?">deslizamientos</a>
+<div class="topbar">
+  <span class="brand" translate="no">🗺️ Mappealo</span>
+  <span class="tag">Asistente de planificación y riesgos de Puerto Rico</span>
+  <button id="chattoggle" class="chattog" title="Mostrar/ocultar chat">&#9776;</button>
+  <span class="langtog"><a id="lang-es">ES</a><a id="lang-en">EN</a></span>
 </div>
-<div id="out"></div>
-<div class="disc" id="disc"></div>
-</section>
-<div id="map" class="panel"></div>
+<main>
+  <section class="chat">
+    <div id="out" class="messages"></div>
+    <div class="composer">
+      <div class="samples">
+        <a data-q="¿Puedo construir en una zona inundable?">Zona inundable</a>
+        <a data-q="¿Qué regula el Reglamento Conjunto?">Permisos</a>
+        <a data-q="¿Cuántas escuelas hay en Adjuntas?">Escuelas</a>
+        <a data-q="¿Dónde hay riesgo de deslizamiento?">Deslizamientos</a>
+      </div>
+      <div class="inputrow">
+        <textarea id="q" placeholder="Escribe tu pregunta… o haz clic en el mapa"></textarea>
+        <button id="go" title="Preguntar">➤</button>
+      </div>
+      <div class="composer-meta">
+        <a id="clear">Nueva conversación</a>
+        <span id="loc" class="locchip"></span>
+      </div>
+    </div>
+    <div class="disc" id="disc"></div>
+  </section>
+
+  <section class="mappanel">
+    <div id="map"></div>
+    <div id="legend" class="legend"></div>
+    <aside id="layerctl">
+      <div class="h"><span>Capas del mapa</span>
+        <select id="basemapsel" class="bmsel" title="Mapa base"></select></div>
+      <input id="lyrq" class="lyrq" type="search" placeholder="Buscar capas…" autocomplete="off">
+      <div id="layerlist">Cargando capas…</div>
+      <div id="layerinfo" class="layerinfo"></div>
+    </aside>
+  </section>
 </main>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=80"></script>
 </body>
 </html>
