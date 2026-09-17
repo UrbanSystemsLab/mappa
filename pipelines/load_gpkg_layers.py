@@ -100,10 +100,13 @@ def load_one(layer: str, table: str, dsn: str) -> str:
     layer arrives either way; only the key column differs, and the tile service
     does not depend on its name.
     """
+    # -dim XY drops Z and M. Several of their layers are 3D measured polygons,
+    # and ST_Intersection against a 2D boundary returns a degenerate result for
+    # those - Cabo Rojo came back with zero protected area when it has 24 km2.
     base = ["ogr2ogr", "-f", "PostgreSQL", f"PG:{dsn}", str(GPKG), layer,
             "-nln", table, "-t_srs", "EPSG:4326", "-overwrite",
             "-lco", "GEOMETRY_NAME=geom", "-lco", "SPATIAL_INDEX=GIST",
-            "-nlt", "PROMOTE_TO_MULTI", "-gt", "20000",
+            "-nlt", "PROMOTE_TO_MULTI", "-dim", "XY", "-gt", "20000",
             "--config", "PG_USE_COPY", "YES"]
     try:
         subprocess.run(base + ["-lco", "FID=id"], check=True, capture_output=True, text=True)
