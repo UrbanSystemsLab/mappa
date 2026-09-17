@@ -42,6 +42,9 @@ def _is_decline(text: str) -> bool:
     return any(m in t for m in _DECLINE_MARKERS)
 
 
+from .retrieval import citation_id
+
+
 def _strip_urls(text: str) -> str:
     """Remove any link/URL the model may have emitted. All source links come from the
     database citations shown in the UI, never from the model's prose — this enforces
@@ -266,8 +269,14 @@ def narrate(
             if key in seen_docs:
                 continue
             seen_docs.add(key)
+            # No outbound link. A citation used to carry the document's original
+            # URL, which for the documents La Maraña catalogued but supplied only
+            # a link for meant the answer pointed at a government site. Every
+            # answer now cites their document by the ID on their own inventory,
+            # which is the thing they can look up and verify.
             citations.append({"id": d["id"], "title": d["title"],
-                              "year": d.get("year"), "url": d.get("url", "")})
+                              "year": d.get("year"),
+                              "doc_id": citation_id(d["id"])})
     if declined:
         confidence = "baja" if lang == "es" else "low"
     elif lang == "es":

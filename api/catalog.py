@@ -29,6 +29,10 @@ _CATEGORY_LABEL = {
     "geologia": "Geología",
     "hidrografia": "Hidrografía",
     "limitesgeograficos": "Límites geográficos",
+    # Layers from their GeoPackage whose name does not match a single row on the
+    # inventory sheet, so we do not know their category. Saying so beats a label
+    # that sounds like a judgement on the data.
+    "sinclasificar": "Otras capas",
 }
 
 
@@ -179,11 +183,14 @@ def get_layer(layer_id: str, lang: str = "es") -> dict[str, Any] | None:
     return _row_to_layer(row, lang) if row else None
 
 
-def categories(lang: str = "es") -> list[dict[str, Any]]:
+def categories(lang: str = "es", available_only: bool = False) -> list[dict[str, Any]]:
     """Category facets with counts, for grouping the layer panel."""
     with db.connection() as conn:
         cur = conn.cursor()
         cur.execute(
+            "SELECT category, count(*) FILTER (WHERE status = 'published'), count(*) "
+            "FROM layer_registry WHERE status = 'published' "
+            "GROUP BY category" if available_only else
             "SELECT category, count(*) FILTER (WHERE status = 'published'), count(*) "
             "FROM layer_registry WHERE status IN ('published','catalogued') "
             "GROUP BY category"

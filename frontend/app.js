@@ -171,7 +171,8 @@ function render() {
   out.innerHTML = conversation.map(m => {
     const layers = (m.suggested_layers || []).map(l => `<span class="tag">${esc(l)}</span>`).join('');
     const cites = (m.citations || []).map(c =>
-      `<div class="cite">📄 <a href="${c.url}" target="_blank">${esc(c.title)}</a>${c.year ? ` · ${c.year}` : ''}</div>`
+      `<div class="cite">📄 <span class="ct">${esc(c.title)}</span>${
+        c.year ? ` · ${c.year}` : ''}${c.doc_id ? ` · <span class="cid">${esc(c.doc_id)}</span>` : ''}</div>`
     ).join('');
     const thinking = m.answer === '…';
     const conf = (m.confidence && !thinking) ? `<span class="badge ${confClass(m.confidence)}">${esc(m.confidence)}</span>` : '';
@@ -257,7 +258,7 @@ const paintKey = type => (type === 'fill' ? 'fill-opacity'
 
 async function loadCatalog() {
   try {
-    CATEGORIES = await (await fetch(`/catalog/categories?lang=${LANG}`)).json();
+    CATEGORIES = await (await fetch(`/catalog/categories?lang=${LANG}&available_only=true`)).json();
     await fetchLayers();
   } catch (e) {
     document.getElementById('layerlist').textContent =
@@ -266,7 +267,7 @@ async function loadCatalog() {
 }
 
 async function fetchLayers() {
-  const p = new URLSearchParams({ lang: LANG, limit: '700' });
+  const p = new URLSearchParams({ lang: LANG, limit: '700', available_only: 'true' });
   if (layerQuery) p.set('q', layerQuery);
   const d = await (await fetch('/catalog/layers?' + p)).json();
   RESULTS = d.layers || [];

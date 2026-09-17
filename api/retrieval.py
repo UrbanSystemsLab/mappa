@@ -1,11 +1,22 @@
 import json
 import os
+import re
 import unicodedata
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
+
+# Their inventory IDs. A document they supplied that is not on the sheet gets an
+# LM- slug from its filename, which is an internal key rather than a reference a
+# reader could look up, so it is not shown as one.
+_THEIR_ID = re.compile(r"^(?:DOC|HMP|WCRP|RV|POT|GIS)-\d{2,4}(?:-\d+)?$", re.I)
+
+
+def citation_id(doc_id: str) -> str:
+    return doc_id if _THEIR_ID.match(doc_id or "") else ""
+
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_PATH = DATA_DIR / "documents.json"
@@ -225,7 +236,7 @@ def compose_answer(query: str, docs: list[dict[str, Any]], layers: list[str]) ->
     answer = intro + "\n\n" + "\n\n".join(bullets)
 
     citations = [
-        {"id": d["id"], "title": d["title"], "year": d["year"], "url": d.get("url", "")}
+        {"id": d["id"], "title": d["title"], "year": d["year"], "doc_id": citation_id(d["id"])}
         for d in docs
     ]
     confidence = "alta" if len(docs) >= 2 else "media"

@@ -69,7 +69,9 @@ class Citation(BaseModel):
     id: str
     title: str
     year: int | None = None
-    url: str = ""
+    # Their inventory ID. No URL: an answer cites a document La Maraña holds,
+    # not a page on a government site.
+    doc_id: str = ""
 
 
 class AskResponse(BaseModel):
@@ -177,8 +179,8 @@ def catalog_layers(lang: str = "es", q: str | None = None, category: str | None 
 
 
 @app.get("/catalog/categories")
-def catalog_categories(lang: str = "es") -> JSONResponse:
-    return JSONResponse(catalog.categories(lang),
+def catalog_categories(lang: str = "es", available_only: bool = False) -> JSONResponse:
+    return JSONResponse(catalog.categories(lang, available_only=available_only),
                         headers={"Cache-Control": "public, max-age=300"})
 
 
