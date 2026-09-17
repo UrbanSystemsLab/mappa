@@ -44,3 +44,6 @@ logs/
 
 # Extracted document text produced by pipelines/fetch_parse_local.py (derived, large)
 data/corpus_*.json
+
+# La Maraña's master inventory workbook (partner data, pulled from their Drive)
+data/raw/lamarana_master_inventory.xlsx
