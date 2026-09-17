@@ -266,7 +266,7 @@ async function loadCatalog() {
 }
 
 async function fetchLayers() {
-  const p = new URLSearchParams({ lang: LANG, limit: '200' });
+  const p = new URLSearchParams({ lang: LANG, limit: '700' });
   if (layerQuery) p.set('q', layerQuery);
   const d = await (await fetch('/catalog/layers?' + p)).json();
   RESULTS = d.layers || [];
@@ -302,6 +302,12 @@ function layerRow(l, isActive) {
       <button class="ic rm" data-act="remove" data-id="${l.id}" title="${
         LANG === 'es' ? 'Quitar' : 'Remove'}">&times;</button></div>`;
   }
+  if (l.available === false) {
+    return `<div class="lrow off" data-id="${l.id}">
+      ${sw}<span class="nm">${esc(l.name)}<span class="yr">${yr}</span></span>
+      <span class="pend">${LANG === 'es' ? 'sin cargar' : 'not loaded'}</span>
+      ${info}</div>`;
+  }
   return `<div class="lrow" data-act="add" data-id="${l.id}">
     ${sw}<span class="nm">${esc(l.name)}<span class="yr">${yr}</span></span>
     ${info}<button class="ic add" data-act="add" data-id="${l.id}">+</button></div>`;
@@ -334,7 +340,8 @@ function renderLayerPanel() {
     const open = EXPANDED.has(c);
     html += `<div class="lsec">
       <div class="lsec-h clickable" data-act="cat" data-cat="${esc(c)}">
-        <span>${open ? '&#9662;' : '&#9656;'} ${esc(catLabel(c))}</span><span class="cnt">${rows.length}</span>
+        <span>${open ? '&#9662;' : '&#9656;'} ${esc(catLabel(c))}</span><span class="cnt">${
+          rows.filter(r => r.available !== false).length} / ${rows.length}</span>
       </div>${open ? rows.map(l => layerRow(l, false)).join('') : ''}</div>`;
   });
 

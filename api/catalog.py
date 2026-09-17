@@ -12,9 +12,38 @@ Language is resolved server-side: the client asks for 'es' or 'en' and gets one
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from typing import Any
 
 from . import db
+
+# Their sheet spells five categories more than one way - Conservacion and
+# Conservación, Limites geograficos and Limites_Geograficos - which would split
+# one theme across two groups in the layer panel. Group on an accent- and
+# punctuation-insensitive key and show the best-written variant, while each layer
+# still reports their exact string so nothing they wrote is overwritten.
+_CATEGORY_LABEL = {
+    "conservacion": "Conservación",
+    "desarrolloeconomico": "Desarrollo Económico",
+    "geologia": "Geología",
+    "hidrografia": "Hidrografía",
+    "limitesgeograficos": "Límites geográficos",
+}
+
+
+def _category_key(name: str | None) -> str:
+    text = unicodedata.normalize("NFKD", (name or "").lower())
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", "", text)
+
+
+def canonical_category(name: str | None) -> str:
+    """One display label per theme, regardless of how their sheet spelled it."""
+    if not name:
+        return "Sin clasificar"
+    return _CATEGORY_LABEL.get(_category_key(name), name.replace("_", " "))
+
 
 # Columns returned for a row in the layer list.
 _LIST_COLS = """
@@ -34,7 +63,10 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
         "id": lid,
         "name": name,
         "description": description,
-        "category": category,
+        "category": canonical_category(category),
+        # Exactly what their inventory says, kept so the grouping above never
+        # stands in for what they actually wrote.
+        "category_source": category,
         "subcategory": subcategory,
         "theme": theme,
         "keywords": keywords or [],
@@ -98,8 +130,10 @@ def list_layers(
     params: dict[str, Any] = {}
 
     if category:
-        where.append("category = %(category)s")
-        params["category"] = category
+        where.append("regexp_replace(lower(translate(category,"
+                     "'áéíóúñüÁÉÍÓÚÑÜ','aeiounuAEIOUNU')), '[^a-z0-9]+', '', 'g') "
+                     "= %(category)s")
+        params["category"] = _category_key(category)
     if q:
         # Prose match OR keyword-array match, so "flood" finds a layer whose only
         # English signal is a keyword.
@@ -152,9 +186,15 @@ def categories(lang: str = "es") -> list[dict[str, Any]]:
         cur.execute(
             "SELECT category, count(*) FILTER (WHERE status = 'published'), count(*) "
             "FROM layer_registry WHERE status IN ('published','catalogued') "
-            "GROUP BY category ORDER BY category"
+            "GROUP BY category"
         )
-        return [{"category": c, "available": a, "count": n} for c, a, n in cur.fetchall()]
+        merged: dict[str, dict[str, Any]] = {}
+        for cat, available, total in cur.fetchall():
+            label = canonical_category(cat)
+            row = merged.setdefault(label, {"category": label, "available": 0, "count": 0})
+            row["available"] += available
+            row["count"] += total
+        return sorted(merged.values(), key=lambda r: r["category"])
 
 
 def tile_columns(table_name: str) -> tuple[str | None, str | None]:

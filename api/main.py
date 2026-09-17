@@ -165,7 +165,7 @@ def catalog_layers(lang: str = "es", q: str | None = None, category: str | None 
                    limit: int = 100, offset: int = 0) -> JSONResponse:
     """Search/filter the layer catalog. Replaces the hardcoded layer list that used
     to ship inside the frontend bundle."""
-    limit = max(1, min(limit, 500))
+    limit = max(1, min(limit, 1000))
     return JSONResponse(
         catalog.list_layers(lang=lang, q=q, category=category,
                             available_only=available_only, limit=limit, offset=offset),

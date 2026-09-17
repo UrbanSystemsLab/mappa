@@ -200,7 +200,10 @@
   .lrow .sw{width:9px;height:9px;border-radius:2px;flex:0 0 auto;
             box-shadow:0 0 0 1.5px var(--surface),0 0 0 2.5px rgba(0,0,0,.09)}
   .lrow .nm{flex:1;min-width:0}
-  .lrow .yr{color:var(--faint)}
+  .lrow.off{opacity:.55;cursor:default}
+.lrow.off:hover{background:none}
+.pend{font-size:11px;color:#8a8f98;border:1px solid #d8dbe0;border-radius:3px;padding:1px 5px;white-space:nowrap}
+.lrow .yr{color:var(--faint)}
   .lrow .ic{border:0;background:none;cursor:pointer;color:var(--faint);font-size:12px;width:19px;
             height:19px;border-radius:5px;flex:0 0 auto;line-height:1;display:flex;
             align-items:center;justify-content:center}
