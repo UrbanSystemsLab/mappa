@@ -161,12 +161,14 @@ def locate(lng: float, lat: float) -> dict:
 
 @app.get("/catalog/layers")
 def catalog_layers(lang: str = "es", q: str | None = None, category: str | None = None,
+                   available_only: bool = False,
                    limit: int = 100, offset: int = 0) -> JSONResponse:
     """Search/filter the layer catalog. Replaces the hardcoded layer list that used
     to ship inside the frontend bundle."""
     limit = max(1, min(limit, 500))
     return JSONResponse(
-        catalog.list_layers(lang=lang, q=q, category=category, limit=limit, offset=offset),
+        catalog.list_layers(lang=lang, q=q, category=category,
+                            available_only=available_only, limit=limit, offset=offset),
         headers={"Cache-Control": "public, max-age=300"},
     )
 

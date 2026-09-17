@@ -61,15 +61,21 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
         "value_labels": val_labels or {},
         "dataset_version": version,
         "status": status,
+        # 'catalogued' means the layer is on La Maraña's inventory but its data is
+        # not in the database yet. It is listed so the catalog reflects what they
+        # actually hold, and it carries no tile URL, because there is nothing to
+        # draw. The UI shows it as unavailable rather than as a toggle that fails.
+        "available": bool(table) and status == "published",
         # Version in the path means a republished layer gets fresh tile URLs, so
         # cached tiles are invalidated without purging the CDN.
-        "tiles_url": f"/tiles/{table}/{{z}}/{{x}}/{{y}}.mvt?v={version}",
+        "tiles_url": (f"/tiles/{table}/{{z}}/{{x}}/{{y}}.mvt?v={version}" if table else None),
     }
 
 
 def _lang_cols(lang: str) -> str:
     return ("name_es AS name, description_es AS description" if lang == "es"
-            else "name_en AS name, description_en AS description")
+            else "COALESCE(name_en, name_es) AS name, "
+                 "COALESCE(description_en, description_es) AS description")
 
 
 def list_layers(
@@ -77,12 +83,18 @@ def list_layers(
     q: str | None = None,
     category: str | None = None,
     include_drafts: bool = False,
+    available_only: bool = False,
     limit: int = 100,
     offset: int = 0,
 ) -> dict[str, Any]:
     """Search / filter the catalog. Returns {total, limit, offset, layers}."""
     lang = "es" if lang == "es" else "en"
-    where = ["status = 'published'"] if not include_drafts else ["status <> 'hidden'"]
+    if available_only:
+        where = ["status = 'published'"]
+    elif include_drafts:
+        where = ["status <> 'hidden'"]
+    else:
+        where = ["status IN ('published','catalogued')"]
     params: dict[str, Any] = {}
 
     if category:
@@ -111,7 +123,8 @@ def list_layers(
         total = cur.fetchone()[0]
         cur.execute(
             f"SELECT {_LIST_COLS}, {_lang_cols(lang)} FROM layer_registry "
-            f"WHERE {wsql} ORDER BY category, name_{lang} "
+            f"WHERE {wsql} ORDER BY (status = 'published') DESC, category, "
+            f"{'name_es' if lang == 'es' else 'COALESCE(name_en, name_es)'} "
             f"LIMIT %(limit)s OFFSET %(offset)s",
             params,
         )
@@ -137,10 +150,11 @@ def categories(lang: str = "es") -> list[dict[str, Any]]:
     with db.connection() as conn:
         cur = conn.cursor()
         cur.execute(
-            "SELECT category, count(*) FROM layer_registry "
-            "WHERE status = 'published' GROUP BY category ORDER BY category"
+            "SELECT category, count(*) FILTER (WHERE status = 'published'), count(*) "
+            "FROM layer_registry WHERE status IN ('published','catalogued') "
+            "GROUP BY category ORDER BY category"
         )
-        return [{"category": c, "count": n} for c, n in cur.fetchall()]
+        return [{"category": c, "available": a, "count": n} for c, a, n in cur.fetchall()]
 
 
 def tile_columns(table_name: str) -> tuple[str | None, str | None]:
