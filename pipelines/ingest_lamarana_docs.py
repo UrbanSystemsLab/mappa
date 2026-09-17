@@ -35,8 +35,14 @@ CTRL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")   # Postgres rejects NUL
 
 
 def doc_id_for(path: Path, cur) -> tuple[str | None, str]:
-    """Resolve a file to one of their document IDs: by ID in the filename first,
-    then by matching the title in their inventory."""
+    """Resolve a file to one of their IDs.
+
+    Nothing they supplied is dropped for failing to match. A file that carries one
+    of their IDs uses it; anything else is still ingested under an ID derived from
+    its own filename, because the alternative is discarding a document they gave us
+    because our lookup was strict. That is how Reglamento Conjunto 2020 - one of the
+    most important regulations in the corpus - was nearly lost.
+    """
     m = ID_RE.search(path.stem)
     if m:
         return m.group(1).upper(), "filename id"
@@ -55,7 +61,9 @@ def doc_id_for(path: Path, cur) -> tuple[str | None, str]:
     rows = cur.fetchall()
     if len(rows) == 1:
         return rows[0][0], "title match"
-    return None, "no confident match" if not rows else "ambiguous title match"
+    # Unmatched but still theirs: keep it, under a stable ID from the filename.
+    slug = re.sub(r"[^A-Za-z0-9]+", "-", path.stem).strip("-")[:48].upper()
+    return f"LM-{slug}", "kept, no inventory row"
 
 
 def main() -> None:
@@ -88,9 +96,23 @@ def main() -> None:
         cur.execute("SELECT title, year, municipio, doc_type FROM document_registry WHERE doc_id=%s", (did,))
         row = cur.fetchone()
         if not row:
-            unmatched.append((p.name, f"{did} not in their inventory"))
-            continue
-        title, year, muni, dtype = row
+            # Not on the Documentos sheet. GIS-* ids are catalogued on their layer
+            # sheets; anything else is a file they supplied that the inventory has
+            # not caught up with. Either way it is theirs, so register and keep it.
+            cur.execute("SELECT layer_name, category FROM layer_inventory WHERE gis_id=%s", (did,))
+            lay = cur.fetchone()
+            title = (lay[0] if lay else p.stem)
+            dtype = ("Documentación de capa" if lay else "Sin clasificar en inventario")
+            year, muni = None, None
+            cur.execute("""INSERT INTO document_registry (doc_id,title,doc_type,category,
+                               source_inventory,load_state,load_note)
+                           VALUES (%s,%s,%s,%s,%s,'not_attempted',%s)
+                           ON CONFLICT (doc_id) DO NOTHING""",
+                        (did, title, dtype, (lay[1] if lay else None), SOURCE,
+                         "added from their folder; not on the Documentos sheet"))
+            how = f"{how}, registered from folder"
+        else:
+            title, year, muni, dtype = row
         try:
             doc = fitz.open(p)
             text = CTRL.sub("", "\n".join(pg.get_text("text") for pg in doc)).strip()
@@ -118,7 +140,21 @@ def main() -> None:
         print(f"\n[lamarana] dry run — {len(out)} ready. Use --commit to write.")
         return
 
-    import json
+    import collections, json
+    # Their folder can hold a document split across files (POT-065.1.pdf and
+    # POT-065.2.pdf). Both resolve to one inventory id, which collides on insert,
+    # so suffix the extras rather than dropping a document they supplied.
+    by = collections.defaultdict(list)
+    for d in out:
+        by[d["id"]].append(d)
+    deduped = []
+    for did, xs in by.items():
+        xs.sort(key=lambda x: len(x["text"]), reverse=True)
+        deduped.append(xs[0])
+        for i, extra in enumerate(xs[1:], start=2):
+            extra["id"], extra["title"] = f"{did}-{i}", f"{extra['title']} ({i})"
+            deduped.append(extra)
+    out = deduped
     staged = Path("data/corpus_lamarana.json")
     staged.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"\n[lamarana] wrote {staged} ({len(out)} docs)")
