@@ -6,17 +6,19 @@
 // Falls back to OSM raster if the vector style cannot be reached, so the map
 // always draws something.
 // ---------------------------------------------------------------------------
+// Ordered richest-first. Positron is a deliberately grey, minimal style — useful
+// when a dense data layer needs to dominate, and far too flat as a default.
 const BASEMAPS = [
-  { id: 'claro',  es: 'Claro',  en: 'Light',    style: 'https://tiles.openfreemap.org/styles/positron' },
-  { id: 'detalle',es: 'Detalle',en: 'Detailed', style: 'https://tiles.openfreemap.org/styles/liberty' },
-  { id: 'calles', es: 'Calles', en: 'Streets',  style: null },   // null = raster fallback
+  { id: 'calles', es: 'Calles',  en: 'Streets',  style: 'https://tiles.openfreemap.org/styles/liberty' },
+  { id: 'relieve',es: 'Detalle', en: 'Detailed', style: 'https://tiles.openfreemap.org/styles/bright' },
+  { id: 'claro',  es: 'Tenue',   en: 'Muted',    style: 'https://tiles.openfreemap.org/styles/positron' },
+  { id: 'osm',    es: 'OSM',     en: 'OSM',      style: null },   // raster fallback
 ];
-let basemapId = localStorage.getItem('mappealo.basemap') || 'claro';
+let basemapId = localStorage.getItem('mappealo.basemap.v2') || 'calles';
 const basemapStyle = id => {
   const b = BASEMAPS.find(x => x.id === id) || BASEMAPS[0];
   return b.style || RASTER_FALLBACK;
 };
-const VECTOR_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 const RASTER_FALLBACK = {
   version: 8,
   sources: {
@@ -568,7 +570,7 @@ loadCatalog();
       `<option value="${b.id}"${b.id === basemapId ? ' selected' : ''}>${b[LANG] || b.en}</option>`).join('');
     bm.onchange = () => {
       basemapId = bm.value;
-      try { localStorage.setItem('mappealo.basemap', basemapId); } catch (e) { /* private mode */ }
+      try { localStorage.setItem('mappealo.basemap.v2', basemapId); } catch (e) { /* private mode */ }
       if (!map) return;
       const keep = [...ACTIVE.keys()];
       map.setStyle(basemapStyle(basemapId));
