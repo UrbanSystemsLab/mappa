@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS document_registry (
     load_note         text,
     updated_at        timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT document_registry_load_state_check
-        CHECK (load_state IN ('not_attempted','loaded','failed_link','no_text_layer','excluded'))
+        CHECK (load_state IN ('not_attempted','staged','loaded','failed_link','no_text_layer','excluded'))
 );
 CREATE INDEX IF NOT EXISTS idx_docreg_municipio ON document_registry (municipio);
 CREATE INDEX IF NOT EXISTS idx_docreg_category  ON document_registry (category);
