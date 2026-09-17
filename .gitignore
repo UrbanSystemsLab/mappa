@@ -47,3 +47,4 @@ data/corpus_*.json
 
 # La Maraña's master inventory workbook (partner data, pulled from their Drive)
 data/raw/lamarana_master_inventory.xlsx
+data/raw/lamarana_docs/
