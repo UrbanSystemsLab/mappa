@@ -103,6 +103,8 @@ def ask(req: AskRequest) -> AskResponse:
     municipio = req.location or detect_municipio(req.question)
     scored = retrieve_with_scores(retrieval_query, top_k=6, jurisdiction=municipio)
     layers = infer_layers(req.question)
+    # Catalog IDs the map can actually switch on, resolved through the registry.
+    map_layers = spatial_ops.suggested_layer_ids(req.question)
 
     # Facility questions (schools/hospitals/shelters/roads) are answered from the map
     # data, not the hazard documents. Build a combined context for the model.
@@ -135,7 +137,7 @@ def ask(req: AskRequest) -> AskResponse:
         return AskResponse(
             answer_es=NO_MATCH[lang],
             citations=[],
-            suggested_layers=layers,
+            suggested_layers=(map_layers or layers),
             confidence="baja" if lang == "es" else "low",
             disclaimer=disclaimer,
             municipio=municipio,
@@ -153,6 +155,10 @@ def ask(req: AskRequest) -> AskResponse:
             result = compose_answer(req.question, docs, layers)
     else:
         result = compose_answer(req.question, docs, layers)
+    # The narrator returns the themes it was given; the map needs catalog IDs it
+    # can actually switch on, so the resolved ones win where we have them.
+    if map_layers:
+        result["suggested_layers"] = map_layers
     return AskResponse(disclaimer=disclaimer, municipio=municipio, focus=focus, **result)
 
 

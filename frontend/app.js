@@ -546,13 +546,19 @@ function featureCard(rec, props) {
 }
 
 // Turn on layers the answer referenced, by matching catalog keywords.
-function autoShowLayers(themes) {
-  if (!themes || !themes.length) return;
+function autoShowLayers(wanted) {
+  if (!wanted || !wanted.length) return;
+  // The server resolves a question to real catalog IDs. Matching those directly
+  // is what makes "is my house in a flood zone" turn the flood layer on; the old
+  // match was on a theme field that almost every loaded layer leaves empty.
   const alias = { zonificacion: 'uso_de_terrenos' };
-  const want = new Set((themes || []).map(x => alias[x] || x));
+  const want = new Set(wanted.map(x => alias[x] || x));
+  let shown = 0;
   RESULTS.forEach(l => {
-    if (ACTIVE.has(l.id)) return;
-    if (want.has(l.theme) || (l.keywords || []).some(k => want.has(k))) addLayer(l.id);
+    if (ACTIVE.has(l.id) || shown >= 3) return;      // three at once stays readable
+    if (want.has(l.id) || want.has(l.theme) || (l.keywords || []).some(k => want.has(k))) {
+      addLayer(l.id); shown++;
+    }
   });
 }
 
@@ -699,8 +705,8 @@ if (map) map.on('click', async (e) => {
         <tr><th>${es ? 'Inundación 2018' : 'Flood 2018'}</th><td>${yn(h.flood_0_2pct_2018)}</td></tr>
         <tr><th>${es ? 'Deslizamiento' : 'Landslide'}</th><td>${yn(h.landslide)}</td></tr>
       </table>
-      ${muni ? `<button class="askbtn" onclick="askHere()">${
-        es ? 'Preguntar sobre este lugar' : 'Ask about this place'}</button>` : ''}
+      <button class="askbtn" onclick="askHere()"${muni ? '' : ' disabled'}>${
+        es ? 'Preguntar sobre este lugar' : 'Ask about this place'}</button>
     </div>`;
 
   showPopup([lng, lat], place + cards);
@@ -712,18 +718,9 @@ function askHere() {
   activeLocation = pending.municipio;
   activeSpatial = pending.spatial;
   renderLoc();
-  const h = pending.spatial.hazards || {};
-  const es = LANG === 'es';
-  const hz = [];
-  if (h.flood_2009 || h.flood_0_2pct_2018) hz.push(es ? 'inundación' : 'flood');
-  if (h.landslide) hz.push(es ? 'deslizamiento' : 'landslide');
-  if (es) {
-    const risk = hz.length ? 'riesgos de ' + hz.join(' y ') : 'riesgos naturales';
-    q.value = `¿Cuáles son los ${risk} y las reglas de construcción y planificación en ${pending.municipio}?`;
-  } else {
-    const risk = hz.length ? hz.join(' and ') + ' risks' : 'natural hazard risks';
-    q.value = `What are the ${risk} and building/planning rules in ${pending.municipio}?`;
-  }
+  q.value = LANG === 'es'
+    ? `¿Qué debo saber sobre ${pending.municipio}: riesgos naturales, uso de terrenos y reglas de planificación?`
+    : `What should I know about ${pending.municipio}: natural hazards, land use, and planning rules?`;
   ask();
 }
 

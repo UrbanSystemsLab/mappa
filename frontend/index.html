@@ -303,6 +303,13 @@
 
   <section class="mappanel">
     <div id="map"></div>
+    <!-- Place search. The styles and the JS for this existed; the markup never
+         did, so there was no way to find a place on the map. -->
+    <div class="mapsearch">
+      <input id="placeq" type="search" autocomplete="off"
+             placeholder="Buscar un municipio o barrio…" aria-label="Buscar lugar">
+      <div id="placeres" class="placeres"></div>
+    </div>
     <div id="legend" class="legend"></div>
     <aside id="layerctl">
       <div class="h"><span>Capas del mapa</span>

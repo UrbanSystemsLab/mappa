@@ -450,3 +450,24 @@ def describe(results: list[dict[str, Any]], lang: str = "es") -> list[str]:
                 f"{r['covered_km2']} km² of {where} ({r['region_km2']} km² total, "
                 f"{r['share']:.1%}) is covered by {lay}")
     return out
+
+
+def suggested_layer_ids(question: str) -> list[str]:
+    """Catalog IDs of the layers a question is about, so the map can show them.
+
+    The frontend used to match on a layer's theme, a field almost every layer
+    loaded from their GeoPackage leaves empty, so asking about flooding turned
+    nothing on. Resolving concept -> table -> catalog ID uses the registry, which
+    every loaded layer has a row in.
+    """
+    keys = detect_layers(question)
+    if not keys:
+        return []
+    tables = [LAYERS[k]["table"] for k in keys]
+    with db.connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id FROM layer_registry WHERE status='published' AND table_name = ANY(%s)",
+            (tables,),
+        )
+        return [r[0] for r in cur.fetchall()]
