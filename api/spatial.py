@@ -132,6 +132,41 @@ def locate(lng: float, lat: float) -> dict[str, Any]:
     return {"municipio": municipio, "hazards": hazards}
 
 
+def search_places(q: str, limit: int = 8) -> list[dict[str, Any]]:
+    """Look up a municipio or barrio by name and return its bounds.
+
+    Accent- and case-insensitive: a resident typing "anasco" or "ANASCO" should
+    find Añasco. Exact prefix matches sort first so the obvious answer is on top.
+    """
+    if not q or len(q.strip()) < 2:
+        return []
+    term = q.strip()
+    with _conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT name, unit_type,
+                   ST_XMin(g), ST_YMin(g), ST_XMax(g), ST_YMax(g)
+            FROM (
+              SELECT name, unit_type, ST_Envelope(geom) AS g,
+                     translate(lower(name),
+                               'áéíóúñüÁÉÍÓÚÑÜ','aeiounuAEIOUNU') AS plain
+              FROM reference_units
+              WHERE unit_type IN ('municipio','barrio')
+            ) t
+            WHERE plain LIKE translate(lower(%s),'áéíóúñüÁÉÍÓÚÑÜ','aeiounuAEIOUNU') || '%%'
+               OR plain LIKE '%%' || translate(lower(%s),'áéíóúñüÁÉÍÓÚÑÜ','aeiounuAEIOUNU') || '%%'
+            ORDER BY (plain LIKE translate(lower(%s),'áéíóúñüÁÉÍÓÚÑÜ','aeiounuAEIOUNU') || '%%') DESC,
+                     unit_type, name
+            LIMIT %s
+            """,
+            (term, term, term, limit),
+        )
+        return [
+            {"name": r[0], "type": r[1], "bbox": [float(r[2]), float(r[3]), float(r[4]), float(r[5])]}
+            for r in cur.fetchall()
+        ]
+
+
 def municipio_bbox(name: str | None) -> list[float] | None:
     """Bounding box [west, south, east, north] of a municipio, so the map can fly to
     the place the chat is answering about. None if the name isn't a known municipio."""

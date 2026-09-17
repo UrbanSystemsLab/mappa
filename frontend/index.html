@@ -91,6 +91,24 @@
           border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm);cursor:pointer;
           font-size:11.5px;font-weight:600;color:var(--ink);padding:6px 11px;line-height:1.2}
   .lyrbtn:hover{background:var(--surface-2)}
+  /* location search, sitting on the map like any other map control */
+  .mapsearch{position:absolute;top:10px;left:10px;z-index:4;width:266px}
+  .mapsearch input{width:100%;padding:8px 12px 8px 30px;font:inherit;font-size:12.5px;
+                   border:1px solid var(--line);border-radius:9px;outline:none;
+                   background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm)}
+  .mapsearch input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(13,148,136,.13)}
+  .mapsearch::before{content:"⌕";position:absolute;left:11px;top:6px;font-size:15px;
+                     color:var(--faint);pointer-events:none;z-index:1}
+  .placeres{display:none;margin-top:5px;background:var(--surface);border:1px solid var(--line);
+            border-radius:9px;box-shadow:var(--shadow);overflow:hidden;max-height:260px;
+            overflow-y:auto}
+  .placeres.on{display:block}
+  .placeres button{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;border:0;
+                   background:none;cursor:pointer;padding:7px 11px;font:inherit;font-size:12.5px;
+                   color:var(--ink)}
+  .placeres button:hover{background:var(--surface-2)}
+  .placeres .kind{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;
+                  margin-left:auto}
   .bmsel{font:inherit;font-size:10.5px;color:var(--muted);background:var(--surface-2);
          border:1px solid var(--line);border-radius:6px;padding:2px 5px;cursor:pointer;
          text-transform:none;letter-spacing:0;font-weight:500;max-width:96px}
@@ -292,6 +310,6 @@
   </section>
 </main>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="/static/app.js?v=72"></script>
+<script src="/static/app.js?v=80"></script>
 </body>
 </html>

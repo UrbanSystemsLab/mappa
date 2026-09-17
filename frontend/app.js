@@ -107,6 +107,9 @@ function applyLang() {
   if (tag) tag.textContent = t('tagline');
   q.placeholder = t('ph');
   if (clearBtn) clearBtn.textContent = t('clear');
+  const pqel = document.getElementById('placeq');
+  if (pqel) pqel.placeholder = LANG === 'es'
+    ? 'Buscar municipio o barrio…' : 'Search municipality or barrio…';
   const es = document.getElementById('lang-es'), en = document.getElementById('lang-en');
   if (es) es.classList.toggle('on', LANG === 'es');
   if (en) en.classList.toggle('on', LANG === 'en');
@@ -578,6 +581,45 @@ loadCatalog();
       map.once('styledata', () => { ACTIVE.clear(); keep.forEach(addLayer); });
     };
   }
+  // --- location search: find a municipio or barrio and fly there ---
+  const pq = document.getElementById('placeq');
+  const pr = document.getElementById('placeres');
+  if (pq && pr) {
+    let ptimer = null;
+    const close = () => { pr.classList.remove('on'); pr.innerHTML = ''; };
+    pq.addEventListener('input', () => {
+      clearTimeout(ptimer);
+      const term = pq.value.trim();
+      if (term.length < 2) return close();
+      ptimer = setTimeout(async () => {
+        try {
+          const rows = await (await fetch('/places?q=' + encodeURIComponent(term))).json();
+          if (!rows.length) return close();
+          pr.innerHTML = rows.map(r =>
+            `<button data-bbox="${r.bbox.join(',')}" data-name="${esc(r.name)}">
+               <span>${esc(r.name)}</span>
+               <span class="kind">${r.type === 'municipio'
+                 ? (LANG === 'es' ? 'Municipio' : 'Municipality') : 'Barrio'}</span>
+             </button>`).join('');
+          pr.classList.add('on');
+        } catch (e) { close(); }
+      }, 220);
+    });
+    pr.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-bbox]');
+      if (!b) return;
+      focusBBox(b.dataset.bbox.split(',').map(Number));
+      // Searching for a place also scopes the conversation to it, so the next
+      // question is about there without having to say so.
+      activeLocation = b.dataset.name;
+      renderLoc();
+      pq.value = b.dataset.name;
+      close();
+    });
+    pq.addEventListener('blur', () => setTimeout(close, 160));
+    pq.addEventListener('keydown', (e) => { if (e.key === 'Escape') { pq.value = ''; close(); } });
+  }
+
   const lt = document.getElementById('lyrtoggle');
   if (lt) lt.onclick = () => {
     document.querySelector('main').classList.toggle('layers-hidden');

@@ -146,6 +146,13 @@ def layers() -> JSONResponse:
     return JSONResponse(spatial.list_layers(), headers={"Cache-Control": "public, max-age=3600"})
 
 
+@app.get("/places")
+def places(q: str, limit: int = 8) -> JSONResponse:
+    """Search municipios and barrios by name, for the map's location search."""
+    return JSONResponse(spatial.search_places(q, min(limit, 20)),
+                        headers={"Cache-Control": "public, max-age=600"})
+
+
 @app.get("/locate")
 def locate(lng: float, lat: float) -> dict:
     """What municipio + hazards apply at a clicked point."""
