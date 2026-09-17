@@ -102,13 +102,15 @@ def layer_meta(name: str) -> dict[str, Any] | None:
         return _LAYER_META[name]
     with db.connection() as conn:
         cur = conn.cursor()
-        
+        # layer_registry is the record of what exists. This used to read
+        # spatial_layers, which only ever held the ten layers loaded by hand, so
+        # every layer added since was catalogued, published and undrawable - the
+        # tile service returned 404 for a layer the panel offered as available.
         cur.execute(
-            """SELECT s.layer_name, s.geometry_type, s.feature_count,
-                      coalesce(r.tile_properties, '{}') , r.simplified
-               FROM spatial_layers s
-               LEFT JOIN layer_registry r ON r.table_name = s.layer_name
-               WHERE s.layer_name = %s""",
+            """SELECT table_name, geometry_type, feature_count,
+                      coalesce(tile_properties, '{}'), simplified
+               FROM layer_registry
+               WHERE table_name = %s AND status = 'published'""",
             (name,),
         )
         row = cur.fetchone()
