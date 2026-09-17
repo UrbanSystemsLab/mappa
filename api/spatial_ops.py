@@ -144,16 +144,29 @@ def detect_layers(question: str) -> list[str]:
     return found
 
 
-def detect_distance(question: str) -> int | None:
-    """Metres from a phrase like 'within 500 meters' or 'a menos de 2 km'."""
+def detect_distance(question: str) -> tuple[int, int] | None:
+    """Metres and where the phrase sits, from 'within 500 meters' or 'a menos de 2 km'.
+
+    The position matters: a question can ask for one layer by intersection and
+    another by distance - "in flood zones or within 500 metres of a river" - and
+    applying the distance to both would answer a question nobody asked.
+    """
     text = _strip(question)
     m = re.search(r"(\d[\d,.]*)\s*(m|metro|metros|meter|meters)\b", text)
     if m:
-        return int(float(m.group(1).replace(",", "")))
+        return int(float(m.group(1).replace(",", ""))), m.end()
     m = re.search(r"(\d[\d,.]*)\s*(km|kilometro|kilometros|kilometer|kilometers)\b", text)
     if m:
-        return int(float(m.group(1).replace(",", "")) * 1000)
+        return int(float(m.group(1).replace(",", "")) * 1000), m.end()
     return None
+
+
+def _layer_position(question: str, key: str) -> int:
+    """Where a concept is first named, or -1. Used to bind a distance to the layer
+    it modifies, which in both languages is the one that follows it."""
+    text = _strip(question)
+    hits = [text.find(_strip(w)) for w in LAYERS[key]["words"] if _strip(w) in text]
+    return min(hits) if hits else -1
 
 
 def _table(key: str) -> str:
@@ -339,4 +352,101 @@ def point_profile(lng: float, lat: float) -> dict[str, Any]:
             cur.execute(f'SELECT EXISTS(SELECT 1 FROM "{table}" WHERE ST_Intersects(geom, {point}))',
                         (lng, lat))
             (out["in"] if cur.fetchone()[0] else out["not_in"]).append(key)
+    return out
+
+
+# Phrases that make a question quantitative. These are the ones that used to be
+# answered with a number lifted out of retrieved prose.
+_COUNT_WORDS = ["cuantos", "cuantas", "how many", "number of", "cuántos", "cuántas"]
+_SHARE_WORDS = ["que porcentaje", "qué porcentaje", "what percentage", "how much of",
+                "que parte", "qué parte", "what share", "cuanto de", "cuánto de",
+                "how much", "que proporcion", "qué proporción"]
+
+
+def wants_number(question: str) -> bool:
+    """Whether the question asks for a figure we must compute rather than narrate."""
+    text = _strip(question)
+    return any(_strip(w) in text for w in _COUNT_WORDS + _SHARE_WORDS)
+
+
+def analyze(question: str, region: str | None = None) -> list[dict[str, Any]]:
+    """Run whatever spatial question this is, and return only what was computed.
+
+    Returns an empty list when the question is quantitative but the layers cannot
+    answer it. The caller uses that to decline, which is the whole point: the
+    absence of a result has to travel, or the model fills the silence.
+    """
+    keys = detect_layers(question)
+    if not keys:
+        return []
+    dist = detect_distance(question)
+    countable = [k for k in keys if k in COUNTABLE]
+    others = [k for k in keys if k not in COUNTABLE]
+    text = _strip(question)
+    results: list[dict[str, Any]] = []
+
+    # The distance applies to the layer named after it; every other layer in the
+    # question is an overlay.
+    by_distance: set[str] = set()
+    if dist and others:
+        metres, at = dist
+        after = [(pos, k) for k in others if (pos := _layer_position(question, k)) >= at]
+        by_distance = {min(after)[1]} if after else set(others)
+
+    try:
+        if countable and others:
+            metres = dist[0] if dist else None
+            for c in countable:
+                for o in others:
+                    r = (count_within_distance(c, o, metres, region)
+                         if o in by_distance and metres
+                         else count_intersecting(c, o, region))
+                    if r:
+                        results.append(r)
+        elif countable:
+            for c in countable:
+                r = count_features(c, region)
+                if r:
+                    results.append(r)
+        elif others and region and any(_strip(w) in text for w in _SHARE_WORDS):
+            for o in others:
+                r = coverage_share(o, region)
+                if r:
+                    results.append(r)
+    except KeyError:
+        # A concept whose layer is not loaded. Nothing computed, so nothing claimed.
+        return results
+    return results
+
+
+def describe(results: list[dict[str, Any]], lang: str = "es") -> list[str]:
+    """One plain line per computed result, naming the layer the number came from."""
+    out = []
+    for r in results:
+        lay = label(r["layer"], lang)
+        where = r.get("region") or ("Puerto Rico")
+        if r["op"] == "count":
+            out.append(f"{r['count']} {lay} en {where}" if lang == "es"
+                       else f"{r['count']} {lay} in {where}")
+        elif r["op"] == "intersect":
+            against = label(r["against"], lang)
+            out.append(
+                f"{r['count']} de {r['total']} {lay} en {where} intersecan {against}"
+                if lang == "es" else
+                f"{r['count']} of {r['total']} {lay} in {where} intersect {against}")
+        elif r["op"] == "within_distance":
+            of = label(r["of"], lang)
+            out.append(
+                f"{r['count']} de {r['total']} {lay} en {where} están a "
+                f"{r['metres']} m o menos de {of}"
+                if lang == "es" else
+                f"{r['count']} of {r['total']} {lay} in {where} are within "
+                f"{r['metres']} m of {of}")
+        elif r["op"] == "coverage":
+            out.append(
+                f"{r['covered_km2']} km² de {where} ({r['region_km2']} km² en total, "
+                f"{r['share']:.1%}) están cubiertos por {lay}"
+                if lang == "es" else
+                f"{r['covered_km2']} km² of {where} ({r['region_km2']} km² total, "
+                f"{r['share']:.1%}) is covered by {lay}")
     return out

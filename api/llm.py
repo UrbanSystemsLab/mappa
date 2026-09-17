@@ -200,6 +200,8 @@ def _spatial_block(spatial: dict[str, Any], lang: str) -> str:
         lines.append(f"- {_HAZARD_LABELS.get(key, key)}: {yes if val else no}")
     for label, count in (spatial.get("facilities") or {}).items():
         lines.append(f"- {label}: {count}")
+    for line in (spatial.get("analysis") or []):
+        lines.append(f"- {line}")
     shown = spatial.get("active_layers") or []
     if shown:
         head_l = ("Capas visibles ahora en el mapa" if lang == "es"
@@ -208,12 +210,24 @@ def _spatial_block(spatial: dict[str, Any], lang: str) -> str:
             f"{l.get('name')}" + (f" ({l.get('year')})" if l.get("year") else "")
             for l in shown if l.get("name"))
         lines.append(f"- {head_l}: {names}")
+    # A figure was asked for and the layers could not produce one. Saying nothing
+    # here is what let a number be lifted out of the retrieved text - a table
+    # headed "10 pies" once became "10 schools".
+    if spatial.get("no_figure"):
+        warn = ("NO HAY CIFRA CALCULABLE: las capas cargadas no permiten contar ni medir "
+                "lo que pide esta pregunta. No des ningún número. Di que los datos "
+                "disponibles no permiten calcularlo y explica qué haría falta."
+                if lang == "es" else
+                "NO FIGURE CAN BE COMPUTED: the loaded layers cannot count or measure what "
+                "this question asks. Do not give any number. Say the available data cannot "
+                "answer it and explain what would be needed.")
+        return warn + "\n\n" + (("\n".join(lines) + "\n\n") if lines else "")
     if not lines:
         return ""
-    head = ("DATOS DEL LUGAR SELECCIONADO (de las capas oficiales del mapa; cítalos como "
-            "datos de mapa con su año):" if lang == "es"
-            else "MAP FACTS FOR THE SELECTED LOCATION (from official map layers; cite these "
-            "as map data with their year):")
+    head = ("DATOS DEL MAPA (calculados sobre las capas oficiales; son las únicas cifras "
+            "que puedes dar, cítalas con su año):" if lang == "es"
+            else "MAP FACTS (computed against the official layers; these are the only "
+            "figures you may state, cite them with their year):")
     return head + "\n" + "\n".join(lines) + "\n\n"
 
 

@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import catalog, llm, spatial, tiles
+from . import catalog, llm, spatial, spatial_ops, tiles
 from .retrieval import compose_answer, detect_municipio, infer_layers, retrieve_with_scores
 
 # Minimum retrieval relevance (cosine similarity) to attempt an answer. Below this,
@@ -110,11 +110,22 @@ def ask(req: AskRequest) -> AskResponse:
     context = dict(req.spatial or {})
     if facilities:
         context["facilities"] = facilities
+
+    # Counts, overlays and distances are computed against their layers rather than
+    # read out of retrieved prose. When the question asks for a figure and the
+    # layers cannot produce one, that absence is passed through too, so the model
+    # is told to say so instead of finding a number in the text.
+    analysis = spatial_ops.analyze(req.question, municipio)
+    if analysis:
+        context["analysis"] = spatial_ops.describe(analysis, lang)
+    elif spatial_ops.wants_number(req.question):
+        context["no_figure"] = True
     if req.active_layers:
         context["active_layers"] = req.active_layers
     # Layers on screen count as context too: 'what am I looking at?' is a real
     # question and should not be turned away by the relevance gate.
-    has_context = bool(req.spatial) or bool(facilities) or bool(req.active_layers)
+    has_context = (bool(req.spatial) or bool(facilities) or bool(req.active_layers)
+                   or bool(analysis))
 
     focus = spatial.municipio_bbox(municipio)
 
