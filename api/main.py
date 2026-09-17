@@ -1,6 +1,9 @@
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+import hashlib
+import re
+
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -232,6 +235,22 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
 @app.get("/")
-def index() -> FileResponse:
-    # Never cache the HTML, so the browser always picks up the current app.js version.
-    return FileResponse(FRONTEND_DIR / "index.html", headers={"Cache-Control": "no-store"})
+def index() -> Response:
+    """Serve the app shell, stamped with the current asset versions.
+
+    The version in ?v= used to be a number edited by hand, so an app.js change
+    shipped behind a token that had not moved reached every browser that already
+    had the old file - the app looked unchanged no matter what was deployed.
+    The stamp is now a hash of the file's own contents, so it moves exactly when
+    the file does and never when it does not.
+    """
+    html = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+    for asset in ("app.js", "app.css"):
+        path = FRONTEND_DIR / asset
+        if not path.exists():
+            continue
+        digest = hashlib.sha1(path.read_bytes()).hexdigest()[:10]
+        html = re.sub(rf"/static/{re.escape(asset)}(\?v=[^\"\']*)?",
+                      f"/static/{asset}?v={digest}", html)
+    return Response(html, media_type="text/html",
+                    headers={"Cache-Control": "no-store"})
