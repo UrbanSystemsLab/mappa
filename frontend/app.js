@@ -291,7 +291,7 @@ function statusChip(st) {
 
 function layerRow(l, isActive) {
   const yr = l.source && l.source.year ? ` · ${l.source.year}` : '';
-  const sw = `<span class="sw" style="background:${(l.style && l.style.color) || '#0b5d4b'}"></span>`;
+  const sw = `<span class="sw" style="background:${(l.style && l.style.color) || '#09814A'}"></span>`;
   const info = `<button class="ic info" data-act="info" data-id="${l.id}" title="${
     LANG === 'es' ? 'Sobre esta capa' : 'About this layer'}">i</button>`;
   if (isActive) {
@@ -364,7 +364,7 @@ function renderLegend() {
   el.style.display = 'block';
   el.innerHTML = `<div class="lg-h">${LANG === 'es' ? 'Leyenda' : 'Legend'}</div>` +
     active.map(l => `<div class="lg-r">
-        <span class="lg-k" style="background:${(l.style && l.style.color) || '#0b5d4b'}"></span>
+        <span class="lg-k" style="background:${(l.style && l.style.color) || '#09814A'}"></span>
         <span>${esc(l.name)}</span></div>`).join('') +
     `<div class="lg-src">${LANG === 'es' ? 'Fuente' : 'Source'}: ${
       esc(active[0].source && active[0].source.inventory || '')}</div>`;
@@ -408,7 +408,7 @@ function addLayer(id) {
       maxzoom: l.max_zoom != null ? l.max_zoom : 14,
     });
   }
-  const color = (l.style && l.style.color) || '#0b5d4b';
+  const color = (l.style && l.style.color) || '#09814A';
   const g = (l.geometry_type || '').toLowerCase();
   const common = { source: srcId, 'source-layer': 'layer' };
   if (g.includes('polygon')) {
@@ -536,7 +536,7 @@ function featureCard(rec, props) {
     .slice(0, 6)
     .map(k => `<tr><th>${esc(fieldLabel(rec, k))}</th><td>${esc(String(valueLabel(rec, props[k])))}</td></tr>`)
     .join('');
-  const sw = `<span class="fp-sw" style="background:${(rec && rec.style && rec.style.color) || '#0b5d4b'}"></span>`;
+  const sw = `<span class="fp-sw" style="background:${(rec && rec.style && rec.style.color) || '#09814A'}"></span>`;
   const yr = rec && rec.source && rec.source.year ? ` · ${rec.source.year}` : '';
   return `<div class="fp-card">
       <div class="fp-h">${sw}${esc(rec ? rec.name : 'Capa')}${yr}</div>
@@ -690,7 +690,7 @@ if (map) map.on('click', async (e) => {
   catch (err) { info = { municipio: null, hazards: {} }; }
 
   if (locMarker) locMarker.remove();
-  locMarker = new maplibregl.Marker({ color: '#0b5d4b' }).setLngLat([lng, lat]).addTo(map);
+  locMarker = new maplibregl.Marker({ color: '#09814A' }).setLngLat([lng, lat]).addTo(map);
 
   const muni = info.municipio;
   const h = info.hazards || {};
