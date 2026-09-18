@@ -110,8 +110,11 @@ def main() -> None:
     if args.layer:
         cur.execute("SELECT id, table_name FROM layer_registry WHERE id = %s", (args.layer,))
     else:
+        # Only layers whose data is actually loaded. A catalogued layer has no
+        # table, and building a query around a NULL table name fails the run.
         cur.execute("SELECT id, table_name FROM layer_registry "
-                    "WHERE geometry_type ILIKE '%%polygon%%' OR geometry_type ILIKE '%%line%%' "
+                    "WHERE status = 'published' AND table_name IS NOT NULL "
+                    "  AND (geometry_type ILIKE '%%polygon%%' OR geometry_type ILIKE '%%line%%') "
                     "ORDER BY id")
     for lid, table in cur.fetchall():
         c2 = conn.cursor()
