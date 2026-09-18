@@ -41,6 +41,18 @@ def _get_pool():
     return _POOL
 
 
+def _alive(conn) -> bool:
+    """Whether a connection can still answer. Cheap enough to run per checkout."""
+    if conn.closed:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+        return True
+    except Exception:
+        return False
+
+
 class connection:
     """Context manager yielding a pooled connection, returned to the pool on exit.
 
@@ -50,15 +62,30 @@ class connection:
 
     def __enter__(self):
         self._pool = _get_pool()
-        self._conn = self._pool.getconn()
-        return self._conn
+        # A pooled connection can be dead on arrival: the Cloud SQL proxy and the
+        # server both drop idle connections, and the pool hands them back anyway.
+        # The first query on one raises InterfaceError, which surfaced as a
+        # request that returned nothing at all. Check before handing it out, and
+        # throw away anything that does not answer.
+        for _ in range(POOL_MAX + 1):
+            conn = self._pool.getconn()
+            if _alive(conn):
+                self._conn = conn
+                return conn
+            self._pool.putconn(conn, close=True)
+        raise RuntimeError("no usable database connection in the pool")
 
     def __exit__(self, exc_type, exc, tb):
+        broken = False
         try:
             if exc_type is not None:
                 self._conn.rollback()
             else:
                 self._conn.commit()
+        except Exception:
+            # The connection died mid-request. Closing it on return stops the pool
+            # from handing the same dead one to the next caller.
+            broken = True
         finally:
-            self._pool.putconn(self._conn)
+            self._pool.putconn(self._conn, close=broken)
         return False
