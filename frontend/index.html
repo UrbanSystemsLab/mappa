@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="google" content="notranslate">
 <title>Mappa — Asistente Geoespacial de Puerto Rico</title>
+<link rel="icon" type="image/png" href="/static/logo.png">
+<link rel="apple-touch-icon" href="/static/logo.png">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <style>
   /* ============================================================
@@ -73,7 +75,8 @@
   /* ---------- top bar ---------- */
   .topbar{height:var(--topbar-h);display:flex;align-items:center;gap:12px;
           background:var(--brand);color:#fff;padding:0 18px}
-  .topbar .brand{font-weight:700;font-size:18px;letter-spacing:.01em;white-space:nowrap}
+  .topbar .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:18px;letter-spacing:.01em;white-space:nowrap}
+  .topbar .brand img{width:26px;height:26px;display:block;border-radius:50%}
   .topbar .tag{font-size:12.5px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .chattog{margin-left:auto;background:rgba(255,255,255,.14);border:0;color:#fff;cursor:pointer;
            border-radius:7px;padding:5px 10px;font-size:13px;line-height:1}
@@ -129,7 +132,8 @@
   /* ---------- conversation ---------- */
   .messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:13px}
   .empty{margin:auto 0 0;padding:4px 2px 0;color:var(--muted);max-width:none;text-align:left}
-  .empty .icon{font-size:22px;opacity:.85}
+  .empty .icon{line-height:0}
+  .empty .icon img{width:46px;height:46px;border-radius:50%;display:block}
   .empty h3{margin:8px 0 6px;color:var(--ink);font-size:16px;letter-spacing:-.01em}
   .empty p{margin:0;font-size:12.5px;line-height:1.6}
   .empty .hint{margin-top:13px;padding-top:11px;border-top:1px solid var(--line-2);
@@ -286,7 +290,7 @@
 </head>
 <body>
 <div class="topbar">
-  <span class="brand" translate="no">🗺️ Mappa</span>
+  <span class="brand" translate="no"><img src="/static/logo.png" alt="" width="26" height="26">Mappa</span>
   <span class="tag">Asistente de planificación y riesgos de Puerto Rico</span>
   <button id="chattoggle" class="chattog" title="Mostrar/ocultar chat">&#9776;</button>
   <span class="langtog"><a id="lang-es">ES</a><a id="lang-en">EN</a></span>

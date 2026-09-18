@@ -161,7 +161,7 @@ function render() {
       ? '<b>Cada respuesta cita su fuente.</b> Si los documentos cargados no lo dicen, Mappa lo dirá en vez de inventarlo.'
       : '<b>Every answer cites its source.</b> If the loaded documents do not say it, Mappa will say so rather than fill the gap.';
     out.innerHTML = `<div class="empty">
-      <div class="icon">🗺️</div>
+      <div class="icon"><img src="/static/logo.png" alt="" width="46" height="46"></div>
       <h3 translate="no">${t('emptyT')}</h3>
       <p>${t('emptyB')}</p>
       <div class="hint">${hint}</div>
