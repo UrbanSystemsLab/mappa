@@ -47,6 +47,16 @@ def _is_decline(text: str) -> bool:
 from .retrieval import citation_id
 
 
+_MAP_MARKER = re.compile(
+    r"\s*[\[(](?:MAP FACTS?|DATOS? DEL MAPA|Dato del mapa|Map data|Datos del mapa)[\])]",
+    re.I)
+
+
+def _strip_map_markers(text: str) -> str:
+    """Drop the model's references to the map-facts block itself."""
+    return _MAP_MARKER.sub("", text)
+
+
 def _strip_urls(text: str) -> str:
     """Remove any link/URL the model may have emitted. All source links come from the
     database citations shown in the UI, never from the model's prose — this enforces
@@ -297,7 +307,7 @@ def narrate(
     answer = _chat(messages)
     if not answer:
         raise RuntimeError("empty LLM response")
-    answer = _strip_urls(answer)
+    answer = _strip_map_markers(_strip_urls(answer))
 
     # If the model declined (couldn't answer from the sources), don't present the
     # retrieved docs as if they backed an answer — show no citations and low
