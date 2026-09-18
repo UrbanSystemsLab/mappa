@@ -87,7 +87,8 @@ LAYERS: dict[str, dict[str, Any]] = {
         "label_es": "áreas protegidas terrestres (PACAT 2018)",
         "label_en": "terrestrial protected areas (PACAT 2018)",
         "words": ["area protegida", "área protegida", "areas protegidas", "áreas protegidas",
-                  "protected area", "protected areas", "reserva", "reservas", "reserve"],
+                  "protected", "reserva", "reservas", "reserve", "area natural",
+                  "área natural", "areas naturales", "áreas naturales", "natural area"],
     },
     "agricultural_valleys": {
         "table": "layer_g13_conserv_valles_agricolas_regla_5_2014",
@@ -119,7 +120,8 @@ LAYERS: dict[str, dict[str, Any]] = {
         "label_es": "Plan de Uso de Terrenos (2015)",
         "label_en": "Land Use Plan (2015)",
         "words": ["plan de uso de terrenos", "land use plan", "put", "clasificacion de suelo",
-                  "clasificación de suelo"],
+                  "clasificación de suelo", "zonificacion", "zonificación", "zoning",
+                  "uso de suelo", "uso del suelo", "land use"],
     },
 }
 
