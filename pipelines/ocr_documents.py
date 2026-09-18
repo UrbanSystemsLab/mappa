@@ -36,11 +36,13 @@ DPI = 300
 WORDS = re.compile(r"[A-Za-zÀ-ÿ]{3,}")
 CTRL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 
-# Below these, the pages were images rather than text. A map sheet scores around
-# 60% letters and a few hundred words across the whole document; real prose runs
-# above 75%. Anything under is recorded as image-only instead of being ingested.
-MIN_LETTER_SHARE = 0.70
-MIN_WORDS = 400
+# What separates a scanned document from a scanned map is the share of characters
+# that are letters, not how many words came back. Their map sheets land at 67-73%
+# (coordinates, grid labels, fragments); real documents run 77-81%. A word floor
+# of 400 rejected a genuine 314-word regulation, so it is only there to catch a
+# page or two of noise.
+MIN_LETTER_SHARE = 0.75
+MIN_WORDS = 120
 
 
 def ocr_page_range(pdf: Path, first: int, last: int) -> str:
