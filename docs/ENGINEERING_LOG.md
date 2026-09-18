@@ -208,8 +208,37 @@ it was right.**
 | **Tile service read the wrong table** | Every layer loaded after the first ten returned 404 while the panel offered it | `tiles.py` looked layers up in `spatial_layers`, the old ten-row table, not `layer_registry`. |
 | **Stale asset version** | Panel stayed on an old build no matter what was deployed | `index.html` pointed at `app.js?v=80`, a number edited by hand. Now a content hash. |
 | **Place search invisible** | No way to find a place on the map | The CSS and the JavaScript existed; the markup never did. |
+| **Local answers took 16 seconds** | Every question felt broken | `LLM_PROVIDER` defaulted to `ollama`, so a laptop answered from Mistral running locally — 16.2s against Gemini's 2.1s, and a different model from the one the product ships. Default now follows the credentials present. |
+| **Model embellished a computed count** | Told "3 of 7 schools intersect the flood zone", it named the one school it claimed was outside. Four were. | It was given figures, not feature names, and filled in the rest. Prompt now forbids naming or inferring individual features. |
 | **8 placeholder documents cited** | A FEMA source appeared that was not in their inventory | Scaffold rows in `documents.json`. Purged; prompts hardened. This is the incident the provenance rule comes from. |
 | **Registry marked `loaded` before commit** | False provenance record | Marking moved after the embedding run; `--reconcile` sets state from what is actually in the corpus. |
+
+---
+
+## 6a. Latency
+
+Measured per stage on a warm process, one question:
+
+| Stage | Time |
+|---|---|
+| `detect_municipio` | 0.55s |
+| `retrieve_with_scores` (pgvector, top-6) | 0.55s |
+| `spatial_ops.analyze` | <0.01s |
+| `suggested_layer_ids` | 0.52s |
+| `municipio_bbox` | 0.44s |
+| **LLM narration (Gemini 2.5-flash-lite)** | **2.1s** |
+| **Total, warm** | **~2s** |
+
+The first request after a restart is ~8s while the Vertex client is built; it is
+cached for the life of the process after that.
+
+Everything outside the model is about two seconds combined, and several of those
+stages are separate round trips that could be folded together if it ever matters.
+It does not yet — the model dominates.
+
+**Streaming is the next real win.** Two seconds to first token is fine; two
+seconds of blank screen is what people notice. Server-sent events from `/ask`
+would show the answer as it is written.
 
 ---
 
