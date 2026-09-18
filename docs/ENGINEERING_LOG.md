@@ -8,7 +8,7 @@ system makes back to a file they gave us.
 **Append to this file as work lands. Do not rewrite history — corrections go in
 as corrections, because knowing something was once wrong is the useful part.**
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 ---
 
@@ -210,6 +210,9 @@ it was right.**
 | **Place search invisible** | No way to find a place on the map | The CSS and the JavaScript existed; the markup never did. |
 | **Local answers took 16 seconds** | Every question felt broken | `LLM_PROVIDER` defaulted to `ollama`, so a laptop answered from Mistral running locally — 16.2s against Gemini's 2.1s, and a different model from the one the product ships. Default now follows the credentials present. |
 | **Model embellished a computed count** | Told "3 of 7 schools intersect the flood zone", it named the one school it claimed was outside. Four were. | It was given figures, not feature names, and filled in the rest. Prompt now forbids naming or inferring individual features. |
+| **Place questions returned the wrong place** | A question about Loíza came back with one chunk out of 1,652, and the answer said the corpus had nothing on Loíza | HNSW finds the nearest chunks across the whole corpus and applies the municipality filter *afterwards*, discarding nearly all of them. Fixed with `hnsw.iterative_scan = relaxed_order`. **Any filtered vector search has this problem — check row counts, not just scores.** |
+| **Map location overrode the question** | After searching Mayagüez on the map, asking about Loíza returned Mayagüez documents | `req.location or detect_municipio(...)` — the sticky location won. The question wins now. |
+| **Dead pooled connections** | Requests intermittently returned nothing at all | The Cloud SQL proxy drops idle connections and the pool handed them back. Connections are tested on checkout. |
 | **8 placeholder documents cited** | A FEMA source appeared that was not in their inventory | Scaffold rows in `documents.json`. Purged; prompts hardened. This is the incident the provenance rule comes from. |
 | **Registry marked `loaded` before commit** | False provenance record | Marking moved after the embedding run; `--reconcile` sets state from what is actually in the corpus. |
 
