@@ -61,7 +61,7 @@ def retrieve_cloud(
     documents plus island-wide ("Puerto Rico") documents. Falls back to an unscoped
     search if the scoped one finds nothing, so it always answers.
     """
-    import psycopg2
+    from . import db
 
     qvec = _get_query_model().encode([query], normalize_embeddings=True, show_progress_bar=False)[0]
     lit = _vector_literal(qvec)
@@ -71,9 +71,16 @@ def retrieve_cloud(
         "FROM document_chunks c JOIN documents d ON c.document_id = d.id "
     )
     tail = "ORDER BY c.embedding <=> %s::vector LIMIT %s"
-    with psycopg2.connect(DB_URL) as conn, conn.cursor() as cur:
+    with db.connection() as conn:
+        cur = conn.cursor()
         rows = []
         if jurisdiction:
+            # An HNSW index finds the nearest chunks in the whole corpus and only
+            # then applies the WHERE, so a municipality filter threw away nearly
+            # all of them: a question about Loíza came back with one chunk, and
+            # the answer read as though the corpus had nothing on Loíza. Iterative
+            # scan keeps searching until the filter is satisfied.
+            cur.execute("SET LOCAL hnsw.iterative_scan = relaxed_order")
             cur.execute(
                 base + "WHERE d.jurisdiction ILIKE %s OR d.jurisdiction ILIKE 'Puerto Rico' " + tail,
                 (lit, jurisdiction, lit, top_k),

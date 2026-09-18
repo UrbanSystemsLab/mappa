@@ -100,7 +100,11 @@ def ask(req: AskRequest) -> AskResponse:
     if req.history:
         retrieval_query = f"{req.history[-1].question} {req.question}"
     # Location-aware: scope to the clicked municipio, or one named in the question.
-    municipio = req.location or detect_municipio(req.question)
+    # A place named in the question wins over the one the map happens to be on.
+    # It used to be the other way round, so after searching for Mayaguez on the
+    # map, asking about Loiza returned Mayaguez documents and the answer said
+    # there was nothing on Loiza.
+    municipio = detect_municipio(req.question) or req.location
     scored = retrieve_with_scores(retrieval_query, top_k=6, jurisdiction=municipio)
     layers = infer_layers(req.question)
     # Catalog IDs the map can actually switch on, resolved through the registry.
