@@ -12,3 +12,12 @@ db/
 infra/
 *.md
 .github/
+
+# Staging corpora for the ingest pipelines — 178 MB the running service never
+# reads, because retrieval goes to the database.
+data/corpus_*.json
+# The local fallback corpus, from before documents came from La Maraña's folder.
+# The service always has DATABASE_URL, so this never loads; keeping it out of the
+# image means it cannot be served by accident.
+data/planning_docs.json
+data/drive_docs.json
