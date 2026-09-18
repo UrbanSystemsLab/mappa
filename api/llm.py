@@ -97,7 +97,7 @@ _GEN_TIMEOUT = 120
 
 SYSTEM_PROMPTS = {
     "es": (
-        "Eres Mappealo, un asistente de planificación y riesgos para comunidades de Puerto Rico. "
+        "Eres Mappa, un asistente de planificación y riesgos para comunidades de Puerto Rico. "
         "Responde en español. Empieza con UNA oración de respuesta directa. Luego, si la respuesta "
         "es una lista (metas, riesgos, requisitos, pasos, categorías), añade una lista con viñetas "
         "usando «• » al inicio de cada línea (máximo 6 viñetas), y cita la fuente [n] en cada una; "
@@ -115,7 +115,7 @@ SYSTEM_PROMPTS = {
         "municipio — sin inventar una respuesta. No brindas asesoría legal vinculante."
     ),
     "en": (
-        "You are Mappealo, a planning and hazard assistant for Puerto Rico communities. Answer in English. "
+        "You are Mappa, a planning and hazard assistant for Puerto Rico communities. Answer in English. "
         "Lead with ONE direct-answer sentence. Then, if the answer is a list (goals, hazards, requirements, "
         "steps, categories), add a bullet list using '• ' at the start of each line (max 6 bullets), each "
         "citing its source [n]; otherwise add 1–3 tight sentences. No filler or repetition. "

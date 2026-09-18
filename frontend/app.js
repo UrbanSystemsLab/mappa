@@ -88,11 +88,11 @@ let LANG = 'es';
 const I18N = {
   es: { tagline: 'Asistente de planificación y riesgos de Puerto Rico',
         ph: 'Escribe tu pregunta… o haz clic en el mapa', clear: 'Nueva conversación',
-        sources: 'Fuentes', layersTitle: 'Capas del mapa', emptyT: 'Pregúntale a Mappealo',
+        sources: 'Fuentes', layersTitle: 'Capas del mapa', emptyT: 'Pregúntale a Mappa',
         emptyB: 'Uso de terrenos, riesgo de inundación o deslizamiento, permisos y planificación en Puerto Rico. También puedes hacer clic en el mapa para preguntar sobre un lugar.' },
   en: { tagline: 'Planning & hazard assistant for Puerto Rico',
         ph: 'Type your question… or click the map', clear: 'New conversation',
-        sources: 'Sources', layersTitle: 'Map layers', emptyT: 'Ask Mappealo',
+        sources: 'Sources', layersTitle: 'Map layers', emptyT: 'Ask Mappa',
         emptyB: 'Land use, flood or landslide risk, permits, and planning in Puerto Rico. You can also click the map to ask about a place.' },
 };
 const t = k => I18N[LANG][k];
@@ -158,8 +158,8 @@ function confClass(c) {
 function render() {
   if (!conversation.length) {
     const hint = LANG === 'es'
-      ? '<b>Cada respuesta cita su fuente.</b> Si los documentos cargados no lo dicen, Mappealo lo dirá en vez de inventarlo.'
-      : '<b>Every answer cites its source.</b> If the loaded documents do not say it, Mappealo will say so rather than fill the gap.';
+      ? '<b>Cada respuesta cita su fuente.</b> Si los documentos cargados no lo dicen, Mappa lo dirá en vez de inventarlo.'
+      : '<b>Every answer cites its source.</b> If the loaded documents do not say it, Mappa will say so rather than fill the gap.';
     out.innerHTML = `<div class="empty">
       <div class="icon">🗺️</div>
       <h3 translate="no">${t('emptyT')}</h3>
@@ -179,7 +179,7 @@ function render() {
     return `
       <div class="row user"><div class="bubble">${esc(m.question)}</div></div>
       <div class="row bot"><div class="bubble">
-        <div class="who">Mappealo ${conf}</div>
+        <div class="who">Mappa ${conf}</div>
         <div class="answer${thinking ? ' typing' : ''}">${thinking ? (LANG === 'es' ? 'Consultando…' : 'Thinking…') : esc(m.answer)}</div>
         ${cites ? `<div class="cites"><div class="cites-h">${t('sources')}</div>${cites}</div>` : ''}
         ${layers ? `<div class="layers">${layers}</div>` : ''}
