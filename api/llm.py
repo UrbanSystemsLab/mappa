@@ -14,11 +14,13 @@ Env:
 
 from __future__ import annotations
 
+import functools
 import json
 import os
 import re
 import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import Any
 
 # Matches markdown links [text](url), bare http(s):// URLs, and www.* addresses.
@@ -54,9 +56,24 @@ def _strip_urls(text: str) -> str:
     text = re.sub(r"(?m)^\s*[\*\-]\s+", "• ", text)  # normalize markdown bullets to •
     return re.sub(r"[ \t]{2,}", " ", text).strip()
 
-# Provider: "ollama" (local, default), "gemini" (Vertex AI — GCP-native, no key,
-# auth via the service account), or "openai" (any OpenAI-compatible API).
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "ollama").lower()
+# Provider: "gemini" (Vertex AI — GCP-native, no key, auth via the service
+# account), "ollama" (a local model), or "openai" (any OpenAI-compatible API).
+#
+# Gemini is the default wherever Google credentials are present, which means a
+# laptop is running what production runs. The default used to be ollama, so local
+# answers came from Mistral on the machine - 16 seconds against Gemini's 2, and a
+# different model from the one the product actually ships.
+def _default_provider() -> str:
+    # K_SERVICE is set by Cloud Run, where credentials come from the metadata
+    # server and neither file below exists. Without this check the deployed
+    # service would fall back to a local model that is not running there.
+    if os.environ.get("K_SERVICE") or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+        return "gemini"
+    adc = Path.home() / ".config" / "gcloud" / "application_default_credentials.json"
+    return "gemini" if adc.exists() else "ollama"
+
+
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", _default_provider()).lower()
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
@@ -130,7 +147,7 @@ def _chat_gemini(messages: list[dict[str, str]]) -> str:
     from google import genai
     from google.genai import types
 
-    client = genai.Client(vertexai=True, project=GCP_PROJECT, location=VERTEX_LOCATION)
+    client = _gemini_client()
     system = next((m["content"] for m in messages if m["role"] == "system"), None)
     contents = [
         types.Content(role=("model" if m["role"] == "assistant" else "user"),
@@ -143,6 +160,15 @@ def _chat_gemini(messages: list[dict[str, str]]) -> str:
         config=types.GenerateContentConfig(system_instruction=system, temperature=0.2, max_output_tokens=900),
     )
     return (resp.text or "").strip()
+
+
+@functools.lru_cache(maxsize=1)
+def _gemini_client():
+    """One Vertex client for the process. Building it per request repeated the
+    credential handshake on every question."""
+    from google import genai
+
+    return genai.Client(vertexai=True, project=GCP_PROJECT, location=VERTEX_LOCATION)
 
 
 def _post_json(url: str, payload: dict, headers: dict) -> dict:
@@ -224,10 +250,17 @@ def _spatial_block(spatial: dict[str, Any], lang: str) -> str:
         return warn + "\n\n" + (("\n".join(lines) + "\n\n") if lines else "")
     if not lines:
         return ""
+    # Naming which features made up a count is the tempting next sentence, and the
+    # model does not have them: told "3 of 7 schools", it named the one school it
+    # claimed was outside the flood zone. Four were.
     head = ("DATOS DEL MAPA (calculados sobre las capas oficiales; son las únicas cifras "
-            "que puedes dar, cítalas con su año):" if lang == "es"
+            "que puedes dar, cítalas con su año). Repórtalas tal cual: no nombres "
+            "instalaciones concretas ni deduzcas cuáles son, porque no se te han dado."
+            if lang == "es"
             else "MAP FACTS (computed against the official layers; these are the only "
-            "figures you may state, cite them with their year):")
+            "figures you may state, cite them with their year). Report them as given: "
+            "do not name individual facilities or infer which ones they are - you have "
+            "not been told.")
     return head + "\n" + "\n".join(lines) + "\n\n"
 
 
