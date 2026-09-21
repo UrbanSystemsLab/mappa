@@ -88,12 +88,14 @@ let LANG = 'es';
 const I18N = {
   es: { tagline: 'Asistente de planificación y riesgos de Puerto Rico',
         ph: 'Escribe tu pregunta… o haz clic en el mapa', clear: 'Nueva conversación',
-        sources: 'Fuentes', layersTitle: 'Capas del mapa', emptyT: 'Pregúntale a Mappa',
-        emptyB: 'Uso de terrenos, riesgo de inundación o deslizamiento, permisos y planificación en Puerto Rico. También puedes hacer clic en el mapa para preguntar sobre un lugar.' },
+        // '¡Aló!' is how the brand greets people - the same word in both languages,
+        // so the welcome reads as Puerto Rican rather than as a translated label.
+        sources: 'Fuentes', layersTitle: 'Capas del mapa', emptyT: '¡Aló!',
+        emptyB: 'Pregúntale a Mappa sobre uso de terrenos, riesgo de inundación o deslizamiento, permisos y planificación en Puerto Rico. También puedes hacer clic en el mapa para preguntar sobre un lugar. Puedes preguntar en español o en inglés.' },
   en: { tagline: 'Planning & hazard assistant for Puerto Rico',
         ph: 'Type your question… or click the map', clear: 'New conversation',
-        sources: 'Sources', layersTitle: 'Map layers', emptyT: 'Ask Mappa',
-        emptyB: 'Land use, flood or landslide risk, permits, and planning in Puerto Rico. You can also click the map to ask about a place.' },
+        sources: 'Sources', layersTitle: 'Map layers', emptyT: '¡Aló!',
+        emptyB: 'Ask Mappa about land use, flood or landslide risk, permits, and planning in Puerto Rico. You can also click the map to ask about a place. Ask questions in Spanish or English.' },
 };
 const t = k => I18N[LANG][k];
 const CATS = {
