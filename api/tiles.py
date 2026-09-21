@@ -157,8 +157,16 @@ def tile(name: str, z: int, x: int, y: int) -> bytes | None:
     # per-row reprojection is needed.
     area_filter = ""
     tile_area = max((e - w) * (n - s), 1e-12)
-    if "Polygon" in (meta["geometry_type"] or "") and z < 11:
-        area_filter = f" AND ST_Area(l.geom) > {tile_area / 4_000_000.0:.12g}"
+    # Case-insensitive: the ten hand-loaded layers record "MultiPolygon" while
+    # everything from their GeoPackage records "MULTIPOLYGON", so this filter
+    # silently did nothing for 97 of the 107 layers - which is how one landcover
+    # tile came to be 7 MB.
+    if "polygon" in (meta["geometry_type"] or "").lower() and z < 11:
+        # A tile is drawn at 256 px a side, so a feature smaller than tile_area
+        # / 256² covers less than one pixel and cannot be seen. The old divisor
+        # of 4,000,000 kept features 1/64th of a pixel across - invisible, but
+        # still paid for in bytes on every tile.
+        area_filter = f" AND ST_Area(l.geom) > {tile_area / 65_536.0:.12g}"
 
     # `name` is whitelisted via spatial_layers above; bounds are bound parameters.
     sql = f"""
