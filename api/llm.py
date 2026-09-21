@@ -47,14 +47,29 @@ def _is_decline(text: str) -> bool:
 from .retrieval import citation_id
 
 
-_MAP_MARKER = re.compile(
-    r"\s*[\[(](?:MAP FACTS?|DATOS? DEL MAPA|Dato del mapa|Map data|Datos del mapa)[\])]",
-    re.I)
+# The model cites the map-facts block the way it cites a document. It appears
+# alone - "[MAP FACTS]" - and also mixed into a citation list - "[1, MAP FACTS]" -
+# which the first version of this missed, so readers saw it in the answer.
+_MAP_LABEL = r"(?:MAP FACTS?|DATOS? DEL MAPA|Dato del mapa|Map data|Datos del mapa)"
+_MAP_MARKER_ALONE = re.compile(rf"\s*[\[(]\s*{_MAP_LABEL}\s*[\])]", re.I)
+_MAP_MARKER_IN_LIST = re.compile(rf"(?<=[\[(])([^\[\]()]*?){_MAP_LABEL}([^\[\]()]*?)(?=[\])])",
+                                 re.I)
 
 
 def _strip_map_markers(text: str) -> str:
-    """Drop the model's references to the map-facts block itself."""
-    return _MAP_MARKER.sub("", text)
+    """Drop the model's references to the map-facts block itself.
+
+    Inside a citation list the surrounding numbers are kept, so "[1, MAP FACTS]"
+    becomes "[1]" rather than losing the real citation with it.
+    """
+    text = _MAP_MARKER_ALONE.sub("", text)
+
+    def tidy(m: re.Match) -> str:
+        rest = (m.group(1) + m.group(2))
+        rest = re.sub(r"\s*,\s*,\s*", ", ", rest)          # gap left in the middle
+        return re.sub(r"^[\s,]+|[\s,]+$", "", rest)         # or at either end
+
+    return _MAP_MARKER_IN_LIST.sub(tidy, text)
 
 
 def _strip_urls(text: str) -> str:

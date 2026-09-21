@@ -92,6 +92,27 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def municipality_in_scope(req: AskRequest) -> str | None:
+    """Which municipality the question is about, including when it does not say.
+
+    A follow-up rarely repeats the name: "and the flood risk there?", "how many
+    schools in that municipality?". Reading only the current question left those
+    turns with no region at all - the spatial engine could not count anything and
+    the map did not move - so the place carries forward from the conversation.
+
+    A place named in the current question still wins, so changing subject works;
+    the map's own location is the last resort.
+    """
+    named = detect_municipio(req.question)
+    if named:
+        return named
+    for turn in reversed(req.history or []):
+        earlier = detect_municipio(turn.question)
+        if earlier:
+            return earlier
+    return req.location
+
+
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest) -> AskResponse:
     lang = "es" if (req.lang or llm.RESPONSE_LANG or "en").lower() == "es" else "en"
@@ -106,7 +127,7 @@ def ask(req: AskRequest) -> AskResponse:
     # It used to be the other way round, so after searching for Mayaguez on the
     # map, asking about Loiza returned Mayaguez documents and the answer said
     # there was nothing on Loiza.
-    municipio = detect_municipio(req.question) or req.location
+    municipio = municipality_in_scope(req)
     scored = retrieve_with_scores(retrieval_query, top_k=6, jurisdiction=municipio)
     layers = infer_layers(req.question)
     # Catalog IDs the map can actually switch on, resolved through the registry.
@@ -123,7 +144,8 @@ def ask(req: AskRequest) -> AskResponse:
     # read out of retrieved prose. When the question asks for a figure and the
     # layers cannot produce one, that absence is passed through too, so the model
     # is told to say so instead of finding a number in the text.
-    analysis = spatial_ops.analyze(req.question, municipio)
+    analysis = spatial_ops.analyze(req.question, municipio,
+                                   [h.question for h in (req.history or [])])
     if analysis:
         context["analysis"] = spatial_ops.describe(analysis, lang)
     elif spatial_ops.wants_number(req.question):
@@ -191,7 +213,7 @@ def ask_stream(req: AskRequest) -> StreamingResponse:
         # Doing them before the first yield meant nothing reached the screen until
         # the whole pipeline had finished, which put the map three seconds behind
         # for no reason.
-        municipio = detect_municipio(req.question) or req.location
+        municipio = municipality_in_scope(req)
         layers = infer_layers(req.question)
         map_layers = spatial_ops.suggested_layer_ids(req.question)
         focus = spatial.municipio_bbox(municipio)
@@ -209,7 +231,8 @@ def ask_stream(req: AskRequest) -> StreamingResponse:
         context = dict(req.spatial or {})
         if facilities:
             context["facilities"] = facilities
-        analysis = spatial_ops.analyze(req.question, municipio)
+        analysis = spatial_ops.analyze(req.question, municipio,
+                                   [h.question for h in (req.history or [])])
         if analysis:
             context["analysis"] = spatial_ops.describe(analysis, lang)
         elif spatial_ops.wants_number(req.question):

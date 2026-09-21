@@ -371,7 +371,8 @@ def wants_number(question: str) -> bool:
     return any(_strip(w) in text for w in _COUNT_WORDS + _SHARE_WORDS)
 
 
-def analyze(question: str, region: str | None = None) -> list[dict[str, Any]]:
+def analyze(question: str, region: str | None = None,
+            history: list[str] | None = None) -> list[dict[str, Any]]:
     """Run whatever spatial question this is, and return only what was computed.
 
     Returns an empty list when the question is quantitative but the layers cannot
@@ -379,6 +380,15 @@ def analyze(question: str, region: str | None = None) -> list[dict[str, Any]]:
     absence of a result has to travel, or the model fills the silence.
     """
     keys = detect_layers(question)
+    # "How many of those are in a flood zone?" names the hazard but not the thing
+    # being counted - the subject is in the previous turn. Without it the question
+    # reads as uncountable and the answer declines, having just said there are 25.
+    if not any(k in COUNTABLE for k in keys):
+        for earlier in reversed(history or []):
+            carried = [k for k in detect_layers(earlier) if k in COUNTABLE]
+            if carried:
+                keys = carried + keys
+                break
     if not keys:
         return []
     dist = detect_distance(question)
