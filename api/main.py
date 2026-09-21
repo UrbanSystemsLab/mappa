@@ -2,9 +2,11 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 import hashlib
+import json
 import re
 
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import (FileResponse, JSONResponse, Response,
+                               StreamingResponse)
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -164,6 +166,90 @@ def ask(req: AskRequest) -> AskResponse:
     if map_layers:
         result["suggested_layers"] = map_layers
     return AskResponse(disclaimer=disclaimer, municipio=municipio, focus=focus, **result)
+
+
+@app.post("/ask/stream")
+def ask_stream(req: AskRequest) -> StreamingResponse:
+    """The same answer as /ask, sent as it is written.
+
+    The map facts arrive first, in a `meta` event, so the map can fly to the place
+    and switch on the right layers while the text is still being written. Then
+    `delta` events carry the answer, and `done` carries citations and confidence.
+
+    An answer that takes two seconds is fine; two seconds of a blank panel reading
+    'Thinking...' is what people experience as the product being broken.
+    """
+    lang = "es" if (req.lang or llm.RESPONSE_LANG or "en").lower() == "es" else "en"
+    disclaimer = DISCLAIMER_ES if lang == "es" else DISCLAIMER_EN
+
+    def event(name: str, payload: dict) -> str:
+        return f"event: {name}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+    def generate():
+        # The map's answer is cheap to work out - a name match and a bounding box -
+        # so it goes out first. Retrieval and the spatial analysis run afterwards.
+        # Doing them before the first yield meant nothing reached the screen until
+        # the whole pipeline had finished, which put the map three seconds behind
+        # for no reason.
+        municipio = detect_municipio(req.question) or req.location
+        layers = infer_layers(req.question)
+        map_layers = spatial_ops.suggested_layer_ids(req.question)
+        focus = spatial.municipio_bbox(municipio)
+        yield event("meta", {"municipio": municipio, "focus": focus,
+                             "suggested_layers": (map_layers or layers),
+                             "disclaimer": disclaimer})
+
+        retrieval_query = req.question
+        if req.history:
+            retrieval_query = f"{req.history[-1].question} {req.question}"
+        scored = retrieve_with_scores(retrieval_query, top_k=6, jurisdiction=municipio)
+        docs = [doc for _, doc in scored]
+
+        facilities = spatial.facility_counts(req.question, municipio)
+        context = dict(req.spatial or {})
+        if facilities:
+            context["facilities"] = facilities
+        analysis = spatial_ops.analyze(req.question, municipio)
+        if analysis:
+            context["analysis"] = spatial_ops.describe(analysis, lang)
+        elif spatial_ops.wants_number(req.question):
+            context["no_figure"] = True
+        if req.active_layers:
+            context["active_layers"] = req.active_layers
+        has_context = (bool(req.spatial) or bool(facilities) or bool(req.active_layers)
+                       or bool(analysis))
+
+        if not has_context and (not scored or scored[0][0] < MIN_RELEVANCE):
+            yield event("delta", {"text": NO_MATCH[lang]})
+            yield event("done", {"citations": [], "confidence":
+                                 "baja" if lang == "es" else "low"})
+            return
+
+        if (docs or has_context) and llm.is_available():
+            try:
+                messages = llm.build_messages(req.question, docs, layers,
+                                              [(t.question, t.answer) for t in req.history],
+                                              context or None, lang)
+                parts = []
+                for piece in llm.stream_answer(messages):
+                    parts.append(piece)
+                    yield event("delta", {"text": piece})
+                result = llm.finish("".join(parts), docs, (map_layers or layers), lang)
+            except Exception:
+                # Any transport or parse failure falls back to the templated
+                # composer, so the panel always resolves to something.
+                result = compose_answer(req.question, docs, layers)
+                yield event("delta", {"text": result["answer_es"]})
+        else:
+            result = compose_answer(req.question, docs, layers)
+            yield event("delta", {"text": result["answer_es"]})
+
+        yield event("done", {"citations": result.get("citations", []),
+                             "confidence": result.get("confidence", "")})
+
+    return StreamingResponse(generate(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache",
+                                      "X-Accel-Buffering": "no"})
 
 
 @app.get("/layers")

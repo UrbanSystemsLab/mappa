@@ -172,6 +172,31 @@ def _chat_gemini(messages: list[dict[str, str]]) -> str:
     return (resp.text or "").strip()
 
 
+def _chat_gemini_stream(messages: list[dict[str, str]]):
+    """Same call as _chat_gemini, yielding text as the model writes it.
+
+    Two seconds to an answer is fine; two seconds of blank panel is what people
+    read as the thing being slow.
+    """
+    from google.genai import types
+
+    client = _gemini_client()
+    system = next((m["content"] for m in messages if m["role"] == "system"), None)
+    contents = [
+        types.Content(role=("model" if m["role"] == "assistant" else "user"),
+                      parts=[types.Part.from_text(text=m["content"])])
+        for m in messages if m["role"] != "system"
+    ]
+    for chunk in client.models.generate_content_stream(
+        model=LLM_MODEL,
+        contents=contents,
+        config=types.GenerateContentConfig(system_instruction=system, temperature=0.2,
+                                           max_output_tokens=900),
+    ):
+        if chunk.text:
+            yield chunk.text
+
+
 @functools.lru_cache(maxsize=1)
 def _gemini_client():
     """One Vertex client for the process. Building it per request repeated the
@@ -274,21 +299,11 @@ def _spatial_block(spatial: dict[str, Any], lang: str) -> str:
     return head + "\n" + "\n".join(lines) + "\n\n"
 
 
-def narrate(
-    question: str,
-    docs: list[dict[str, Any]],
-    layers: list[str],
-    history: list[tuple[str, str]] | None = None,
-    spatial: dict[str, Any] | None = None,
-    lang: str | None = None,
-) -> dict[str, Any]:
-    """Call the local LLM to write a cited answer over the retrieved docs.
 
-    `history` is prior (question, answer) turns so follow-ups keep context.
-    `spatial` is the clicked point's map facts, folded in so the answer can reason
-    over real conditions (flood/landslide) alongside the documents. `lang` is the
-    UI-selected answer language. Raises on transport/parse errors so callers fall back.
-    """
+def build_messages(question, docs, layers=None, history=None, spatial=None, lang=None):
+    """Assemble the prompt. Shared so the streaming and non-streaming paths cannot
+    drift apart - the grounding rules live here, and an answer written under
+    different rules would be a different product."""
     lang = (lang or RESPONSE_LANG)
     lang = lang if lang in SYSTEM_PROMPTS else "en"
     loc = _spatial_block(spatial, lang) if spatial else ""
@@ -299,15 +314,32 @@ def narrate(
         f"{_USER_INSTRUCTION[lang]}"
     )
     messages = [{"role": "system", "content": SYSTEM_PROMPTS[lang]}]
-    # Include recent conversation so the model can answer follow-ups in context.
     for prev_q, prev_a in (history or [])[-4:]:
         messages.append({"role": "user", "content": prev_q})
         messages.append({"role": "assistant", "content": prev_a})
     messages.append({"role": "user", "content": user})
-    answer = _chat(messages)
-    if not answer:
-        raise RuntimeError("empty LLM response")
-    answer = _strip_map_markers(_strip_urls(answer))
+    return messages
+
+
+def stream_answer(messages):
+    """Yield the answer as it is written, provider permitting."""
+    if LLM_PROVIDER == "gemini":
+        yield from _chat_gemini_stream(messages)
+    else:
+        yield _chat(messages)
+
+
+def finish(answer: str, docs, layers, lang: str) -> dict:
+    """Post-process a finished answer the same way narrate() does - strip URLs and
+    the map-facts marker, decide citations and confidence."""
+    answer = _strip_map_markers(_strip_urls(answer)).strip()
+    return _assemble(answer, docs, layers, lang)
+
+
+
+def _assemble(answer: str, docs, layers, lang: str) -> dict[str, Any]:
+    """Citations and confidence for a finished answer. Shared by the streaming
+    and non-streaming paths so they cannot disagree about what backed an answer."""
 
     # If the model declined (couldn't answer from the sources), don't present the
     # retrieved docs as if they backed an answer — show no citations and low
@@ -346,3 +378,26 @@ def narrate(
         "suggested_layers": layers,
         "confidence": confidence,
     }
+
+
+def narrate(
+    question: str,
+    docs: list[dict[str, Any]],
+    layers: list[str],
+    history: list[tuple[str, str]] | None = None,
+    spatial: dict[str, Any] | None = None,
+    lang: str | None = None,
+) -> dict[str, Any]:
+    """Call the local LLM to write a cited answer over the retrieved docs.
+
+    `history` is prior (question, answer) turns so follow-ups keep context.
+    `spatial` is the clicked point's map facts, folded in so the answer can reason
+    over real conditions (flood/landslide) alongside the documents. `lang` is the
+    UI-selected answer language. Raises on transport/parse errors so callers fall back.
+    """
+    messages = build_messages(question, docs, layers, history, spatial, lang)
+    answer = _chat(messages)
+    if not answer:
+        raise RuntimeError("empty LLM response")
+    answer = _strip_map_markers(_strip_urls(answer))
+    return _assemble(answer, docs, layers, lang)
