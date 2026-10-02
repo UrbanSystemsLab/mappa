@@ -8,7 +8,7 @@ system makes back to a file they gave us.
 **Append to this file as work lands. Do not rewrite history — corrections go in
 as corrections, because knowing something was once wrong is the useful part.**
 
-Last updated: 2026-09-18
+Last updated: 2026-10-02
 
 ---
 
@@ -291,3 +291,120 @@ search; map click; chat driving the map.
   separated them.
 - Look at the screen. Three separate bugs survived because the API was checked
   and the page was not.
+
+---
+
+## 12. Since the first entry (18 Sep – 2 Oct)
+
+### It is live on its own domain
+
+**https://app.mappealo.org** — public, no login, TLS issued by Google and
+auto-renewing. Getting there took longer than the work deserved, because NYU
+enforces `run.managed.requireInvokerIam` on the project and that rejects any new
+revision of a publicly-invokable Cloud Run service. Two routes around it were
+closed: an external load balancer still needs `allUsers`, which domain-restricted
+sharing blocks, and climateiq is not a counterexample because its public traffic
+is GKE, not Cloud Run.
+
+NYU HPC resolved it with a **resource-manager tag** on the single service
+(`mappa-lamarana-aecc/mappa-public-ingress/true`), scoped to one resource rather
+than the project. Worth remembering: that is the sanctioned pattern, and asking
+for it directly would have saved two days.
+
+The app sits on a subdomain so the bare `mappealo.org` stays free for a landing
+page — a decision La Maraña still has to make.
+
+### Name, logo and palette
+
+Renamed Mappealo → **Mappa** in ten places, including the model's own system
+prompt, where it had been introducing itself by the old name. La Maraña's palette
+applied: navy `#0B3954` on the chrome, green `#09814A` on the actions, the other
+three colours held for semantic use only. Logo in the header, the welcome panel
+and as the favicon — there had been no favicon at all.
+
+### Answers stream now
+
+The panel used to sit on "Thinking…" until the entire pipeline finished. Worse,
+the browser request had no deadline, so a stalled connection never resolved and
+never errored — one question sat there for ten minutes.
+
+`/ask/stream` sends the map's answer first as a `meta` event. Municipality,
+bounding box and which layers to switch on are a name match and a lookup, so the
+map moves in about **0.15 s** while the text is still being written. The browser
+now also gives up after 90 seconds and says so.
+
+### Follow-up questions work
+
+A follow-up rarely repeats itself. "How many schools are in that municipality?"
+had no place, so the spatial engine had no region. "How many of those are in a
+flood zone?" had no subject, so it read as uncountable and declined — having just
+answered 25. Both now carry forward from the conversation, with anything named in
+the current question still winning.
+
+```
+"What should I know about Carolina…"          → Carolina
+"How many schools are in that municipality?"  → 25 public schools
+"How many of those are in a flood zone?"      → 8 of the 25
+```
+
+### Baked tiles (proven, not yet shipped)
+
+`pipelines/bake_tiles.py` cuts a layer into a PMTiles archive with tippecanoe.
+Proven on one layer:
+
+| | baked | on demand |
+|---|---|---|
+| z8 | 145 KB · 0.025 s | 171 KB · 0.205 s |
+| z9 | 149 KB · 0.025 s | 188 KB · 0.797 s |
+
+Smaller and 8–30× faster, and a baked tile is static bytes — no database, no CPU,
+near-zero serving cost. The trade is staleness, which suits a published GIS
+inventory and would not suit live data.
+
+**First attempt produced tiles three times heavier than the ones they replaced.**
+Tippecanoe's default thins uniformly and only once a tile is already oversized;
+the on-demand path drops the smallest features first. `--drop-smallest-as-needed`
+with a 160 KB budget matches it.
+
+### Faults found in this period
+
+| Fault | Effect | Cause |
+|---|---|---|
+| **Streaming edit deleted 18 functions** | Page loaded and did nothing — blank chat, layer panel stuck | The edit was bounded by a comment that sat 500 lines below the function. A screenshot after the change looked fine, because the welcome state renders from HTML and exercised none of the deleted code. **Checking that a page paints is not checking that it works.** |
+| **Container OOM-killed** | Questions hung then timed out, intermittently | 2 GiB was not enough for PyTorch plus the embedding model plus concurrent requests. Compounded by `containerConcurrency: 160` on 2 CPU. Now 4 GiB, 4 CPU, concurrency 4. |
+| **Case-sensitive geometry filter** | One tile 7.1 MB in 28 s | Test for `"Polygon"` missed `"MULTIPOLYGON"`, disabling the sub-pixel filter for 97 of 107 layers. And the threshold kept features 1/64th of a pixel across. Now 232 KB in 3.6 s. |
+| **MAP FACTS leaked into answers** | Readers saw `[1, MAP FACTS]` as if it were a citation | The strip only matched the marker alone, not folded into a citation list. |
+| **Local answers took 16 s** | Everything felt broken | `LLM_PROVIDER` defaulted to `ollama`, so a laptop answered from Mistral locally — a different model from the one that ships. Default now follows the credentials present. |
+
+### Things we learned that are not code
+
+**Their inventory already links documents to layers, and we are not using it.**
+13 of 649 layers name a related document by ID; 18 of 507 documents name a related
+layer, though as themes rather than IDs. Surfacing those links is the piece that
+would make documents and layers feel like one product.
+
+**No sync exists, and the partner believed one did.** La Maraña asked whether
+edits to their Drive sheet reach the backend. They do not — the import is a
+manual run against a downloaded copy, and it matches column headers by exact
+name, so a renamed header silently drops that field. This was corrected with
+them, and a scheduled sync is now on the roadmap.
+
+**Open vs closed weights, for grant purposes.** Retrieval and OCR run on open
+weights we control (MiniLM, Apache 2.0; Tesseract). Only answer synthesis uses a
+closed model (Gemini 2.5 Flash-Lite), and it is replaceable — the platform ran on
+Mistral during development. The knowledge base itself is entirely open and in
+La Maraña's own project.
+
+### Open, as of 2 October
+
+1. **Rate limiting** — the app is on a memorable domain with no login and no
+   limit. Every question bills the project, and La Maraña inherits it. Most
+   urgent item.
+2. **OCR unfinished** — 39 of 73 scans read. The remainder are mostly municipal
+   territorial plans and housing regulations.
+3. **Baked tiles** — pipeline proven on one layer, not rolled out or wired into
+   the frontend.
+4. **Scheduled inventory sync** — promised to La Maraña, not built.
+5. **Document ↔ layer links** — their data, unused.
+6. **~540 catalogued layers have no data** — the largest open question, and one
+   only they can answer.
