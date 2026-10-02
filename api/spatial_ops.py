@@ -183,8 +183,10 @@ def _table(key: str) -> str:
         raise KeyError(key)
     with db.connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT 1 FROM layer_registry WHERE table_name=%s AND status='published'",
-                    (spec["table"],))
+        # 'loaded' counts here: the assistant can answer from a layer that the
+        # map does not offer as a toggle.
+        cur.execute("SELECT 1 FROM layer_registry WHERE table_name=%s "
+                    "AND status IN ('published','loaded')", (spec["table"],))
         if cur.fetchone() is None:
             raise KeyError(f"{key} not loaded")
     return spec["table"]
@@ -479,7 +481,8 @@ def suggested_layer_ids(question: str) -> list[str]:
     with db.connection() as conn:
         cur = conn.cursor()
         cur.execute(
-            "SELECT id FROM layer_registry WHERE status='published' AND table_name = ANY(%s)",
+            "SELECT id FROM layer_registry WHERE status='published' "
+            "AND table_name = ANY(%s)",
             (tables,),
         )
         return [r[0] for r in cur.fetchall()]

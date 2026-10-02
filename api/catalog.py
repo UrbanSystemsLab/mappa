@@ -102,6 +102,8 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
         # actually hold, and it carries no tile URL, because there is nothing to
         # draw. The UI shows it as unavailable rather than as a toggle that fails.
         "available": bool(table) and status == "published",
+        # Queryable by the assistant even when it is not a map toggle.
+        "queryable": bool(table) and status in ("published", "loaded"),
         # Version in the path means a republished layer gets fresh tile URLs, so
         # cached tiles are invalidated without purging the CDN.
         "tiles_url": (f"/tiles/{table}/{{z}}/{{x}}/{{y}}.mvt?v={version}" if table else None),
@@ -126,11 +128,15 @@ def list_layers(
     """Search / filter the catalog. Returns {total, limit, offset, layers}."""
     lang = "es" if lang == "es" else "en"
     if available_only:
+        # What the map panel asks for: layers it can actually draw.
         where = ["status = 'published'"]
     elif include_drafts:
         where = ["status <> 'hidden'"]
     else:
-        where = ["status IN ('published','catalogued')"]
+        # 'loaded' means the data is in the database and the assistant can query
+        # it, but it is not offered as a map toggle - La Maraña chooses which
+        # are promoted to 'published'.
+        where = ["status IN ('published','loaded','catalogued')"]
     params: dict[str, Any] = {}
 
     if category:

@@ -32,8 +32,15 @@ from pathlib import Path
 
 import psycopg2
 
-GPKG = Path("data/raw/la_marana.gpkg")
-SOURCE = "La Maraña — la_marana.gpkg"
+DEFAULT_GPKG = Path("data/raw/la_marana.gpkg")
+GPKG = DEFAULT_GPKG          # replaced by --source at startup
+
+# Provenance recorded against each layer: which file La Maraña sent it in.
+SOURCES = {
+    "la_marana.gpkg": "La Maraña — la_marana.gpkg",
+    "IPRS_DATA.gpkg": "La Maraña — IPRS_DATA.gpkg",
+}
+SOURCE = SOURCES["la_marana.gpkg"]
 MAX_IDENT = 63  # Postgres identifier limit; a truncated name still has to be unique.
 
 # Noise their export tooling added to layer names. Stripped only when looking for
@@ -122,10 +129,21 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--redo", action="store_true")
+    ap.add_argument("--source", default=str(DEFAULT_GPKG),
+                    help="GeoPackage to load")
+    # Loading 500 layers straight onto the map would make the panel unusable.
+    # They arrive queryable by the assistant and invisible to the map until
+    # La Maraña names the ones worth showing.
+    ap.add_argument("--status", default="loaded",
+                    choices=["loaded", "published"],
+                    help="loaded = queryable but hidden; published = on the map")
     args = ap.parse_args()
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
         raise SystemExit("DATABASE_URL not set")
+    global GPKG, SOURCE
+    GPKG = Path(args.source)
+    SOURCE = SOURCES.get(GPKG.name, f"La Maraña — {GPKG.name}")
     if not GPKG.exists():
         raise SystemExit(f"{GPKG} not found")
 
@@ -173,9 +191,9 @@ def main() -> None:
         if len(hits) == 1:
             gis_id = hits[0][0]
             cur.execute("""UPDATE layer_registry
-                           SET table_name=%s, status='published', geometry_type=%s,
+                           SET table_name=%s, status=%s, geometry_type=%s,
                                feature_count=%s, updated_at=now()
-                           WHERE gis_id=%s""", (table, gtype, count, gis_id))
+                           WHERE gis_id=%s""", (table, args.status, gtype, count, gis_id))
             linked += 1
             note = f"-> {gis_id}"
         else:
@@ -187,11 +205,11 @@ def main() -> None:
                     INSERT INTO layer_registry
                         (id, table_name, name_es, category, geometry_type, feature_count,
                          source_inventory, metadata_status, status, keywords)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,'unknown','published',%s)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,'unknown',%s,%s)
                     ON CONFLICT (id) DO UPDATE SET table_name=EXCLUDED.table_name,
-                        status='published', feature_count=EXCLUDED.feature_count
+                        status=EXCLUDED.status, feature_count=EXCLUDED.feature_count
                 """, (rid, table, NOISE.sub("", layer).replace("_", " ").strip(),
-                      "Sin clasificar", gtype, count, SOURCE,
+                      "Sin clasificar", gtype, count, SOURCE, args.status,
                       sorted({w for w in re.split(r"[^a-z0-9]+", norm_keep_words(layer)) if len(w) > 2})))
             standalone += 1
             note = "own row (no single inventory match)"
