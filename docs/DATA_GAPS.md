@@ -1,67 +1,46 @@
 # Where the missing layer data actually is
 
-Measured 3 October 2026, against their Drive and our database.
+Measured 3 October 2026 against their Drive and our database.
 
-The catalogue said **119 layers have no data**. That number was never examined,
-and it turns out to be four different problems with four different owners. Only
-42 of them are a question for La Maraña. The rest are ours.
+The catalogue says **119 layers have no data**. That number had never been taken
+apart. It is four different problems, and only one of them is theirs.
 
 | | count | whose |
 |---|---|---|
-| Data is already loaded — the catalogue row just is not linked to it | **46** | ours, today |
-| The file is in their Drive and we never loaded it | **16** | ours, this week |
-| Catalogued as a layer but it is a PDF map image, not GIS data | **15** | ours, re-file |
-| Not found anywhere in their Drive under any name we can match | **42** | **ask them** |
+| Duplicate catalogue row — the layer is live under a different GIS ID | **17** | ours, retire the row |
+| The file is in their Drive and we never loaded it | **16** | ours, load it |
+| Catalogued as a layer but it is a PDF map image | **15** | ours, re-file |
+| No data found anywhere | **71** | ask them |
+
+**Two earlier counts in this file were wrong and are corrected above.** The first
+pass matched layer names with a loose substring rule, which paired *Deslizamientos
+PRMaria* with the unrelated `layer_deslizamiento` and inflated the "already
+loaded" group to 46. The second pass found 25 tables that no live registry row
+pointed at and read them as lost data; they are superseded duplicates, each with
+a newer registered copy. **No layer data is unreachable.** The PREPA grid, the
+census blocks and the hydrography are all live under their newer table names.
 
 ---
 
-## 1. Already loaded, not linked (46 layers)
+## 1. Duplicate catalogue rows (17)
 
-The data is in the database and working. The catalogue row points at nothing, so
-the layer is invisible to the map and the assistant. This is the same registry
-drift that removed 26 layers from the map in September — loading their second
-GeoPackage re-matched rows onto the new file's copies and stranded the rest.
+The layer works. The catalogue simply lists it twice, under two GIS IDs, and the
+second row has nothing behind it. Agroturismo 2021 appears three times.
 
-Nothing needs to be asked or downloaded. These can be relinked today.
+Retiring these rows changes nothing a user can see; it makes the catalogue
+honest, and it removes 17 from the "missing" figure that has been quoted to
+everyone including La Maraña.
 
-| GIS ID | Layer | Table that holds its data |
+| GIS ID | Layer | Live table holding the data |
 |---|---|---|
 | GIS-017 | Agroturismo 2021 | `layer_agroturismo_2021` |
-| GIS-018 | barrios 2015 | `layer_barrios_2015_corrected_16_nov17` |
-| GIS-021 | Deslizamientos PRMaria | `layer_deslizamiento` |
-| GIS-022 | Deslizamientos rainfall-induced 2022/2023 | `layer_deslizamiento` |
-| GIS-026 | Hidrografía 2006 | `layer_mapa_base_crim_ogp_hidrografia_2006` |
-| GIS-028 | Hospitales CDTs | `layer_hospitales` |
 | GIS-032 | Refugios 2023 | `layer_refugios_2023` |
 | GIS-033 | ResidencialesPublicos 2009 | `layer_residenciales_publicos_2009` |
-| GIS-036 | Vertederos | `layer_vertederos_en_operacion` |
-| GIS-070 | g11 proteccion epa facility registry system 2011 | `layer_g11_proteccion_epa_facility_registry_system_2011` |
-| GIS-078 | g03 electorales dist representativos 2012 | `layer_g03_electorales_dist_representativos_2012` |
-| GIS-079 | g03 electorales dist senatoriales 2012 | `layer_g03_electorales_dist_senatoriales_2012` |
-| GIS-080 | g03 electorales precintos 2004 | `layer_g03_electorales_precintos_2004` |
-| GIS-081 | g03 electorales unidades electorales 2004 | `layer_g03_electorales_unidades_electorales_2004` |
-| GIS-083 | g03 legales municipios 2015 | `layer_g03_legales_municipios_2015` |
-| GIS-089 | g23 agricultura canal riego isabela | `layer_canal_riego_isabela` |
-| GIS-091 | g07 industrial urbanizaciones industriales | `layer_urbanizaciones_industriales` |
-| GIS-092 | g33 dotacional centros de gobierno aut edificios publicos 2010 | `layer_edificios_publicos_2010` |
-| GIS-093 | g33 seguridad refugios 2023 | `layer_refugios_2023` |
-| GIS-094 | Hospitales y CDT | `layer_hospitales` |
-| GIS-096 | g35 colectiva tren urbano estaciones 2000 | `layer_tren_urbano_estaciones_2000` |
-| GIS-097 | g35 maritima puertos 2010 | `layer_puertos_2010` |
-| GIS-098 | g35 viales carreteras estatales segmentadas agosto 2021 | `layer_carreteras_estatales_segmentadas_agosto_2021` |
-| GIS-101 | ComunidadesEspeciales 2006 | `layer_g31_asentamientos_delim_comunidades_especiales_2006` |
-| GIS-105 | g33 dotacional educacion escuelas 2021 | `layer_dotacional_educacion_escuelas_2021` |
-| GIS-107 | g07 turismo balnearios | `layer_turismo_balnearios` |
-| GIS-111 | g33 vivienda residenciales 2009 | `layer_residenciales_2009` |
 | GIS-114 | Agroturismo 2021 | `layer_agroturismo_2021` |
-| GIS-126 | valles agricolas | `layer_conservacion_de_valles_agricolas_1` |
-| GIS-191 | Areas aprobadas por el Servicio de Pesca y Vida Silvestre FWS en Puerto Rico e Is | `layer_areas_aprobadas_por_el_servicio_de_pesca_y_vida_silvestre` |
-| GIS-194 | Areas de interes del Servicio de Pesca y Vida Silvestre FWS en Puerto Rico e Islas | `layer_areas_de_interes_del_servicio_de_pesca_y_vida_silvestre_f` |
 | GIS-216 | Agroturismo 2021 | `layer_agroturismo_2021` |
 | GIS-328 | Hospitales | `layer_hospitales` |
-| GIS-343 | proteccion epa facility registry system 2011 | `layer_proteccion_epa_facility_registry_system_2011` |
+| GIS-343 | proteccion epa facility registry system 2011 | `layer_g11_proteccion_epa_facility_registry_system_2011` |
 | GIS-349 | refugios 2023 | `layer_refugios_2023` |
-| GIS-351 | tanques soterrados | `layer_tanques` |
 | GIS-368 | Huellas de Edificios PR USVI 2018 | `layer_huellas_de_edificios_pr_usvi_2018` |
 | GIS-375 | Residenciales publicos 2009 | `layer_residenciales_publicos_2009` |
 | GIS-392 | electorales dist representativos 2012 | `layer_electorales_dist_representativos_2012` |
@@ -70,16 +49,14 @@ Nothing needs to be asked or downloaded. These can be relinked today.
 | GIS-395 | electorales unidades electorales 2004 | `layer_electorales_unidades_electorales_2004` |
 | GIS-397 | legales municipios 2015 | `layer_legales_municipios_2015` |
 | GIS-556 | turismo balnearios | `layer_turismo_balnearios` |
-| GIS-572 | Marejada Coclonica | `layer_marejada_coclonica_general` |
 | GIS-596 | carreteras estatales segmentadas agosto 2021 | `layer_carreteras_estatales_segmentadas_agosto_2021` |
 
 ---
 
-## 2. In their Drive, never loaded (16 layers)
+## 2. In their Drive, never loaded (16)
 
-Found by searching their Drive on 3 October. Every one of these exists as a
-folder or geodatabase under `Capas GIS`. We loaded two GeoPackages and stopped;
-these were never picked up.
+Found by searching their Drive on 3 October. Each exists as a folder or
+geodatabase under `Capas GIS`. We loaded two GeoPackages and stopped.
 
 | GIS ID | Layer | Folder in their Drive |
 |---|---|---|
@@ -100,23 +77,21 @@ these were never picked up.
 | GIS-090 | GDB NAD83 2011.gdb | `GDB_NAD83_2011.gdb` |
 | GIS-106 | DependenciasDRNA 2010 | `DependenciasDRNA_2010` |
 
-Two caveats worth stating before anyone counts these as solved:
+Before counting these as solved:
 
-- **`Census2020.lpkx` is an ArcGIS layer package**, not a shapefile or a
-  geodatabase. It needs converting before it can be loaded, and the conversion
-  is lossy in ways we should check with them rather than guess at.
+- **`Census2020.lpkx` is an ArcGIS layer package**, not a shapefile or geodatabase.
+  It needs converting, and the conversion is lossy in ways to check with them.
 - Their own folder names flag several as unfinished: `Datos Censo_INCOMPLETO`,
   `DesalojoTsunami_2014 INCOMPLETO`, `AreasNaturalesProtegidasTerrestres_2019_INCOMPLETO`,
-  `CorredorAgricolaSur_INCOMPLETO`. They already know these are partial.
+  `CorredorAgricolaSur_INCOMPLETO`.
 
 ---
 
-## 3. Catalogued as layers, but they are PDFs (15 rows)
+## 3. PDFs catalogued as layers (15)
 
-These are map *images* — "Mapa de clasificación de suelo de la Reserva Agrícola
-del Valle de Lajas" and similar. They are documents, not spatial data, and no
-amount of loading will turn them into layers. They belong in the document corpus,
-where their text would be searchable.
+Map *images* — "Mapa de clasificación de suelo de la Reserva Agrícola del Valle
+de Lajas" and similar. Documents, not spatial data. They belong in the document
+corpus, where their text becomes searchable.
 
 | GIS ID | Title |
 |---|---|
@@ -138,15 +113,29 @@ where their text would be searchable.
 
 ---
 
-## 4. Not found in their Drive (42 layers)
+## 4. No data found (71)
 
-**This is the only list that is a question for La Maraña.** Each was searched for
-by its catalogue name and by the filename their inventory gives, across every
-folder shared with us. Nothing matched.
+Searched by catalogue name and by the filename their inventory gives, across every
+folder shared with us.
 
-| GIS ID | Layer | Format the inventory claims |
+**La Maraña said on 11 September:** *"This is the completed gdb and we are not
+planning on adding anything else given the scale of it (contains 600 layers)."*
+We hold 603 layers with data. So these are almost certainly **older inventory rows
+that never made it into the final geodatabase**, rather than files still to come.
+
+That makes this a question about the catalogue, not a chase for missing files:
+*should these rows be retired, or do they describe something you still intend to
+produce?*
+
+| GIS ID | Layer | Format claimed |
 |---|---|---|
+| GIS-018 | barrios 2015 | Geodatabase |
+| GIS-021 | Deslizamientos PRMaria | Geodatabase |
+| GIS-022 | Deslizamientos rainfall-induced 2022/2023 | CSV |
 | GIS-023 | Finca Eólica de Santa Isabel | — |
+| GIS-026 | Hidrografía 2006 | Shapefile |
+| GIS-028 | Hospitales CDTs | Shapefile |
+| GIS-036 | Vertederos | Shapefile |
 | GIS-039 | Sequia 2026 | CSV |
 | GIS-040 | landslide susceptibility | Tif |
 | GIS-041 | Cobertura de terrenos | — |
@@ -158,12 +147,33 @@ folder shared with us. Nothing matched.
 | GIS-048 | g01 conserv linea vegetacion permanente 2007 | Shapefile |
 | GIS-059 | geology 24jul18 | gdb |
 | GIS-069 | g11 proteccion empresas pecuarias 2008 | Shapefile |
+| GIS-070 | g11 proteccion epa facility registry system 2011 | Shapefile |
 | GIS-071 | g11 proteccion fincas receptoras 2010 | Shapefile |
 | GIS-075 | g09 puntuales alturas | — |
+| GIS-078 | g03 electorales dist representativos 2012 | Shapefile |
+| GIS-079 | g03 electorales dist senatoriales 2012 | Shapefile |
+| GIS-080 | g03 electorales precintos 2004 | Shapefile |
+| GIS-081 | g03 electorales unidades electorales 2004 | Shapefile |
+| GIS-083 | g03 legales municipios 2015 | Shapefile |
+| GIS-089 | g23 agricultura canal riego isabela | Shapefile |
+| GIS-091 | g07 industrial urbanizaciones industriales | Shapefile |
+| GIS-092 | g33 dotacional centros de gobierno aut edificios publicos 2010 | Shapefile |
+| GIS-093 | g33 seguridad refugios 2023 | Shapefile |
+| GIS-094 | Hospitales y CDT | Shapefile |
+| GIS-096 | g35 colectiva tren urbano estaciones 2000 | Shapefile |
+| GIS-097 | g35 maritima puertos 2010 | Shapefile |
+| GIS-098 | g35 viales carreteras estatales segmentadas agosto 2021 | Shapefile |
 | GIS-099 | tiger rds2006se | — |
 | GIS-100 | USGS National Transportation Dataset (NTD) for Puerto Rico (published 20260212) | GDB |
+| GIS-101 | ComunidadesEspeciales 2006 | Shapefile |
 | GIS-102 | arpe permisos 1999 2010.gdb | GDB |
+| GIS-105 | g33 dotacional educacion escuelas 2021 | Shapefile |
+| GIS-107 | g07 turismo balnearios | Shapefile |
 | GIS-110 | g31 recreacion bosque estatal monte choca centro visit 2012 | Shapefile |
+| GIS-111 | g33 vivienda residenciales 2009 | Shapefile |
+| GIS-126 | valles agricolas | Shapefile |
+| GIS-191 | Areas aprobadas por el Servicio de Pesca y Vida Silvestre FWS en Puerto Rico e Is | Shapefile |
+| GIS-194 | Areas de interes del Servicio de Pesca y Vida Silvestre FWS en Puerto Rico e Islas | Shapefile |
 | GIS-195 | areas de manejo | Shapefile |
 | GIS-205 | Cuevas Junta de Planificacion | Shapefile |
 | GIS-210 | PRcosta2007 14April2010 editado 25nov2016 | Shapefile |
@@ -176,6 +186,7 @@ folder shared with us. Nothing matched.
 | GIS-324 | escuela | Shapefile |
 | GIS-330 | Hoteles OCT2014 | Shapefile |
 | GIS-338 | merge rcra | Shapefile |
+| GIS-351 | tanques soterrados | Shapefile |
 | GIS-352 | Terrenos DVyAgencias puntos | Shapefile |
 | GIS-360 | Yacimientos arqueologicos de Puerto Rico | Shapefile |
 | GIS-373 | Proyectos estrategicos | Shapefile |
@@ -183,31 +194,28 @@ folder shared with us. Nothing matched.
 | GIS-377 | Terrenos DVyAgencias | Shapefile |
 | GIS-378 | Terrenos Excedentes AEP 2007 | Shapefile |
 | GIS-381 | Vertederos de la Autoridad de Desperdicios Solidos | Shapefile |
+| GIS-572 | Marejada Coclonica | Shapefile |
 | GIS-605 | NUMEROS SALIDAS AUTOPISTAS | Shapefile |
 | GIS-610 | Puentes REVISION abril 2016 | Shapefile |
 | GIS-618 | Rutas de transporte publico SIMETRO | Shapefile |
 | GIS-621 | RUTAS PUBLICOS TERMINALES 2010 | Shapefile |
 | GIS-664 | Zona de interes turistico SanJuan | Shapefile |
 
-**How this was searched, and what that does not prove.** Each name was searched
-across the whole Drive, not only the folders we were pointed at. A file stored
-under a different name, or inside a geodatabase whose own name does not mention
-it, would not be found this way. So the honest claim is: *not present under any
-name we know to look for* — not *does not exist*.
+**What the search does not prove.** A file stored under a different name, or
+inside a geodatabase whose own name does not mention it, would not be found.
+The honest claim is *not present under any name we know to look for*.
 
 ---
 
 # The metadata workbooks
 
-Their team spent months reconstructing where each layer came from. Five workbooks,
-**61 layer tabs**. Only 15 attach to a layer. The other 46 split in two:
+Five workbooks, **61 layer tabs**, of which 15 attach to a layer. The other 46:
 
-## 4a. Describe a layer we have, under a different name (16 tabs)
+## Describe a layer we have, under a different name (16)
 
-Their GIS files call it `Hidrante`; our catalogue calls it `hidrantes`. These need
-an alias, not a conversation. Each is a layer already on the system that is
-carrying inferred metadata when their team had already established the real
-source.
+Their files say `Hidrante`; our catalogue says `hidrantes`. An alias, not a
+conversation. Each of these layers currently carries *inferred* metadata when
+their team had already established the real source.
 
 | Their tab | Our layer |
 |---|---|
@@ -228,15 +236,14 @@ source.
 | Residenciales | `layer_residenciales_2009` |
 | TREN_URBANO_DETALLE | `layer_tren_urbano` |
 
-## 4b. Describe a layer we do not have (30 tabs)
+## Describe a layer we do not have (30)
 
 `Línea_de_Gravedad`, `Tubería_Bombeo`, `Acometida_Sanitaria`, `Línea_Matriz`, `Línea_de_Servicio`, `Accesorio_de_Conexión`, `Estructura_Red`, `Estación_de_bombas`, `Estación_Bomba`, `Planta_Alcantarillado_Sani`, `Planta_de_filtracion`, `Punto_de_Muestreo`, `PuntoServicio`, `Metadata`, `invertebrados_poligonos_1`, `pajaros`, `esilr_1`, `esip_1`, `esile_1`, `CRIM`, `Empresas pecuarias`, `Flooding_Areas`, `Flood_1.00`, `Flood_0.2`, `Fincas_receptoras`, `geology_2018`, `Huellas_vertederos`, `Linea_vegetación`, `SistemaVial`, `RUTAS_AMA`
 
-Thirteen of these are the AAA water and sewer network — gravity lines, pump
-stations, filtration plants, sampling points. Their team documented that whole
-network, and we hold none of it. That is worth asking about directly: it is the
-single largest block of described-but-absent data, and it is infrastructure a
-planning assistant would be asked about.
+Thirteen are the **AAA water and sewer network** — gravity lines, pump stations,
+filtration plants, sampling points. Their team documented the whole network and
+we hold none of the data. It is the largest block of described-but-absent data,
+and it is infrastructure a planning assistant gets asked about.
 
-The tab called `Metadata` is the ACT highways workbook, which has one sheet rather
-than one per layer — a format the importer does not read. That one is ours to fix.
+`Metadata` is the ACT highways workbook, which has one sheet rather than one per
+layer — a format the importer does not read. Ours to fix.

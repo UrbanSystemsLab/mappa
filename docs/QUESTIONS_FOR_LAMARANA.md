@@ -64,20 +64,24 @@ Still worth confirming once the list is applied:
 - Are there layers that matter for particular audiences — funders,
   municipalities, community workshops — even if rarely used?
 
-### 2. 42 layers we cannot find anywhere in the Drive
+### 2. 71 catalogue rows with no data anywhere
 
 The catalogue listed 119 layers with no data. We went through all of them against
-your Drive on 3 October, and most were our problem rather than yours: 46 are
-already loaded and just not linked, 16 are in your Drive and we had not loaded
-them, and 15 are PDF maps catalogued as though they were GIS layers.
+your Drive on 3 October. Much of it was our problem rather than yours: 17 are
+duplicate catalogue rows for layers that are already live under a different GIS
+ID, 16 are in your Drive and we had not loaded them, and 15 are PDF maps
+catalogued as though they were GIS layers.
 
-That leaves **42 we cannot find under any name**, including Cuevas, Playas,
+That leaves **71 we cannot find under any name**, including Cuevas, Playas,
 Islotes y cayos, Superfunds sites, Yacimientos arqueológicos, Hoteles OCT2014,
 Puentes, RUTAS PÚBLICOS TERMINALES and the PREPA transmission data. The full list
 is in `docs/DATA_GAPS.md`.
 
-For each: is there a copy we have not been given, or was the row added in
-anticipation of data you never received either?
+You told us in September that the geodatabase is complete and nothing more is
+coming, and we hold 603 layers with data — so these are most likely older
+inventory rows that never made it into the final file. **Can they be retired?**
+If any of them describe something you still intend to produce, we will keep the
+row and leave room for it.
 
 Also worth knowing: the **AAA water and sewer network** — gravity lines, pump
 stations, filtration plants, sampling points, 13 layers in total — is fully
