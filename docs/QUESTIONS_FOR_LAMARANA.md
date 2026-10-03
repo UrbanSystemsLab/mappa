@@ -142,6 +142,26 @@ nothing is blocked. But it suggests the file was converted through an encoding
 that lost the accents, and **if this is your working copy, other columns in it
 may have the same damage**. Worth checking against the original.
 
+### 5b. The same accent damage appears in other layers
+
+Beyond the comunidades layer, category values are damaged the same way in at
+least two more: the agricultural valleys layers have *Agr1cola* and *Agr2cola*
+for *Agrícola*, and Agroturismo 2021 has *Basico*, *Besico* and *Bdsico* for
+*Básico*, and *Ecoldgico* for *Ecológico*. One category becomes several, which
+shows on the map as several colours for the same thing.
+
+### 5c. Should the cadastral maps ever be public?
+
+The 78 municipal cadastral layers (`Mapa Catastral de …`) carry each parcel's
+owner name, mailing address, sale price, sale date and tax amount. They are in
+the database but not on the public map, and the map is now set never to show
+those fields even if a cadastral layer is turned on. Parcel number, neighbourhood
+and street are shown instead.
+
+Is that the right line? Owner data in the CRIM register is public record, but a
+public website that shows a resident's name and mailing address on a click is a
+different thing, and the decision should be yours.
+
 ### 6. Two duplicate rows on the inventory
 
 `Census2020` and `Agroturismo_2021` each appear twice under different GIS IDs,
