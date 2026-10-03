@@ -408,3 +408,123 @@ La Maraña's own project.
 5. **Document ↔ layer links** — their data, unused.
 6. **~540 catalogued layers have no data** — the largest open question, and one
    only they can answer.
+
+---
+
+## 13. Engineering foundations (2 Oct)
+
+The product worked; the engineering around it did not meet the standard for
+something being handed to someone else to run. Architecture written down as a
+specification, then built in a day rather than the nine weeks it was scoped at —
+by cutting the frontend rebuild and the handover work, which buy maintainability
+and a deadline respectively, not capability.
+
+### What was wrong, measured
+
+```
+tests                0 files          every regression found by a human
+schema              11 ad-hoc ALTER   database could not be rebuilt
+pipelines           21 scripts        6 dead, no ordering, no shared base
+CI                  deploys on push   no gate between a bad commit and production
+lint                none              style drifted, nothing caught shadowing
+main.py            388 lines          HTTP, orchestration and SQL together
+```
+
+### What was done
+
+**41 tests**, drawn from this project's defect history rather than a coverage
+target: the distance that bound to the wrong layer, the MAP FACTS marker folded
+into a citation list, municipality names truncated at their accent, 3D geometry
+making Cabo Rojo report no protected area, the registry drift that removed 26
+layers from the map.
+
+**They found two real faults on their first run.** A layer was published on the
+map with no geometry and no features. And 25 tables superseded by the second
+GeoPackage were stranded — expected, but better known than discovered.
+
+**Migrations.** Two Alembic revisions; the database now builds from empty and
+rolls back, verified. This was a handover blocker: La Maraña could not have stood
+this up themselves.
+
+**Lint and format.** Thirty-six findings. Five were dead imports left by the
+refactor an hour earlier. Several `zip()` calls would have truncated silently —
+in `embed_layers` that means pairing a layer with another layer's embedding and
+writing it without complaint. And `tiles.py` held a dead branch containing a
+fullwidth comma that would have produced invalid SQL had anything reached it.
+
+**One service behind both answer routes.** The orchestration existed twice,
+copied, and had drifted. Putting them side by side immediately exposed a defect
+only the streamed path had: deltas go out raw, so the cleaned text — URLs
+stripped, the model's references to the computed-facts block removed — was
+computed and thrown away. Users had been seeing `[MAP FACTS]` in every streamed
+answer since streaming was added.
+
+**Routers split out.** `main.py` 388 → 230 lines, and now only assembles the app.
+
+### What was deliberately not done
+
+**The repository layer.** Fifty-one SQL statements, twenty-nine in `spatial_ops`
+where the query and the spatial logic are one thought — a dynamic table name, a
+geometry operation, a region filter — and each is called once. Wrapping them in
+repository classes adds indirection and no testability, because what needs
+testing is the answer the query gives, which the integration tests already assert.
+
+**The frontend rebuild.** Two weeks for maintainability, not capability. Deferred
+deliberately, and the risk is recorded: 766 lines, no modules, no tests, and only
+one person can safely change it.
+
+### Database sizing — and a correction
+
+Raised the instance to 4 vCPU / 16 GB against 27 GB of data, then measured:
+
+```
+1 vCPU, 3.75 GB     0.90s warm
+4 vCPU, 16 GB       0.91s warm
+```
+
+The upgrade bought nothing, because almost all of the 27 GB is cold — nobody
+queries 600 layers, they query a handful. Reverted to 1 vCPU. **Backups kept**,
+which was the part that genuinely needed fixing: there were none at all against
+27 GB of their work, days after they sent a 22 GB file.
+
+The trigger for upgrading is concurrent users, not data size. Resizing takes two
+minutes.
+
+### Reaching all 601 layers
+
+The assistant could answer about fifteen, because fifteen were listed in a
+hand-written dictionary. Layers now carry an embedding, like documents, and a
+question finds them by meaning. Toll plazas and wells became answerable without
+anyone writing down that a *pozo* is a well.
+
+Three things it needed, each from a failure:
+
+- **Strip the place before matching.** "Wells in Arecibo" matched *tipo de suelo
+  arecibo* over *pozos* — the place is a third of the sentence and several layers
+  carry a municipality in theirs.
+- **Only overlay when asked.** "Fire hydrants in Ponce" paired hydrants against a
+  forestry-slope layer that merely scored well.
+- **Reconcile the registry.** Loading the second GeoPackage stranded 30 tables;
+  three were real layers that would have been lost, including 39,999 building
+  footprints.
+
+**A limit worth recording.** Asked about bus terminals, it answers with toll
+plazas. The right layer is `RUTAS PÚBLICOS TERMINALES`, and *públicos* in Puerto
+Rico are shared vans, not buses, so the words genuinely do not align. Scores for
+right and wrong answers overlap — 0.514 wrong against 0.499 right — so no
+threshold separates them. The mitigation that works is that **the answer always
+names the layer it used**.
+
+### Geography beyond the municipality
+
+`reference_units` held 78 municipios and nothing else, and every spatial function
+took a place *name*. Now 1,693 places: 902 barrios and 713 comunidades
+especiales. Census blocks were deliberately excluded — "Block Group 2" is a
+statistical unit referenced by number, and putting it in a gazetteer people
+search by name would bury the real places.
+
+**Barrio Pueblo exists in 74 of 78 municipalities**, which is why every place
+carries its parent.
+
+Still to do: the resolution code only looks at the 78 municipios, so the other
+1,615 places are in the database and not yet reachable.
