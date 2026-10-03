@@ -9,8 +9,12 @@ A layer we have not loaded is 'catalogued': it shows up in search and says so,
 rather than being invisible or pretending to be a toggle that does nothing. As
 each layer's data lands it flips to 'published'.
 
-Nothing here invents metadata. A field their sheet leaves blank stays blank, and
-metadata_status records how much they told us, using their own taxonomy.
+Nothing here invents metadata. A field their sheet leaves blank stays blank.
+
+No trust rating is set. This used to count how many fields a row filled in and
+call the result 'confirmed' or 'inferred' - their words, used for something they
+never said. A rating is recorded only where their team wrote one, by
+import_reconstructed_metadata.
 
 Run:
     python -m pipelines.rebuild_layer_registry            # dry run
@@ -75,22 +79,6 @@ def keywords_for(name: str, category: str | None, subcategory: str | None) -> li
     parts = [p for p in (name, category, subcategory) if p]
     words = {w for p in parts for w in re.split(r"[^\wÀ-ÿ]+", p.lower()) if len(w) > 2}
     return sorted(words | {strip_accents(w) for w in words})
-
-
-def metadata_status(description, data_source, geometry, crs) -> str:
-    """La Maraña's confidence taxonomy, applied to how complete their row is.
-
-    'confirmed' means they told us what it is, where it came from and its shape.
-    We never claim more confidence than their sheet supports.
-    """
-    have = sum(1 for f in (description, data_source, geometry, crs) if f)
-    if have == 4:
-        return "confirmed"
-    if have >= 2:
-        return "inferred"
-    if have == 1:
-        return "reconstructed"
-    return "unknown"
 
 
 def link_loaded_layers(cur) -> list[tuple]:
@@ -168,7 +156,6 @@ def main() -> None:
     rows = cur.fetchall()
 
     added = skipped = 0
-    by_status: dict[str, int] = {}
     for (
         gis_id,
         layer_name,
@@ -177,7 +164,7 @@ def main() -> None:
         geom,
         desc,
         source,
-        crs,
+        _crs,
         pub,
         _fmt,
         restrictions,
@@ -187,8 +174,6 @@ def main() -> None:
             skipped += 1
             continue
         geometry = normalize_geometry(geom)
-        mstatus = metadata_status(desc, source, geometry, crs)
-        by_status[mstatus] = by_status.get(mstatus, 0) + 1
         year = None
         if pub:
             m = re.search(r"(19|20)\d{2}", str(pub))
@@ -198,8 +183,8 @@ def main() -> None:
             INSERT INTO layer_registry
                 (id, gis_id, table_name, name_es, name_en, description_es,
                  category, subcategory, geometry_type, keywords, source_agency,
-                 source_inventory, vintage_year, license, metadata_status, status)
-            VALUES (%s,%s,NULL,%s,NULL,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'catalogued')
+                 source_inventory, vintage_year, license, status)
+            VALUES (%s,%s,NULL,%s,NULL,%s,%s,%s,%s,%s,%s,%s,%s,%s,'catalogued')
             ON CONFLICT (id) DO NOTHING
         """,
             (
@@ -215,7 +200,6 @@ def main() -> None:
                 SOURCE,
                 year,
                 restrictions,
-                mstatus,
             ),
         )
         added += cur.rowcount
@@ -236,9 +220,6 @@ def main() -> None:
     print(f"[layers] already in registry {skipped}")
     print(f"[layers] added as catalogued {added}")
     print(f"[layers] inventory linked    {linked}")
-    print("\n[layers] metadata confidence of the added rows:")
-    for k, n in sorted(by_status.items(), key=lambda t: -t[1]):
-        print(f"    {n:>4}  {k}")
     print("\n[layers] registry by status:")
     for s, n in dist:
         print(f"    {n:>4}  {s}")

@@ -233,8 +233,8 @@ def main() -> None:
                     """
                     INSERT INTO layer_registry
                         (id, table_name, name_es, category, geometry_type, feature_count,
-                         source_inventory, metadata_status, status, keywords)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,'unknown',%s,%s)
+                         source_inventory, status, keywords)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT (id) DO UPDATE SET table_name=EXCLUDED.table_name,
                         status=EXCLUDED.status, feature_count=EXCLUDED.feature_count
                 """,

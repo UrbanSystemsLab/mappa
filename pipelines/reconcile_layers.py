@@ -85,9 +85,9 @@ def main() -> None:
         cur.execute(
             """
             INSERT INTO layer_registry (id, table_name, name_es, category, geometry_type,
-                                        feature_count, source_inventory, metadata_status,
+                                        feature_count, source_inventory,
                                         status, keywords)
-            VALUES (%s,%s,%s,'Otras capas',%s,%s,%s,'unknown','loaded',%s)
+            VALUES (%s,%s,%s,'Otras capas',%s,%s,%s,'loaded',%s)
             ON CONFLICT (id) DO UPDATE SET table_name=EXCLUDED.table_name,
                 status='loaded', feature_count=EXCLUDED.feature_count
         """,

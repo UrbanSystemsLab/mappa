@@ -85,23 +85,58 @@ const locEl = document.getElementById('loc');
 
 // --- Language (in-app toggle; not browser translate) ---
 let LANG = 'es';
+// The disclaimer for the last answer, in both languages, so switching language
+// switches it too instead of leaving the previous language's text on screen.
+const lastDisclaimer = {};
 const I18N = {
   es: { tagline: 'Asistente de planificación y riesgos de Puerto Rico',
         ph: 'Escribe tu pregunta… o haz clic en el mapa', clear: 'Nueva conversación',
         // '¡Aló!' is how the brand greets people - the same word in both languages,
         // so the welcome reads as Puerto Rican rather than as a translated label.
         sources: 'Fuentes', layersTitle: 'Capas del mapa', emptyT: '¡Aló!',
-        emptyB: 'Pregúntale a Mappa sobre uso de terrenos, riesgo de inundación o deslizamiento, permisos y planificación en Puerto Rico. También puedes hacer clic en el mapa para preguntar sobre un lugar. Puedes preguntar en español o en inglés.' },
+        emptyB: 'Pregúntale a Mappa sobre uso de terrenos, riesgo de inundación o deslizamiento, permisos y planificación en Puerto Rico. También puedes hacer clic en el mapa para preguntar sobre un lugar. Puedes preguntar en español o en inglés.',
+        title: 'Mappa — Asistente Geoespacial de Puerto Rico', ask: 'Preguntar',
+        chatToggle: 'Mostrar/ocultar chat', layerSearch: 'Buscar capas…', basemap: 'Mapa base',
+        loading: 'Cargando capas…', removeFilter: 'Quitar filtro',
+        samples: [['Zona inundable', '¿Puedo construir en una zona inundable?'],
+                  ['Permisos', '¿Qué regula el Reglamento Conjunto?'],
+                  ['Escuelas', '¿Cuántas escuelas hay en Adjuntas?'],
+                  ['Deslizamientos', '¿Dónde hay riesgo de deslizamiento?']] },
   en: { tagline: 'Planning & hazard assistant for Puerto Rico',
         ph: 'Type your question… or click the map', clear: 'New conversation',
         sources: 'Sources', layersTitle: 'Map layers', emptyT: '¡Aló!',
-        emptyB: 'Ask Mappa about land use, flood or landslide risk, permits, and planning in Puerto Rico. You can also click the map to ask about a place. Ask questions in Spanish or English.' },
+        emptyB: 'Ask Mappa about land use, flood or landslide risk, permits, and planning in Puerto Rico. You can also click the map to ask about a place. Ask questions in Spanish or English.',
+        title: 'Mappa — Geospatial Assistant for Puerto Rico', ask: 'Ask',
+        chatToggle: 'Show/hide chat', layerSearch: 'Search layers…', basemap: 'Basemap',
+        loading: 'Loading layers…', removeFilter: 'Remove filter',
+        samples: [['Flood zone', 'Can I build in a flood zone?'],
+                  ['Permits', 'What does the Reglamento Conjunto regulate?'],
+                  ['Schools', 'How many schools are in Adjuntas?'],
+                  ['Landslides', 'Where is there landslide risk?']] },
 };
 const t = k => I18N[LANG][k];
+// Category headings in the layer panel. Only six were translated, so ten of the
+// sixteen headings stayed Spanish in English mode. Where La Maraña's own
+// prioritization matrix names a category in English - Hazards, Conservation,
+// Geology, Hydrography, Recreation, Infrastructure, Soil Use - their word is used.
 const CATS = {
-  Riesgos: { es: 'Riesgos', en: 'Hazards' }, Servicios: { es: 'Servicios', en: 'Services' },
-  'Planificación': { es: 'Planificación', en: 'Planning' }, Infraestructura: { es: 'Infraestructura', en: 'Infrastructure' },
-  'Límites': { es: 'Límites', en: 'Boundaries' }, Otros: { es: 'Otros', en: 'Other' },
+  Riesgos: { es: 'Riesgos', en: 'Hazards' },
+  'Conservación': { es: 'Conservación', en: 'Conservation' },
+  'Geología': { es: 'Geología', en: 'Geology' },
+  'Hidrografía': { es: 'Hidrografía', en: 'Hydrography' },
+  Recreacion: { es: 'Recreación', en: 'Recreation' },
+  Infraestructura: { es: 'Infraestructura', en: 'Infrastructure' },
+  'Uso Suelo': { es: 'Uso de suelo', en: 'Soil Use' },
+  Ambiente: { es: 'Ambiente', en: 'Environment' },
+  'Desarrollo Económico': { es: 'Desarrollo Económico', en: 'Economic Development' },
+  Electricidad: { es: 'Electricidad', en: 'Electricity' },
+  'Límites': { es: 'Límites', en: 'Boundaries' },
+  'Límites geográficos': { es: 'Límites geográficos', en: 'Geographic Boundaries' },
+  'Planificación': { es: 'Planificación', en: 'Planning' },
+  Servicios: { es: 'Servicios', en: 'Services' },
+  Transportacion: { es: 'Transportación', en: 'Transportation' },
+  'Otras capas': { es: 'Otras capas', en: 'Other layers' },
+  Otros: { es: 'Otros', en: 'Other' },
 };
 const catLabel = c => (CATS[c] ? CATS[c][LANG] : c);
 function applyLang() {
@@ -115,9 +150,33 @@ function applyLang() {
   const es = document.getElementById('lang-es'), en = document.getElementById('lang-en');
   if (es) es.classList.toggle('on', LANG === 'es');
   if (en) en.classList.toggle('on', LANG === 'en');
-  // Relabel the map-layer panel. Rebuilt from state, so active layers are preserved.
-  const h = document.querySelector('#layerctl .h');
+  // The heading's text only. Setting textContent on the whole header used to
+  // delete the basemap selector that sits beside it on every language switch.
+  const h = document.querySelector('#layerctl .h > span');
   if (h) h.textContent = t('layersTitle');
+  document.title = t('title');
+  const go = document.getElementById('go'); if (go) go.title = t('ask');
+  const ct = document.getElementById('chattoggle'); if (ct) ct.title = t('chatToggle');
+  const lq = document.getElementById('lyrq'); if (lq) lq.placeholder = t('layerSearch');
+  const bm = document.getElementById('basemapsel');
+  if (bm) {
+    bm.title = t('basemap');
+    [...bm.options].forEach(o => {
+      const b = BASEMAPS.find(x => x.id === o.value); if (b) o.textContent = b[LANG];
+    });
+  }
+  // The suggested questions were fixed Spanish text in the page.
+  const samples = document.querySelectorAll('.samples a');
+  t('samples').forEach(([label, question], i) => {
+    if (samples[i]) { samples[i].textContent = label; samples[i].dataset.q = question; }
+  });
+  // An open map popup or layer info box was written in the old language and
+  // stayed that way. Closed rather than left half-translated.
+  if (openPopup) openPopup.remove();
+  const info = document.getElementById('layerinfo'); if (info) info.style.display = 'none';
+  // The disclaimer came back with the last answer, in that answer's language.
+  if (lastDisclaimer[LANG]) disc.textContent = lastDisclaimer[LANG];
+  renderLoc();
   // Layer names are resolved server-side per language, so re-fetch rather than
   // relabel in place. Active layers are keyed by id and survive the reload.
   loadCatalog();
@@ -128,7 +187,7 @@ function renderLoc() {
   if (!locEl) return;
   if (activeLocation) {
     locEl.style.display = 'inline-block';
-    locEl.innerHTML = `📍 ${esc(activeLocation)} <span class="x" title="Quitar filtro">✕</span>`;
+    locEl.innerHTML = `📍 ${esc(activeLocation)} <span class="x" title="${t('removeFilter')}">✕</span>`;
     locEl.querySelector('.x').onclick = () => { activeLocation = null; activeSpatial = null; renderLoc(); };
   } else {
     locEl.style.display = 'none';
@@ -143,7 +202,10 @@ btn.onclick = ask;
 q.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) ask();
 });
-if (clearBtn) clearBtn.onclick = () => { conversation = []; disc.textContent = ''; render(); };
+if (clearBtn) clearBtn.onclick = () => {
+  conversation = []; disc.textContent = '';
+  delete lastDisclaimer.es; delete lastDisclaimer.en; render();
+};
 {
   const es = document.getElementById('lang-es'), en = document.getElementById('lang-en');
   if (es) es.onclick = () => { LANG = 'es'; applyLang(); };
@@ -177,7 +239,7 @@ function render() {
         c.year ? ` · ${c.year}` : ''}${c.doc_id ? ` · <span class="cid">${esc(c.doc_id)}</span>` : ''}</div>`
     ).join('');
     const thinking = m.answer === '…';
-    const conf = (m.confidence && !thinking) ? `<span class="badge ${confClass(m.confidence)}">${esc(m.confidence)}</span>` : '';
+    const conf = (m.confidence && !thinking) ? `<span class="badge ${confClass(m.confidence)}">${esc(confLabel(m.confidence))}</span>` : '';
     return `
       <div class="row user"><div class="bubble">${esc(m.question)}</div></div>
       <div class="row bot"><div class="bubble">
@@ -253,7 +315,8 @@ async function ask() {
         let d; try { d = JSON.parse(dl[1]); } catch (err) { continue; }
         if (ev[1] === 'meta') {
           // The map moves before the first word is written.
-          disc.textContent = d.disclaimer || '';
+          if (d.disclaimers) Object.assign(lastDisclaimer, d.disclaimers);
+          disc.textContent = (d.disclaimers && d.disclaimers[LANG]) || d.disclaimer || '';
           turn.suggested_layers = d.suggested_layers || [];
           autoShowLayers(turn.suggested_layers);
           if (d.focus) focusBBox(d.focus);
@@ -325,6 +388,18 @@ async function fetchLayers() {
   const d = await (await fetch('/catalog/layers?' + p)).json();
   RESULTS = d.layers || [];
   RESULT_TOTAL = d.total || 0;
+  // A layer that is switched on holds a copy of its catalogue row from the
+  // moment it was turned on, so its name stayed in the old language in the
+  // panel and the legend. Refresh the copy, keeping its opacity and order.
+  const fresh = new Map(RESULTS.map(l => [l.id, l]));
+  await Promise.all([...ACTIVE.keys()].map(async id => {
+    let l = fresh.get(id);
+    if (!l) {
+      try { l = await (await fetch(`/catalog/layers/${id}?lang=${LANG}`)).json(); } catch (e) { return; }
+    }
+    const rec = ACTIVE.get(id);
+    if (l && rec) Object.assign(rec, { name: l.name, description: l.description, category: l.category });
+  }));
   // Collapsed groups are the right default for a large catalog, but pointless when
   // there are only a few layers - open everything while the catalog is small, and
   // while searching, so matches are visible without extra clicks.
@@ -332,12 +407,24 @@ async function fetchLayers() {
   renderLayerPanel();
 }
 
+// The server sends the confidence word in the language the question was asked
+// in, so an answer given in Spanish kept saying "alta" after switching to English.
+const CONF_WORDS = { alta: 'high', media: 'medium', baja: 'low' };
+function confLabel(c) {
+  const es = Object.keys(CONF_WORDS).find(k => k === c || CONF_WORDS[k] === c);
+  return es ? (LANG === 'es' ? es : CONF_WORDS[es]) : c;
+}
+
+// A rating exists only where La Maraña's team gave one, in their reconstructed
+// metadata, using their own four words: Confirmed, Inferred, Reconstructed,
+// Unknown. Translated literally and nothing more - this used to call Unknown
+// "undocumented", which is our phrasing, not theirs.
 function statusChip(st) {
   const L = {
     confirmed:     { es: 'confirmado', en: 'confirmed', c: 'ok' },
     inferred:      { es: 'inferido', en: 'inferred', c: 'mid' },
     reconstructed: { es: 'reconstruido', en: 'reconstructed', c: 'mid' },
-    unknown:       { es: 'sin documentar', en: 'undocumented', c: 'low' },
+    unknown:       { es: 'desconocido', en: 'unknown', c: 'low' },
   }[st] || { es: st, en: st, c: 'low' };
   return `<span class="mstat ${L.c}">${esc(L[LANG] || st)}</span>`;
 }
@@ -579,7 +666,7 @@ async function showLayerInfo(id) {
         <dt>${LANG === 'es' ? 'Año' : 'Year'}</dt><dd>${s.year || '—'}</dd>
         <dt>${LANG === 'es' ? 'Elementos' : 'Features'}</dt><dd>${(l.feature_count || 0).toLocaleString()}</dd>
         <dt>${LANG === 'es' ? 'Procedencia' : 'Provenance'}</dt><dd>${esc(s.inventory || '—')}</dd>
-        <dt>${LANG === 'es' ? 'Metadatos' : 'Metadata'}</dt><dd>${statusChip(s.metadata_status)}</dd>
+        ${s.metadata_status ? `<dt>${LANG === 'es' ? 'Evaluación de La Maraña' : 'La Maraña rating'}</dt><dd>${statusChip(s.metadata_status)}</dd>` : ''}
       </dl>`;
     box.style.display = 'block';
     box.querySelector('[data-close]').onclick = () => { box.style.display = 'none'; };

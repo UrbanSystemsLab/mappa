@@ -13,6 +13,7 @@ not just the endpoint that opened the connections.
 from __future__ import annotations
 
 import os
+import threading
 
 from core import DATABASE_URL as DB_URL
 
@@ -28,6 +29,15 @@ POOL_MAX = int(os.environ.get("DB_POOL_MAX", "4"))
 STATEMENT_TIMEOUT_MS = int(os.environ.get("DB_STATEMENT_TIMEOUT_MS", "20000"))
 # Also reap connections whose client has vanished mid-transaction.
 IDLE_TX_TIMEOUT_MS = int(os.environ.get("DB_IDLE_TX_TIMEOUT_MS", "30000"))
+# How long a request waits for a free connection before giving up.
+CHECKOUT_TIMEOUT_S = float(os.environ.get("DB_CHECKOUT_TIMEOUT_S", "15"))
+
+# psycopg2's pool does not wait: when every connection is out, the next request
+# fails on the spot with "connection pool exhausted". Turning on a map layer sends
+# a burst of tile requests, and a question asked in that moment was simply
+# rejected - found by clicking through the app in a browser on 3 Oct. This makes
+# a request wait its turn instead, for a bounded time.
+_SLOTS = threading.BoundedSemaphore(POOL_MAX)
 
 
 def _get_pool():
@@ -63,6 +73,17 @@ class connection:
     """
 
     def __enter__(self):
+        if not _SLOTS.acquire(timeout=CHECKOUT_TIMEOUT_S):
+            raise RuntimeError(
+                f"no database connection free after {CHECKOUT_TIMEOUT_S:.0f}s - the service is overloaded"
+            )
+        try:
+            return self._checkout()
+        except BaseException:
+            _SLOTS.release()
+            raise
+
+    def _checkout(self):
         self._pool = _get_pool()
         # A pooled connection can be dead on arrival: the Cloud SQL proxy and the
         # server both drop idle connections, and the pool hands them back anyway.
@@ -90,4 +111,5 @@ class connection:
             broken = True
         finally:
             self._pool.putconn(self._conn, close=broken)
+            _SLOTS.release()
         return False

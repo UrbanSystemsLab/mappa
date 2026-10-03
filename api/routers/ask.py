@@ -121,6 +121,9 @@ def ask_stream(req: AskRequest) -> StreamingResponse:
                 "focus": on_map.focus,
                 "suggested_layers": on_map.layers,
                 "disclaimer": disclaimer,
+                # Both, so switching language switches the disclaimer instead of
+                # leaving the previous language's text under the answer.
+                "disclaimers": {"es": DISCLAIMER_ES, "en": DISCLAIMER_EN},
             },
         )
 
