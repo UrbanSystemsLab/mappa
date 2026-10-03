@@ -588,3 +588,44 @@ several, so the real allowance is this multiplied by however many are up. It
 stops a loop from one laptop, which is the realistic case. It does not stop a
 distributed flood, and doing so means shared state - a round trip on every
 question, and another thing for La Maraña to run.
+
+### Four minutes waiting for a file that was already on disk
+
+The first question after the deploy came back *"That took too long to answer."*
+The timing said the rest:
+
+```
+run 1    first byte 45.6s    no answer at all after 150s
+run 2    first byte  0.2s    answered in 1.7s
+run 3    first byte  0.2s    answered in 1.9s
+```
+
+Warm, every stage of that question is fast — place 0.7s, layers 4.2s, the
+computed figures 0.6s. So it was the cold container, and the logs named it:
+
+```
+HTTP Error 429 while requesting HEAD huggingface.co/.../adapter_config.json
+Rate limited. Waiting 222.0s before retry [Retry 1/5].
+```
+
+The embedding model has been baked into the image since the first deploy. That
+was not enough: on startup the library still asked Hugging Face whether its copy
+was current, Hugging Face rate-limited the unauthenticated request, and the
+retry policy is to **sleep 222 seconds**. The model it was waiting for was
+already on disk.
+
+So production had a hard runtime dependency on a third party's availability that
+nobody had decided to take, for a file that never changes. Offline mode reads the
+baked cache and opens no socket.
+
+**The second half of the same bug** is that the model and the gazetteer loaded on
+the first *request* rather than at startup, so Cloud Run reported the container
+ready and then sent it a question it could not answer for forty-five seconds.
+Both now load in a lifespan handler. The same seconds are spent, while Cloud Run
+is starting the container rather than while a person is waiting — and the first
+question after a deploy is the one most likely to be asked by whoever we just
+told to go and look.
+
+A failure to warm is logged and swallowed. A container that cannot reach the
+database can still serve the map and the catalogue, and refusing to start would
+take those down too.
