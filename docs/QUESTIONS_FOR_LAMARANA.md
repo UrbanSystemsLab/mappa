@@ -109,6 +109,17 @@ attach it to the wrong layer — it is a claim about where a number came from.
 The other 30 tabs describe layers we do not hold, including the whole **AAA water
 and sewer network** (13 layers). See question 2.
 
+### 3b. The data dictionaries folder looks empty from our side
+
+Your 22 July email linked the **Diccionario** folder for the data dictionaries
+(Field, Description, Include/Exclude per layer). On 3 October that folder and its
+`referencias` subfolder show no files to our account.
+
+Did the dictionaries move, or are the files shared more narrowly than the folder?
+They matter more than they sound: they are what turns a raw column like
+`CLASIPUT` into a label a resident can read, and they say which columns to leave
+out entirely.
+
 ### 4. Communities that are not in any boundary layer
 
 We can now answer questions about 902 barrios and 713 comunidades especiales.
