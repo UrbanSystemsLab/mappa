@@ -567,3 +567,24 @@ boundaries.
 
 Logged for La Maraña, because the damage suggests the file was converted through
 an encoding that lost its accents, and other columns in it may be affected.
+
+### A rate limit, finally
+
+The app has been on a public domain with no sign-in and no limit. Nothing stood
+between a loop pointed at `/ask` and either the model bill or the database the
+map is served from. Fifteen questions a minute and 150 an hour per address.
+
+Two windows rather than one, because two different things are being protected:
+the **cost** is the model, which accumulates over an hour, and the **service** is
+the database, which cares about the next five seconds. A script pacing itself at
+one question every five seconds never trips a per-minute limit, which is the
+whole reason the hourly one exists.
+
+Tiles and the catalogue are deliberately not limited. They are cached and cheap,
+and a classroom on one connection needs the map to keep working.
+
+**The honest limit of it:** the count is per container, and Cloud Run runs
+several, so the real allowance is this multiplied by however many are up. It
+stops a loop from one laptop, which is the realistic case. It does not stop a
+distributed flood, and doing so means shared state - a round trip on every
+question, and another thing for La Maraña to run.
