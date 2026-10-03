@@ -26,27 +26,43 @@ headers by exact name, so renaming one silently stops that field loading.
 No. The import is a manual run against a downloaded copy. **Answered**, and a
 scheduled sync is now on our roadmap.
 
+**Can the system support units smaller than the municipality later?** *(asked by
+La Maraña, 22 Jul 2026: "we would like to know whether the system can be designed
+to support additional reference units in the future, such as barrios or parcels")*
+Yes, and as of 3 October it does. Municipio remains the primary unit as they
+asked, and **902 barrios and 713 comunidades especiales** are now resolvable:
+"¿Cuántas escuelas hay en Santurce?" answers for the barrio, not for all of San
+Juan. Parcels are not in yet. **Worth telling them** — it was their question and
+it is now done.
+
+**Is the GIS set complete?** *(stated by La Maraña, 11 Sep 2026)*
+Yes: *"This is the completed gdb and we are not planning on adding anything else
+given the scale of it (contains 600 layers)."* So the catalogue rows we cannot
+find are almost certainly older inventory entries that never made it into the
+final geodatabase, rather than files still to come. That reframes question 2 —
+it is a question about **the catalogue**, not about missing deliveries.
+
 ---
 
 ## Open — data
 
-### 1. Which layers belong on the map?
+### 1. Which layers belong on the map? — THEY ALREADY ANSWERED THIS
 
-We hold data for **603** of their layers. Only **80** are currently offered as map
-toggles; the rest are searchable and the assistant can answer from them, but they
-are not in the panel.
+**Ailani sent a prioritised shortlist on 28 July 2026**, as an attachment to the
+"Technical details for setting up Mappa data pipelines" thread: *"the short list
+of the layers we consider reliable enough to prioritize first based on their
+publication date and the metadata available."*
 
-This is a design limit, not a technical one. A panel of 600 layers is unusable,
-and most would never be opened.
+That file was never used. The 80 layers currently on the map were chosen by us.
 
-- Which layers does your team actually reach for in a typical week?
+**Action is ours, not theirs:** retrieve that attachment and set the map from it.
+It is not in the Drive folders they shared — it went to the NYU mailbox only. Do
+not re-ask them for it.
+
+Still worth confirming once the list is applied:
+- Has the shortlist changed since July, now that the metadata work is finished?
 - Are there layers that matter for particular audiences — funders,
   municipalities, community workshops — even if rarely used?
-- Is there a grouping you use in practice that differs from the categories on the
-  inventory sheet?
-
-*Our suggestion: a core of 30–50 that load fast and are properly labelled, with
-the rest reachable through search.*
 
 ### 2. 42 layers we cannot find anywhere in the Drive
 
@@ -166,12 +182,30 @@ Roughly **$55/month** today (database, storage, hosting) plus usage of about
 **$0.04 per 100 questions**. That becomes your cost at handover. Worth confirming
 it is workable before we build more on top of it.
 
-### 14. Ownership of the project and domain
+### 14. Is the name settled, and is it the right domain?
 
-The Google Cloud project and `mappealo.org` should end up in La Maraña's name.
-Easier to register them to you now than transfer later.
+They raised a real concern on 28 July and it was never closed out: *"We like the
+name MAPPA but are not fully convinced because we believe it might create a lot
+of confusion when we publish and share it in Puerto Rico."* They preliminarily
+picked **`Mappapr.org`** and asked for marketing input, which nobody gave.
 
-### 15. What should support look like after handover, and for how long?
+Since then we bought **`mappealo.org`**, branded the product **Mappa**, and put it
+live. That decision was ours, not theirs, and it went past an open question they
+had asked for help with.
+
+- Is `mappealo.org` the name you want, or should the live site move?
+- Did you ever register `Mappapr.org`?
+
+Better to change this now than after it is printed on anything.
+
+### 15. Ownership of the project and domain
+
+The Google Cloud project and the domain should end up in La Maraña's name. They
+confirmed on 22 July that **prsostenible@lamarana.org** is the address to use and
+chose Option A — built on NYU's side, transferred to them later. Worth agreeing
+the date for that transfer.
+
+### 16. What should support look like after handover, and for how long?
 
 ---
 
