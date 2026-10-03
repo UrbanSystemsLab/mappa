@@ -212,13 +212,6 @@ if (clearBtn) clearBtn.onclick = () => {
   if (en) en.onclick = () => { LANG = 'en'; applyLang(); };
 }
 
-function confClass(c) {
-  c = (c || '').toLowerCase();
-  if (c === 'alta' || c === 'high') return 'ok';
-  if (c === 'media' || c === 'medium') return 'warn';
-  return 'low';
-}
-
 function render() {
   if (!conversation.length) {
     const hint = LANG === 'es'
@@ -239,11 +232,10 @@ function render() {
         c.year ? ` · ${c.year}` : ''}${c.doc_id ? ` · <span class="cid">${esc(c.doc_id)}</span>` : ''}</div>`
     ).join('');
     const thinking = m.answer === '…';
-    const conf = (m.confidence && !thinking) ? `<span class="badge ${confClass(m.confidence)}">${esc(confLabel(m.confidence))}</span>` : '';
     return `
       <div class="row user"><div class="bubble">${esc(m.question)}</div></div>
       <div class="row bot"><div class="bubble">
-        <div class="who">Mappa ${conf}</div>
+        <div class="who">Mappa</div>
         <div class="answer${thinking ? ' typing' : ''}">${thinking ? (LANG === 'es' ? 'Consultando…' : 'Thinking…') : esc(m.answer)}</div>
         ${cites ? `<div class="cites"><div class="cites-h">${t('sources')}</div>${cites}</div>` : ''}
         ${layers ? `<div class="layers">${layers}</div>` : ''}
@@ -256,7 +248,7 @@ async function ask() {
   const question = q.value.trim();
   if (!question) return;
   btn.disabled = true;
-  const turn = { question, answer: '', citations: [], suggested_layers: [], confidence: '' };
+  const turn = { question, answer: '', citations: [], suggested_layers: [] };
   conversation.push(turn);
   render();
   q.value = '';
@@ -325,7 +317,6 @@ async function ask() {
           render();
         } else if (ev[1] === 'done') {
           turn.citations = d.citations || [];
-          turn.confidence = d.confidence || '';
           // The streamed text is raw. The server's cleaned version removes
           // stray URLs and the model's references to the computed-facts block,
           // so it replaces what was shown.
@@ -407,14 +398,6 @@ async function fetchLayers() {
   renderLayerPanel();
 }
 
-// The server sends the confidence word in the language the question was asked
-// in, so an answer given in Spanish kept saying "alta" after switching to English.
-const CONF_WORDS = { alta: 'high', media: 'medium', baja: 'low' };
-function confLabel(c) {
-  const es = Object.keys(CONF_WORDS).find(k => k === c || CONF_WORDS[k] === c);
-  return es ? (LANG === 'es' ? es : CONF_WORDS[es]) : c;
-}
-
 // A rating exists only where La Maraña's team gave one, in their reconstructed
 // metadata, using their own four words: Confirmed, Inferred, Reconstructed,
 // Unknown. Translated literally and nothing more - this used to call Unknown
@@ -449,13 +432,8 @@ function layerRow(l, isActive) {
       <span class="pend">${LANG === 'es' ? 'sin cargar' : 'not loaded'}</span>
       ${info}</div>`;
   }
-  // What La Maraña wrote beside a layer on their prioritization matrix -
-  // "Needs verification" - travels with it, so nobody mistakes it for settled.
-  const note = l.featured_note
-    ? `<span class="fnote">${esc(l.featured_note === 'Needs verification' && LANG === 'es'
-        ? 'Por verificar' : l.featured_note)}</span>` : '';
   return `<div class="lrow" data-act="add" data-id="${l.id}">
-    ${sw}<span class="nm">${esc(l.name)}<span class="yr">${yr}</span>${note}</span>
+    ${sw}<span class="nm">${esc(l.name)}<span class="yr">${yr}</span></span>
     ${info}<button class="ic add" data-act="add" data-id="${l.id}">+</button></div>`;
 }
 
@@ -472,18 +450,6 @@ function renderLayerPanel() {
         <span>${LANG === 'es' ? 'Activas' : 'Active'} (${active.length})</span>
         <a data-act="clear">${LANG === 'es' ? 'Quitar todas' : 'Clear all'}</a>
       </div>${active.map(l => layerRow(l, true)).join('')}</div>`;
-  }
-
-  // La Maraña's Data Quality Prioritization Matrix: the layers they consider
-  // reliable enough to show first. Always open, above the categories, so the
-  // panel leads with their judgement rather than ours. They still appear in
-  // their category too, for anyone browsing by theme.
-  const featured = RESULTS.filter(l => l.featured && !activeIds.has(l.id));
-  if (featured.length) {
-    html += `<div class="lsec feat"><div class="lsec-h">
-        <span>${LANG === 'es' ? 'Recomendadas por La Maraña' : 'Recommended by La Maraña'}</span>
-        <span class="cnt">${featured.length}</span>
-      </div>${featured.map(l => layerRow(l, false)).join('')}</div>`;
   }
 
   const shown = RESULTS.filter(l => !activeIds.has(l.id));

@@ -144,7 +144,7 @@ def gather(ask: Ask, place: Place | None) -> Evidence:
 
 
 def write(ask: Ask, evidence: Evidence, layers: list[str]) -> dict[str, Any]:
-    """The finished answer, with citations and confidence."""
+    """The finished answer, with its citations."""
     if (evidence.documents or evidence.context) and llm.is_available():
         try:
             return llm.narrate(
@@ -176,7 +176,7 @@ def stream(ask: Ask, evidence: Evidence, layers: list[str]) -> Iterator[str]:
 
 
 def finish(text: str, evidence: Evidence, layers: list[str], lang: str) -> dict[str, Any]:
-    """Citations and confidence for a streamed answer, by the same rules as a
+    """Citations for a streamed answer, by the same rules as a
     written one - so an answer cannot be grounded differently depending on which
     route served it."""
     return llm.finish(text, evidence.documents, layers, lang)

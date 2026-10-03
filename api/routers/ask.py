@@ -83,7 +83,6 @@ def ask(req: AskRequest) -> AskResponse:
             answer_es=NO_MATCH[lang],
             citations=[],
             suggested_layers=on_map.layers,
-            confidence="baja" if lang == "es" else "low",
             disclaimer=disclaimer,
             municipio=on_map.municipality,
             focus=on_map.focus,
@@ -130,7 +129,7 @@ def ask_stream(req: AskRequest) -> StreamingResponse:
         evidence = answering.gather(ask_in, place)
         if not evidence.relevant:
             yield event("delta", {"text": NO_MATCH[lang]})
-            yield event("done", {"citations": [], "confidence": "baja" if lang == "es" else "low"})
+            yield event("done", {"citations": []})
             return
 
         try:
@@ -151,7 +150,6 @@ def ask_stream(req: AskRequest) -> StreamingResponse:
             "done",
             {
                 "citations": result.get("citations", []),
-                "confidence": result.get("confidence", ""),
                 "answer": result.get("answer_es", ""),
             },
         )

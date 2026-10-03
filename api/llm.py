@@ -379,13 +379,13 @@ def stream_answer(messages):
 
 def finish(answer: str, docs, layers, lang: str) -> dict:
     """Post-process a finished answer the same way narrate() does - strip URLs and
-    the map-facts marker, decide citations and confidence."""
+    the map-facts marker, decide citations."""
     answer = _strip_map_markers(_strip_urls(answer)).strip()
     return _assemble(answer, docs, layers, lang)
 
 
 def _assemble(answer: str, docs, layers, lang: str) -> dict[str, Any]:
-    """Citations and confidence for a finished answer. Shared by the streaming
+    """Citations for a finished answer. Shared by the streaming
     and non-streaming paths so they cannot disagree about what backed an answer."""
 
     # If the model declined (couldn't answer from the sources), don't present the
@@ -418,17 +418,14 @@ def _assemble(answer: str, docs, layers, lang: str) -> dict[str, Any]:
                     "doc_id": citation_id(d["id"]),
                 }
             )
-    if declined:
-        confidence = "baja" if lang == "es" else "low"
-    elif lang == "es":
-        confidence = "alta" if len(docs) >= 2 else "media"
-    else:
-        confidence = "high" if len(docs) >= 2 else "medium"
+    # There is no confidence rating. One used to be derived here - two or more
+    # documents meant "alta" - and nobody on La Maraña's side asked for it or
+    # agreed what it should mean. The citations are the evidence; the reader can
+    # judge from those.
     return {
         "answer_es": answer,
         "citations": citations,
         "suggested_layers": layers,
-        "confidence": confidence,
     }
 
 

@@ -50,7 +50,6 @@ class AskResponse(BaseModel):
     answer_es: str
     citations: list[Citation]
     suggested_layers: list[str]
-    confidence: str
     disclaimer: str
     # The place the answer is scoped to, and its bounding box so the map can fly
     # there. Named municipio for the frontend's sake; it may be a barrio.

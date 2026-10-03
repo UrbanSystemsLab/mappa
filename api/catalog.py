@@ -126,9 +126,8 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
         "value_labels": val_labels or {},
         "dataset_version": version,
         "status": status,
-        # On La Maraña's Data Quality Prioritization Matrix (28 Jul 2026): the
-        # layers they consider reliable enough to show first. The panel leads
-        # with these; the note is what they wrote beside it.
+        # On La Maraña's Data Quality Prioritization Matrix (28 Jul 2026), and
+        # what they wrote beside it. Recorded, not currently shown.
         "featured": bool(featured),
         "featured_note": featured_note,
         "reliability": reliability,
@@ -207,7 +206,7 @@ def list_layers(
         total = cur.fetchone()[0]
         cur.execute(
             f"SELECT {_LIST_COLS}, {_lang_cols(lang)} FROM layer_registry "
-            f"WHERE {wsql} ORDER BY featured DESC, (status = 'published') DESC, category, "
+            f"WHERE {wsql} ORDER BY (status = 'published') DESC, category, "
             f"{'name_es' if lang == 'es' else 'COALESCE(name_en, name_es)'} "
             f"LIMIT %(limit)s OFFSET %(offset)s",
             params,

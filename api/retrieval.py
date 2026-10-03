@@ -247,7 +247,6 @@ def compose_answer(query: str, docs: list[dict[str, Any]], layers: list[str]) ->
             ),
             "citations": [],
             "suggested_layers": layers,
-            "confidence": "baja",
         }
 
     intro = f"Con base en los documentos disponibles, sobre «{query.strip()}»:"
@@ -263,10 +262,8 @@ def compose_answer(query: str, docs: list[dict[str, Any]], layers: list[str]) ->
         {"id": d["id"], "title": d["title"], "year": d["year"], "doc_id": citation_id(d["id"])}
         for d in docs
     ]
-    confidence = "alta" if len(docs) >= 2 else "media"
     return {
         "answer_es": answer,
         "citations": citations,
         "suggested_layers": layers,
-        "confidence": confidence,
     }
