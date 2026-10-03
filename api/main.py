@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import catalog, llm, spatial, spatial_ops, tiles
+from .services import answering
 from .retrieval import compose_answer, detect_municipio, infer_layers, retrieve_with_scores
 
 # Minimum retrieval relevance (cosine similarity) to attempt an answer. Below this,
@@ -92,183 +93,89 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-def municipality_in_scope(req: AskRequest) -> str | None:
-    """Which municipality the question is about, including when it does not say.
-
-    A follow-up rarely repeats the name: "and the flood risk there?", "how many
-    schools in that municipality?". Reading only the current question left those
-    turns with no region at all - the spatial engine could not count anything and
-    the map did not move - so the place carries forward from the conversation.
-
-    A place named in the current question still wins, so changing subject works;
-    the map's own location is the last resort.
-    """
-    named = detect_municipio(req.question)
-    if named:
-        return named
-    for turn in reversed(req.history or []):
-        earlier = detect_municipio(turn.question)
-        if earlier:
-            return earlier
-    return req.location
+def _to_ask(req: AskRequest, lang: str) -> answering.Ask:
+    """The HTTP request as the service understands it. This is the only place
+    that knows about both shapes."""
+    return answering.Ask(
+        question=req.question,
+        lang=lang,
+        history=[answering.Turn(t.question, t.answer) for t in req.history],
+        location=req.location,
+        spatial=req.spatial,
+        active_layers=req.active_layers or [],
+    )
 
 
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest) -> AskResponse:
+    """A complete answer. Same service as /ask/stream, so they cannot diverge."""
     lang = "es" if (req.lang or llm.RESPONSE_LANG or "en").lower() == "es" else "en"
     disclaimer = DISCLAIMER_ES if lang == "es" else DISCLAIMER_EN
-    # For follow-up questions, fold the previous question into the retrieval query
-    # so "what about in Ponce?" still finds the right documents.
-    retrieval_query = req.question
-    if req.history:
-        retrieval_query = f"{req.history[-1].question} {req.question}"
-    # Location-aware: scope to the clicked municipio, or one named in the question.
-    # A place named in the question wins over the one the map happens to be on.
-    # It used to be the other way round, so after searching for Mayaguez on the
-    # map, asking about Loiza returned Mayaguez documents and the answer said
-    # there was nothing on Loiza.
-    municipio = municipality_in_scope(req)
-    scored = retrieve_with_scores(retrieval_query, top_k=6, jurisdiction=municipio)
-    layers = infer_layers(req.question)
-    # Catalog IDs the map can actually switch on, resolved through the registry.
-    map_layers = spatial_ops.suggested_layer_ids(req.question)
+    ask_in = _to_ask(req, lang)
 
-    # Facility questions (schools/hospitals/shelters/roads) are answered from the map
-    # data, not the hazard documents. Build a combined context for the model.
-    facilities = spatial.facility_counts(req.question, municipio)
-    context = dict(req.spatial or {})
-    if facilities:
-        context["facilities"] = facilities
+    municipality = answering.place_in_scope(ask_in)
+    on_map = answering.map_answer(ask_in, municipality)
+    evidence = answering.gather(ask_in, municipality)
 
-    # Counts, overlays and distances are computed against their layers rather than
-    # read out of retrieved prose. When the question asks for a figure and the
-    # layers cannot produce one, that absence is passed through too, so the model
-    # is told to say so instead of finding a number in the text.
-    analysis = spatial_ops.analyze(req.question, municipio,
-                                   [h.question for h in (req.history or [])])
-    if analysis:
-        context["analysis"] = spatial_ops.describe(analysis, lang)
-    elif spatial_ops.wants_number(req.question):
-        context["no_figure"] = True
-    if req.active_layers:
-        context["active_layers"] = req.active_layers
-    # Layers on screen count as context too: 'what am I looking at?' is a real
-    # question and should not be turned away by the relevance gate.
-    has_context = (bool(req.spatial) or bool(facilities) or bool(req.active_layers)
-                   or bool(analysis))
+    if not evidence.relevant:
+        return AskResponse(answer_es=NO_MATCH[lang], citations=[],
+                           suggested_layers=on_map.layers,
+                           confidence="baja" if lang == "es" else "low",
+                           disclaimer=disclaimer, municipio=municipality,
+                           focus=on_map.focus)
 
-    focus = spatial.municipio_bbox(municipio)
-
-    # Relevance gate: decline gibberish/off-topic questions. If we have real map
-    # context (a click or facility counts), we always answer.
-    if not has_context and (not scored or scored[0][0] < MIN_RELEVANCE):
-        return AskResponse(
-            answer_es=NO_MATCH[lang],
-            citations=[],
-            suggested_layers=(map_layers or layers),
-            confidence="baja" if lang == "es" else "low",
-            disclaimer=disclaimer,
-            municipio=municipio,
-            focus=focus,
-        )
-
-    docs = [doc for _, doc in scored]
-    history = [(t.question, t.answer) for t in req.history]
-    # Prefer the local LLM for narration; fall back to the templated composer
-    # if Ollama is unreachable or errors, so the app always responds.
-    if (docs or has_context) and llm.is_available():
-        try:
-            result = llm.narrate(req.question, docs, layers, history=history, spatial=context or None, lang=lang)
-        except Exception:
-            result = compose_answer(req.question, docs, layers)
-    else:
-        result = compose_answer(req.question, docs, layers)
-    # The narrator returns the themes it was given; the map needs catalog IDs it
-    # can actually switch on, so the resolved ones win where we have them.
-    if map_layers:
-        result["suggested_layers"] = map_layers
-    return AskResponse(disclaimer=disclaimer, municipio=municipio, focus=focus, **result)
+    result = answering.write(ask_in, evidence, on_map.layers)
+    result["suggested_layers"] = on_map.layers
+    return AskResponse(disclaimer=disclaimer, municipio=municipality,
+                       focus=on_map.focus, **result)
 
 
 @app.post("/ask/stream")
 def ask_stream(req: AskRequest) -> StreamingResponse:
-    """The same answer as /ask, sent as it is written.
+    """The same answer, sent as it is written.
 
-    The map facts arrive first, in a `meta` event, so the map can fly to the place
-    and switch on the right layers while the text is still being written. Then
-    `delta` events carry the answer, and `done` carries citations and confidence.
-
-    An answer that takes two seconds is fine; two seconds of a blank panel reading
-    'Thinking...' is what people experience as the product being broken.
+    The map's half goes first, in a `meta` event, so the map moves while the text
+    is still being written. An answer that takes two seconds is fine; two seconds
+    of a blank panel reading 'Thinking...' is what people experience as broken.
     """
     lang = "es" if (req.lang or llm.RESPONSE_LANG or "en").lower() == "es" else "en"
     disclaimer = DISCLAIMER_ES if lang == "es" else DISCLAIMER_EN
+    ask_in = _to_ask(req, lang)
 
     def event(name: str, payload: dict) -> str:
         return f"event: {name}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
     def generate():
-        # The map's answer is cheap to work out - a name match and a bounding box -
-        # so it goes out first. Retrieval and the spatial analysis run afterwards.
-        # Doing them before the first yield meant nothing reached the screen until
-        # the whole pipeline had finished, which put the map three seconds behind
-        # for no reason.
-        municipio = municipality_in_scope(req)
-        layers = infer_layers(req.question)
-        map_layers = spatial_ops.suggested_layer_ids(req.question)
-        focus = spatial.municipio_bbox(municipio)
-        yield event("meta", {"municipio": municipio, "focus": focus,
-                             "suggested_layers": (map_layers or layers),
+        municipality = answering.place_in_scope(ask_in)
+        on_map = answering.map_answer(ask_in, municipality)
+        yield event("meta", {"municipio": on_map.municipality, "focus": on_map.focus,
+                             "suggested_layers": on_map.layers,
                              "disclaimer": disclaimer})
 
-        retrieval_query = req.question
-        if req.history:
-            retrieval_query = f"{req.history[-1].question} {req.question}"
-        scored = retrieve_with_scores(retrieval_query, top_k=6, jurisdiction=municipio)
-        docs = [doc for _, doc in scored]
-
-        facilities = spatial.facility_counts(req.question, municipio)
-        context = dict(req.spatial or {})
-        if facilities:
-            context["facilities"] = facilities
-        analysis = spatial_ops.analyze(req.question, municipio,
-                                   [h.question for h in (req.history or [])])
-        if analysis:
-            context["analysis"] = spatial_ops.describe(analysis, lang)
-        elif spatial_ops.wants_number(req.question):
-            context["no_figure"] = True
-        if req.active_layers:
-            context["active_layers"] = req.active_layers
-        has_context = (bool(req.spatial) or bool(facilities) or bool(req.active_layers)
-                       or bool(analysis))
-
-        if not has_context and (not scored or scored[0][0] < MIN_RELEVANCE):
+        evidence = answering.gather(ask_in, municipality)
+        if not evidence.relevant:
             yield event("delta", {"text": NO_MATCH[lang]})
-            yield event("done", {"citations": [], "confidence":
-                                 "baja" if lang == "es" else "low"})
+            yield event("done", {"citations": [],
+                                 "confidence": "baja" if lang == "es" else "low"})
             return
 
-        if (docs or has_context) and llm.is_available():
-            try:
-                messages = llm.build_messages(req.question, docs, layers,
-                                              [(t.question, t.answer) for t in req.history],
-                                              context or None, lang)
-                parts = []
-                for piece in llm.stream_answer(messages):
-                    parts.append(piece)
-                    yield event("delta", {"text": piece})
-                result = llm.finish("".join(parts), docs, (map_layers or layers), lang)
-            except Exception:
-                # Any transport or parse failure falls back to the templated
-                # composer, so the panel always resolves to something.
-                result = compose_answer(req.question, docs, layers)
-                yield event("delta", {"text": result["answer_es"]})
-        else:
-            result = compose_answer(req.question, docs, layers)
+        try:
+            parts = []
+            for piece in answering.stream(ask_in, evidence, on_map.layers):
+                parts.append(piece)
+                yield event("delta", {"text": piece})
+            result = answering.finish("".join(parts), evidence, on_map.layers, lang)
+        except Exception:
+            result = answering.write(ask_in, evidence, on_map.layers)
             yield event("delta", {"text": result["answer_es"]})
 
+        # The deltas went out raw, so anything the cleaning step removes - a
+        # stray URL, the model citing the computed-facts block as though it were
+        # a document - stayed on screen. The finished text comes with the done
+        # event and replaces what was streamed.
         yield event("done", {"citations": result.get("citations", []),
-                             "confidence": result.get("confidence", "")})
+                             "confidence": result.get("confidence", ""),
+                             "answer": result.get("answer_es", "")})
 
     return StreamingResponse(generate(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache",

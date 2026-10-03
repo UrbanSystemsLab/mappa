@@ -252,6 +252,10 @@ async function ask() {
         } else if (ev[1] === 'done') {
           turn.citations = d.citations || [];
           turn.confidence = d.confidence || '';
+          // The streamed text is raw. The server's cleaned version removes
+          // stray URLs and the model's references to the computed-facts block,
+          // so it replaces what was shown.
+          if (d.answer) turn.answer = d.answer;
           render();
         }
       }
