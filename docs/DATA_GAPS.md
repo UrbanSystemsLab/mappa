@@ -2,6 +2,11 @@
 
 Measured 3 October 2026 against their Drive and our database.
 
+> **Status, end of 3 Oct:** the 17 duplicate rows are now marked `duplicate` and
+> point at the row holding their data — catalogued is 102, not 119. Their
+> reconstructed metadata attaches to 24 layers, up from 15. The 16 Drive files
+> are not loaded yet.
+
 The catalogue says **119 layers have no data**. That number had never been taken
 apart. It is four different problems, and only one of them is theirs.
 

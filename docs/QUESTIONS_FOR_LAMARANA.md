@@ -88,14 +88,29 @@ stations, filtration plants, sampling points, 13 layers in total — is fully
 documented in your reconstructed metadata workbook, but we hold none of the data.
 Was it ever shared?
 
-### 3. 46 metadata tabs do not match any layer name
+### 3. Seven metadata tabs that could describe more than one layer
 
-The reconstructed metadata workbooks describe layers under the names used in the
-GIS files — `habitat_1`, `pajaros`, `Hidrante`, `RUTAS_AMA` — while the inventory
-catalogues them differently. We attach metadata only where the match is certain,
-so 46 of 61 tabs are unattached rather than attached to a guess.
+Your reconstructed metadata now attaches to **24 layers**, up from 15. Nine tabs
+were matched by hand where the name differed only in spelling — `Hidrante` is
+our `hidrantes`, `peces_1` is our `peces`.
 
-A list of the 46 can be sent. Which name is authoritative?
+Seven we have left unattached, because each could describe two to four of the
+layers you sent and nothing in the tab says which:
+
+| Your tab | Could be |
+|---|---|
+| `Refugios` (FEMA certified, 2015) | refugios 2009, refugios 2023, FWS refuges |
+| `Desalojo` | four tsunami-evacuation layers |
+| `Residenciales` | residenciales 2009, residenciales públicos 2009 |
+| `Comunidades_Especiales` | three comunidades especiales layers |
+| `Critical_wildlife` and `Critical_Wildlife_Areas_20` | two critical wildlife layers |
+| `TREN_URBANO_DETALLE` | four Tren Urbano layers |
+
+Which layer does each describe? We would rather leave provenance blank than
+attach it to the wrong layer — it is a claim about where a number came from.
+
+The other 30 tabs describe layers we do not hold, including the whole **AAA water
+and sewer network** (13 layers). See question 2.
 
 ### 4. Communities that are not in any boundary layer
 

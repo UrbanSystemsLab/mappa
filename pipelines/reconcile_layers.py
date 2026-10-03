@@ -6,6 +6,13 @@ and sometimes richer - but it left the old tables with no registry row, so the
 map quietly went from 107 layers to 81 and the alias table pointed at a layer the
 catalog no longer knew about.
 
+It also finds the third kind, which is not drift but duplication: a catalogue
+row describing a layer that is already live under a different GIS ID. Agroturismo
+2021 is on the sheet three times. Those rows have no data behind them and never
+will, because the data is already here - so they were being counted as "layers
+with no data" and quoted to La Maraña as a gap. They are marked duplicate rather
+than deleted; their row still records that their inventory listed it twice.
+
 This finds both kinds of drift:
 
   * a table with no registry row - either superseded by a newer copy, or a layer
@@ -96,6 +103,34 @@ def main() -> None:
         )
         recovered.append((table, count))
 
+    # A catalogue row whose layer is already live under another GIS ID. The data
+    # is not missing - the sheet lists it twice. Marked, never deleted, because
+    # the duplication is a fact about their inventory worth keeping.
+    cur.execute("ALTER TABLE layer_registry ADD COLUMN IF NOT EXISTS superseded_by text")
+    live = {}
+    cur.execute(
+        """SELECT table_name, id FROM layer_registry
+           WHERE status IN ('published','loaded') AND table_name IS NOT NULL"""
+    )
+    for t, rid in cur.fetchall():
+        live.setdefault(key(t), (t, rid))
+
+    cur.execute(
+        """SELECT r.id, r.gis_id, COALESCE(r.name_es, r.name_en), i.gdb_name, i.original_name
+           FROM layer_registry r LEFT JOIN layer_inventory i ON i.gis_id = r.gis_id
+           WHERE r.status = 'catalogued'"""
+    )
+    duplicates = []
+    for rid, gis_id, name, gdb, original in cur.fetchall():
+        twin = next((live[key(c)] for c in (gdb, original, name) if c and key(c) in live), None)
+        if not twin:
+            continue
+        cur.execute(
+            "UPDATE layer_registry SET status='duplicate', superseded_by=%s WHERE id=%s",
+            (twin[1], rid),
+        )
+        duplicates.append((gis_id or rid, name, twin[0]))
+
     # An alias is only useful if its table is still registered.
     from api.spatial_ops import LAYERS
 
@@ -114,6 +149,10 @@ def main() -> None:
     print(f"\n[reconcile] {len(recovered)} layers recovered that had no registry row:")
     for t, n in recovered:
         print(f"    {t[:46]:48} {n:>9,} features")
+    print(f"\n[reconcile] {len(duplicates)} catalogue rows duplicate a layer that is already live:")
+    for gis_id, name, table in duplicates:
+        print(f"    {gis_id:<10} {str(name)[:38]:40} -> {table[:40]}")
+
     print(f"\n[reconcile] {len(broken)} aliases pointing at an unregistered table:")
     for concept, old, twin in broken:
         print(f"    {concept:14} {old[:42]:44} -> {twin or 'NO REPLACEMENT'}")

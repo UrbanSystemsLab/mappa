@@ -120,3 +120,36 @@ def test_no_three_dimensional_geometry(cur):
         except Exception:
             continue
     assert not bad, f"layers with 3D geometry: {bad[:5]}"
+
+
+def test_a_duplicate_points_at_a_live_layer(cur):
+    """A row marked duplicate must name the row that actually holds its data.
+
+    Otherwise 'duplicate' becomes a place to hide rows nobody could explain, and
+    the gap quoted to La Maraña shrinks for no real reason.
+    """
+    cur.execute("""
+        SELECT d.gis_id FROM layer_registry d
+        WHERE d.status = 'duplicate' AND NOT EXISTS (
+            SELECT 1 FROM layer_registry live
+            WHERE live.id = d.superseded_by AND live.status IN ('published', 'loaded')
+        )
+    """)
+    assert cur.fetchall() == []
+
+
+def test_no_catalogued_row_duplicates_a_live_layer(cur):
+    """The inventory listed Agroturismo 2021 three times. Two of those rows sat as
+    'catalogued' - data not yet received - and were counted as missing."""
+    from pipelines.reconcile_layers import key
+
+    cur.execute("""SELECT table_name FROM layer_registry
+                   WHERE status IN ('published','loaded') AND table_name IS NOT NULL""")
+    live = {key(r[0]) for r in cur.fetchall()}
+    cur.execute("""
+        SELECT r.gis_id, COALESCE(r.name_es, r.name_en), i.gdb_name, i.original_name
+        FROM layer_registry r LEFT JOIN layer_inventory i ON i.gis_id = r.gis_id
+        WHERE r.status = 'catalogued'
+    """)
+    hiding = [g for g, *names in cur.fetchall() if any(n and key(n) in live for n in names)]
+    assert hiding == [], f"catalogued but already live: {hiding}"

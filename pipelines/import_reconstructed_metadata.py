@@ -43,6 +43,31 @@ SOURCE = "La Maraña — Metadata Reconstruída"
 # Tabs that describe the workbook rather than a layer.
 NOT_A_LAYER = {"confidence guide", "guia", "guía", "index", "readme"}
 
+# Their GIS files and our catalogue name the same layer differently - their tab
+# says Hidrante where the table is hidrantes, and the biological layers carry a
+# trailing _1 from the export that produced them. Matching on the name alone
+# leaves 46 of their 61 tabs unattached, so the layer keeps the confidence we
+# inferred while their team had already established the real source.
+#
+# Every pair here was checked by hand against the whole registry, and only the
+# ones with exactly one possible target are listed. Seven more tabs - Refugios,
+# Desalojo, Residenciales, Comunidades_Especiales, Critical_wildlife (twice) and
+# TREN_URBANO_DETALLE - each have two to four plausible layers, and their tab
+# gives no year or qualifier that separates them. Those stay unattached and are
+# question 3 for La Maraña, because provenance guessed is worse than provenance
+# missing: it is a claim about where a number came from.
+ALIASES = {
+    "hidrante": "layer_hidrantes",
+    "contador": "layer_contadores",
+    "habitat_1": "layer_habitat",
+    "mamiferos_marinos_1": "layer_mamiferos_marinos",
+    "mamiferos_terrestres_1": "layer_mamiferos_terrestres",
+    "peces_1": "layer_peces",
+    "reptiles_1": "layer_reptiles",
+    "balnearios": "layer_turismo_balnearios",
+    "corredor_agricola": "layer_corredor_agricola_de_project_exportfeatures",
+}
+
 # Their field labels -> our columns. Both passes used different wording for the
 # same thing, so both spellings map to one place.
 FIELDS = {
@@ -136,6 +161,15 @@ def match(cur, dataset: str, tab: str) -> list[str]:
         if not candidate:
             continue
         key = norm(candidate)
+
+        # A hand-checked alias comes first: it is a decision somebody made, and
+        # it should not be overridden by a coincidental name match.
+        alias = ALIASES.get(re.sub(r"[^a-z0-9_]+", "", (candidate or "").lower()))
+        if alias:
+            cur.execute("SELECT id FROM layer_registry WHERE table_name = %s", (alias,))
+            hits = [r[0] for r in cur.fetchall()]
+            if hits:
+                return hits
         # Three ways in, because a layer may be published (has a table),
         # loaded, or still only catalogued - and the metadata is just as useful
         # on a row whose data has not arrived yet.
