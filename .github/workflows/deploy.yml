@@ -24,7 +24,13 @@ env:
   RUNTIME_SA: mappa-pipeline@mappa-lamarana-aecc.iam.gserviceaccount.com
 
 jobs:
+  # Deploying without a gate is how a bad commit reached the public URL. The
+  # tests have to pass first, every time, including when someone deploys by hand.
+  test:
+    uses: ./.github/workflows/test.yml
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read

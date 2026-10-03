@@ -1,0 +1,82 @@
+# Tests run on every push and every pull request, and the deploy workflow waits
+# for this one. Before it existed, a bad commit reached production unimpeded -
+# an edit that deleted eighteen functions shipped, and the page still rendered,
+# because nothing checked that the page still worked.
+
+name: Tests
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+  workflow_call:          # so deploy.yml can require it
+
+jobs:
+  unit:
+    name: Unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements-api.txt pytest
+      - name: Unit tests
+        run: pytest tests/unit -q
+
+  integration:
+    name: Integration
+    runs-on: ubuntu-latest
+    # PostGIS and pgvector, because the spatial and retrieval tests are the ones
+    # that catch real defects and both need the extensions.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: mappa_test
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports: ['5432:5432']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements-api.txt pytest
+      - name: Apply migrations to an empty database
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/mappa_test
+        run: |
+          # The schema must be reproducible from source. Eleven ad-hoc ALTER
+          # statements in pipeline scripts meant it was not, and La Maraña could
+          # not have rebuilt this after handover.
+          alembic upgrade head
+      - name: Integration tests
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/mappa_test
+        run: pytest tests/integration -q
+
+  frontend-shape:
+    name: Frontend integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: JavaScript parses
+        run: node --check frontend/app.js
+      - name: Every expected function still exists
+        # An edit bounded by the wrong landmark deleted eighteen of these, and the
+        # page still rendered because the welcome screen comes from HTML.
+        run: |
+          missing=0
+          for fn in ask askHere render renderLayerPanel addLayer removeLayer \
+                    restyle autoShowLayers focusBBox fetchLayers layerRow \
+                    renderLegend showPopup featureCard applyLang; do
+            grep -q "function $fn" frontend/app.js || { echo "MISSING: $fn"; missing=1; }
+          done
+          exit $missing
