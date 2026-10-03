@@ -200,7 +200,7 @@ def by_code(unit_code: str) -> Place | None:
 
 
 def municipio(name: str | None) -> Place | None:
-    """The municipality of that name, for a scope the user picked rather than typed."""
+    """The municipality of that name."""
     if not name:
         return None
     by_name, _ = _load()
@@ -208,6 +208,33 @@ def municipio(name: str | None) -> Place | None:
         if p.unit_type == "municipio":
             return p
     return None
+
+
+def from_selection(text: str | None) -> Place | None:
+    """A place the user picked from the search box rather than typed in a question.
+
+    It arrives the way the box displayed it - "Santurce, San Juan" - so the
+    municipality after the comma is what tells the nine places called Buena Vista
+    apart. A picked place is not a guess, so the rules that refuse an ambiguous
+    or ordinary name in prose do not apply here; only the name has to match.
+    """
+    if not text:
+        return None
+    name, _, parent = text.partition(",")
+    name, parent = _strip(name.strip()), _strip(parent.strip())
+    try:
+        by_name, _unused = _load()
+    except Exception:
+        return None
+    group = by_name.get(name, [])
+    if parent:
+        for p in group:
+            if p.parent_name and _strip(p.parent_name) == parent:
+                return p
+    for p in group:
+        if p.unit_type == "municipio":
+            return p
+    return group[0] if len(group) == 1 else None
 
 
 def scope_clause(place: Place | str | None, alias: str = "f") -> tuple[str, list[str]]:

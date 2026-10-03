@@ -652,10 +652,13 @@ loadCatalog();
           const rows = await (await fetch('/places?q=' + encodeURIComponent(term))).json();
           if (!rows.length) return close();
           pr.innerHTML = rows.map(r =>
-            `<button data-bbox="${r.bbox.join(',')}" data-name="${esc(r.name)}">
-               <span>${esc(r.name)}</span>
+            `<button data-bbox="${r.bbox.join(',')}" data-name="${esc(r.label || r.name)}">
+               <span>${esc(r.name)}${r.parent && r.type !== 'municipio'
+                 ? `<span class="sub">, ${esc(r.parent)}</span>` : ''}</span>
                <span class="kind">${r.type === 'municipio'
-                 ? (LANG === 'es' ? 'Municipio' : 'Municipality') : 'Barrio'}</span>
+                 ? (LANG === 'es' ? 'Municipio' : 'Municipality')
+                 : (r.type === 'comunidad'
+                     ? (LANG === 'es' ? 'Comunidad' : 'Community') : 'Barrio')}</span>
              </button>`).join('');
           pr.classList.add('on');
         } catch (e) { close(); }

@@ -87,8 +87,9 @@ def place_in_scope(ask: Ask) -> Place | None:
         earlier = places.resolve(turn.question)
         if earlier:
             return earlier
-    # The map's own selection, which is a municipality the user clicked.
-    return places.municipio(ask.location)
+    # The place the user picked in the search box, which arrives as the box
+    # showed it - "Santurce, San Juan".
+    return places.from_selection(ask.location)
 
 
 def map_answer(ask: Ask, place: Place | None) -> MapAnswer:
