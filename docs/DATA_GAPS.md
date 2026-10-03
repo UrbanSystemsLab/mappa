@@ -4,8 +4,9 @@ Measured 3 October 2026 against their Drive and our database.
 
 > **Status, end of 3 Oct:** the 17 duplicate rows are now marked `duplicate` and
 > point at the row holding their data — catalogued is 102, not 119. Their
-> reconstructed metadata attaches to 24 layers, up from 15. The 16 Drive files
-> are not loaded yet.
+> reconstructed metadata attaches to 24 layers, up from 15. Of the 16 datasets
+> found in their Drive, 13 turned out to be loaded already under their inner
+> layer names; 3 genuinely are not.
 
 The catalogue says **119 layers have no data**. That number had never been taken
 apart. It is four different problems, and only one of them is theirs.
@@ -13,7 +14,8 @@ apart. It is four different problems, and only one of them is theirs.
 | | count | whose |
 |---|---|---|
 | Duplicate catalogue row — the layer is live under a different GIS ID | **17** | ours, retire the row |
-| The file is in their Drive and we never loaded it | **16** | ours, load it |
+| The file is in their Drive and we never loaded it | **3** | ours, load it |
+| Catalogue row describes a container whose contents *are* loaded | **13** | ours, mark it |
 | Catalogued as a layer but it is a PDF map image | **15** | ours, re-file |
 | No data found anywhere | **71** | ask them |
 
@@ -58,37 +60,47 @@ everyone including La Maraña.
 
 ---
 
-## 2. In their Drive, never loaded (16)
+## 2. Found in their Drive — and 13 of 16 turn out to be loaded already
 
-Found by searching their Drive on 3 October. Each exists as a folder or
-geodatabase under `Capas GIS`. We loaded two GeoPackages and stopped.
+These 16 were found by name in their Drive. Checked against the database by
+*meaning* rather than by name, **13 are already loaded**. A `.gdb` or a folder is
+a container: the catalogue row describes the container, while the data inside it
+was loaded as several layers under their own names. `download_prepa_geodata_2014.gdb`
+is one catalogue row and roughly forty live layers — transmission lines,
+distribution structures, switching units, generation sites.
+
+**Already live (13)** — the catalogue row describes a container whose contents are loaded:
+
+| GIS ID | Catalogue row | Where the data is |
+|---|---|---|
+| GIS-016 | Areas Protegidas 2018 (PACAT) | `pacat_2018_areas_protegidas_terrestres`, `_marinas`, `_zonas_amortiguamientos` |
+| GIS-019, GIS-077 | Census2020 | `censo_2020` |
+| GIS-024 | FincasAdmTerrenos 2014 | `bienes_raices_propiedades_admin_terrenos_2014` |
+| GIS-025 | Corredor agrícola del sur | `corredor_agricola_de_project_exportfeatures` |
+| GIS-027 | Desalojo Tsunami 2003/2012 | `areas_desalojo_tsunami_2003_2014` |
+| GIS-029 | InfraestructuraAEE | 18 AEE layers — transmission, distribution, substations |
+| GIS-030 | Parcelas PRIDCO | `propiedades_pridco_parcelas`, `_estructuras` |
+| GIS-037 | ZonasInundables 2009 | `inundacion_fema_firms_2009` |
+| GIS-038 | Tsunami Flood Zone 2012 | `areas_de_inundacion_por_tsunami_de_puerto_rico` |
+| GIS-088 | download_prepa_geodata_2014.gdb | the PREPA 2014 set — ~40 layers |
+| GIS-090 | GDB_NAD83_2011.gdb | `cdt_2011`, `hospitales2011`, `tanques_almac_soterrados_2011` |
+| GIS-106 | DependenciasDRNA 2010 | `dotacional_dependencias_dept_recursos_naturales_2010` |
+
+These rows are not marked in the database yet. The one-to-one cases are clear,
+but a container mapping to several layers is a judgement worth a second look
+before it is recorded as fact.
+
+**Genuinely not loaded (3)** — the file is in their Drive and nothing in the
+database corresponds:
 
 | GIS ID | Layer | Folder in their Drive |
 |---|---|---|
-| GIS-016 | Areas Protegidas 2018 | `Areas_protegidas2018_PACAT` |
-| GIS-019 | Census2020 | `Census2020.lpkx` |
-| GIS-024 | FincasAdmTerrenos 2014 | `FincasAdmTerrenos` |
-| GIS-025 | Corredor agricola del sur 2010 | `corredor_agricola_del_sur` |
-| GIS-027 | Desalojo Tsunami 2003/2012 | `DesalojoTsunami_2003_2012.gdb` |
-| GIS-029 | InfraestructuraAEE | `InfraestructuraAEE` |
-| GIS-030 | Parcelas PRIDCO | `Parcelas_PRIDCO` |
-| GIS-031 | PlazasPublicas 2010 | `PlazasPublicas_2010` |
-| GIS-034 | Response Report | `Response_Report` |
-| GIS-035 | SHP-LIDAR | `SHP-LIDAR` |
-| GIS-037 | ZonasInundables 2009 | `ZonasInundables_2009` |
-| GIS-038 | Tsunami Flood Zone 2012 | `Tsunami_Flood_Zone_2012.gdb` |
-| GIS-077 | Census2020 | `Census2020.lpkx` |
-| GIS-088 | download prepa geodata 2014.gdb | `download_prepa_geodata_2014.gdb` |
-| GIS-090 | GDB NAD83 2011.gdb | `GDB_NAD83_2011.gdb` |
-| GIS-106 | DependenciasDRNA 2010 | `DependenciasDRNA_2010` |
+| GIS-031 | PlazasPublicas 2010 | `Capas GIS/GIS/PlazasPublicas_2010` |
+| GIS-034 | Response Report | `Capas GIS/GIS/Response_Report` |
+| GIS-035 | SHP-LIDAR | `Capas GIS/GIS/SHP-LIDAR` |
 
-Before counting these as solved:
-
-- **`Census2020.lpkx` is an ArcGIS layer package**, not a shapefile or geodatabase.
-  It needs converting, and the conversion is lossy in ways to check with them.
-- Their own folder names flag several as unfinished: `Datos Censo_INCOMPLETO`,
-  `DesalojoTsunami_2014 INCOMPLETO`, `AreasNaturalesProtegidasTerrestres_2019_INCOMPLETO`,
-  `CorredorAgricolaSur_INCOMPLETO`.
+`SHP-LIDAR` is likely large and may be elevation tiles rather than vector data;
+worth opening before committing to load it.
 
 ---
 

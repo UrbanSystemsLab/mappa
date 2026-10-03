@@ -69,8 +69,9 @@ Still worth confirming once the list is applied:
 The catalogue listed 119 layers with no data. We went through all of them against
 your Drive on 3 October. Much of it was our problem rather than yours: 17 are
 duplicate catalogue rows for layers that are already live under a different GIS
-ID, 16 are in your Drive and we had not loaded them, and 15 are PDF maps
-catalogued as though they were GIS layers.
+ID, 13 describe a geodatabase or folder whose contents are already loaded under
+their own names, 3 are in your Drive and we had not loaded them, and 15 are PDF
+maps catalogued as though they were GIS layers.
 
 That leaves **71 we cannot find under any name**, including Cuevas, Playas,
 Islotes y cayos, Superfunds sites, Yacimientos arqueológicos, Hoteles OCT2014,
