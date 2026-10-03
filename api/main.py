@@ -3,12 +3,15 @@ import json
 import re
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi import FastAPI
+from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import catalog, llm, spatial, tiles
+from . import llm
+from .routers import catalog as catalog_router
+from .routers import places as places_router
+from .routers import tiles as tiles_router
 from .services import answering
 
 # Minimum retrieval relevance (cosine similarity) to attempt an answer. Below this,
@@ -198,107 +201,9 @@ def ask_stream(req: AskRequest) -> StreamingResponse:
     )
 
 
-@app.get("/layers")
-def layers() -> JSONResponse:
-    """Catalog of spatial layers available to toggle on the map."""
-    return JSONResponse(spatial.list_layers(), headers={"Cache-Control": "public, max-age=3600"})
-
-
-@app.get("/places")
-def places(q: str, limit: int = 8) -> JSONResponse:
-    """Search municipios and barrios by name, for the map's location search."""
-    return JSONResponse(
-        spatial.search_places(q, min(limit, 20)), headers={"Cache-Control": "public, max-age=600"}
-    )
-
-
-@app.get("/locate")
-def locate(lng: float, lat: float) -> dict:
-    """What municipio + hazards apply at a clicked point."""
-    return spatial.locate(lng, lat)
-
-
-@app.get("/catalog/layers")
-def catalog_layers(
-    lang: str = "es",
-    q: str | None = None,
-    category: str | None = None,
-    available_only: bool = False,
-    limit: int = 100,
-    offset: int = 0,
-) -> JSONResponse:
-    """Search/filter the layer catalog. Replaces the hardcoded layer list that used
-    to ship inside the frontend bundle."""
-    limit = max(1, min(limit, 1000))
-    return JSONResponse(
-        catalog.list_layers(
-            lang=lang,
-            q=q,
-            category=category,
-            available_only=available_only,
-            limit=limit,
-            offset=offset,
-        ),
-        headers={"Cache-Control": "public, max-age=300"},
-    )
-
-
-@app.get("/catalog/categories")
-def catalog_categories(lang: str = "es", available_only: bool = False) -> JSONResponse:
-    return JSONResponse(
-        catalog.categories(lang, available_only=available_only),
-        headers={"Cache-Control": "public, max-age=300"},
-    )
-
-
-@app.get("/catalog/layers/{layer_id}")
-def catalog_layer(layer_id: str, lang: str = "es") -> JSONResponse:
-    """Full metadata for one layer, including provenance and how confident that
-    metadata is — this is what the per-layer info popup shows."""
-    row = catalog.get_layer(layer_id, lang)
-    if row is None:
-        raise HTTPException(status_code=404, detail=f"unknown layer: {layer_id}")
-    return JSONResponse(row, headers={"Cache-Control": "public, max-age=300"})
-
-
-@app.get("/tiles/{name}/{z}/{x}/{y}.mvt")
-def tile(name: str, z: int, x: int, y: int) -> Response:
-    """One vector tile. Carries the whole layer (generalized per zoom), unlike
-    /layer/{name}, which caps features and ships the entire layer at once."""
-    try:
-        data = tiles.tile(name, z, x, y)
-    except Exception as exc:
-        # Returning an empty tile here would render as "no features here", which on
-        # a hazard layer is indistinguishable from "no hazard here". A 503 makes the
-        # client retry and keeps missing data visible rather than silent.
-        raise HTTPException(status_code=503, detail=f"tile temporarily unavailable: {exc}") from exc
-    if data is None:
-        raise HTTPException(status_code=404, detail=f"unknown layer: {name}")
-    return Response(
-        content=data,
-        media_type="application/vnd.mapbox-vector-tile",
-        # Tiles are immutable for a given layer version — safe to cache hard.
-        headers={"Cache-Control": "public, max-age=86400, immutable"},
-    )
-
-
-@app.get("/tiles/{name}.json")
-def tile_json(name: str) -> JSONResponse:
-    """TileJSON descriptor for a layer, so MapLibre can register it as a source."""
-    tj = tiles.tilejson(name, "")
-    if tj is None:
-        raise HTTPException(status_code=404, detail=f"unknown layer: {name}")
-    return JSONResponse(tj, headers={"Cache-Control": "public, max-age=3600"})
-
-
-@app.get("/layer/{name}")
-def layer(name: str) -> JSONResponse:
-    """One spatial layer as GeoJSON (simplified, capped, cached)."""
-    gj = spatial.layer_geojson(name)
-    if gj is None:
-        raise HTTPException(status_code=404, detail=f"unknown layer: {name}")
-    return JSONResponse(gj, headers={"Cache-Control": "public, max-age=86400"})
-
+app.include_router(catalog_router.router)
+app.include_router(places_router.router)
+app.include_router(tiles_router.router)
 
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
