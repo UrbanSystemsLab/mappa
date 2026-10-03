@@ -526,5 +526,44 @@ search by name would bury the real places.
 **Barrio Pueblo exists in 74 of 78 municipalities**, which is why every place
 carries its parent.
 
-Still to do: the resolution code only looks at the 78 municipios, so the other
-1,615 places are in the database and not yet reachable.
+**All 1,693 are now reachable from a question.** Spatial queries scope by a
+place *code* rather than a place name, which is what lets a barrio be a scope at
+all — the old clause hard-coded `unit_type='municipio'` because a name was the
+only handle it had. "¿Cuántas escuelas hay en Santurce?" answers 22, against 84
+for the whole of San Juan.
+
+The hard part is not finding a place. It is refusing to find one.
+
+- **A bare repeated name resolves to nothing.** "Pueblo" names 74 places, so it
+  names none of them. With a municipality beside it — "Pueblo, Ponce" — it
+  resolves.
+- **Ordinary words are not places.** There is a barrio called Playa, one called
+  Costa and one called Centro. Which names are also ordinary Spanish words is
+  *measured*, not hand-listed: the gazetteer pipeline tokenises a sample of the
+  corpus and flags a name that turns up lowercase in a fair share of chunks.
+  Santurce scores zero, playa scores 104, and 35 names are flagged. A flagged
+  name is accepted only when a word like *barrio* or *sector* introduces it.
+- **A fragment of a longer name resolves to nothing.** "Caño Martín Peña"
+  resolved to barrio Caño in Guánica, forty miles away, because Caño was the only
+  name in the sentence the gazetteer held. A match flanked by another capitalised
+  word is now treated as part of a name we do not have.
+
+The failure being guarded here is not an unanswered question. It is a precise
+number computed over the wrong place — the same shape as every grounding bug
+this project has had.
+
+### A corrupt column, found by a test
+
+The new integration tests assert that every place's municipality is one of the
+78. It failed on 139 rows: in the comunidades especiales layer the accented
+character in the municipality column is replaced by a different one in each row,
+so **Añasco appears as Aaasco, Aeasco, Aiasco, Aoasco, AOasco and Asasco**.
+Bayamón has eleven spellings, Canóvanas ten.
+
+The fix was to stop reading the column. A place's municipality is **which
+municipality it sits in**, which the geometry already says, and the 78 boundaries
+are intact. All 1,615 places are now placed by `ST_PointOnSurface` against those
+boundaries.
+
+Logged for La Maraña, because the damage suggests the file was converted through
+an encoding that lost its accents, and other columns in it may be affected.

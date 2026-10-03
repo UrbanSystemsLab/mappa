@@ -71,12 +71,26 @@ But several places that appear in your own documents have no boundary:
 
 Is there a layer delimiting these, or are they known by barrio instead?
 
-### 5. Two duplicate rows on the inventory
+### 5. Accented municipality names are corrupt in the comunidades layer
+
+In `Asentamientos_Delimitacion_Comunidades_Especiales_2006`, the municipality
+column is damaged in **139 of its 713 rows**. The accented character is replaced
+by a different one in each row, so Añasco appears as *Aaasco*, *Aeasco*,
+*Aiasco*, *Aoasco*, *AOasco* and *Asasco*; Bayamón has eleven spellings and
+Canóvanas ten. The community names themselves look intact.
+
+We no longer read that column — each community's municipality is worked out from
+where its polygon sits, which the 78 municipality boundaries give reliably. So
+nothing is blocked. But it suggests the file was converted through an encoding
+that lost the accents, and **if this is your working copy, other columns in it
+may have the same damage**. Worth checking against the original.
+
+### 6. Two duplicate rows on the inventory
 
 `Census2020` and `Agroturismo_2021` each appear twice under different GIS IDs,
 with different categories and sources. Which row is authoritative?
 
-### 6. 96 documents on the inventory have no file
+### 7. 96 documents on the inventory have no file
 
 Mostly municipal Planes de Mitigación — Adjuntas, Aguadilla, Dorado, Loíza,
 Peñuelas among them. The inventory lists a link but no file was supplied.
@@ -86,7 +100,7 @@ Peñuelas among them. The inventory lists a link but no file was supplied.
 - If not, may we download from the link you listed? *(We will not download
   anything you have not listed.)*
 
-### 7. 70 documents are scans with no searchable text
+### 8. 70 documents are scans with no searchable text
 
 We can read them with OCR, and early results on your Spanish text are good. Do
 digital originals exist for any of them? Legal texts in particular — a mistake in
@@ -95,7 +109,7 @@ an OCR'd reglamento is worse than not having it.
 Three of the 70 are map sheets rather than documents (`GIS-001`, `GIS-010`,
 `GIS-014`) and are excluded rather than read as noise.
 
-### 8. Documents with no title on the sheet
+### 9. Documents with no title on the sheet
 
 `POT-047.2`, `POT-067.4`, `POT-067.5` are listed by ID with the title field empty
 or repeated. These look like multi-part documents the sheet has not caught up
@@ -105,7 +119,7 @@ with.
 
 ## Open — product
 
-### 9. Who is this for?
+### 10. Who is this for?
 
 The decision that shapes the most, and it is not yet answered.
 
@@ -117,7 +131,7 @@ The decision that shapes the most, and it is not yet answered.
 - Is any data not for public view — sensitive sites, community-submitted
   information, anything held under agreement with a municipality?
 
-### 10. Spanish-first, or English equal?
+### 11. Spanish-first, or English equal?
 
 Both work today. It affects what we prioritise, and whether layer names get
 English translations.
@@ -126,24 +140,24 @@ English translations.
 
 ## Open — handover
 
-### 11. Who maintains this after April 2027?
+### 12. Who maintains this after April 2027?
 
 Is there someone technical on your team, or would you work with a contractor?
 This changes how we build — a team without an engineer needs a markedly simpler
 system.
 
-### 12. Running cost
+### 13. Running cost
 
 Roughly **$55/month** today (database, storage, hosting) plus usage of about
 **$0.04 per 100 questions**. That becomes your cost at handover. Worth confirming
 it is workable before we build more on top of it.
 
-### 13. Ownership of the project and domain
+### 14. Ownership of the project and domain
 
 The Google Cloud project and `mappealo.org` should end up in La Maraña's name.
 Easier to register them to you now than transfer later.
 
-### 14. What should support look like after handover, and for how long?
+### 15. What should support look like after handover, and for how long?
 
 ---
 
