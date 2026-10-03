@@ -65,13 +65,13 @@ LAYERS: dict[str, dict[str, Any]] = {
         "words": ["deslizamiento", "deslizamientos", "landslide", "landslides", "derrumbe"],
     },
     "tsunami": {
-        "table": "layer_g15_riesgo_geol_areas_desalojo_tsunami_2003",
+        "table": "layer_zonas_desalojo_all_project",
         "label_es": "zonas de desalojo por tsunami (2003)",
         "label_en": "tsunami evacuation zones (2003)",
         "words": ["tsunami", "maremoto"],
     },
     "rivers": {
-        "table": "layer_g23_mapa_base_crim_ogp_hidrografia_2006",
+        "table": "layer_mapa_base_crim_ogp_hidrografia_2006",
         "label_es": "hidrografía (ríos y quebradas, 2006)",
         "label_en": "hydrography (rivers and streams, 2006)",
         "words": ["rio", "río", "rios", "ríos", "river", "rivers", "quebrada", "quebradas",
@@ -381,75 +381,149 @@ def analyze(question: str, region: str | None = None,
     answer it. The caller uses that to decline, which is the whole point: the
     absence of a result has to travel, or the model fills the silence.
     """
-    keys = detect_layers(question)
+    # Every layer the question is about: the named concepts first, then anything
+    # else found by meaning. This is what lifted the reach from fifteen layers to
+    # all 601 - a question about toll plazas or bird habitat no longer has to
+    # appear in a dictionary someone maintains by hand.
+    hits = resolve(question, region=region)
+
     # "How many of those are in a flood zone?" names the hazard but not the thing
     # being counted - the subject is in the previous turn. Without it the question
     # reads as uncountable and the answer declines, having just said there are 25.
-    if not any(k in COUNTABLE for k in keys):
+    if not any(h["countable"] for h in hits):
         for earlier in reversed(history or []):
-            carried = [k for k in detect_layers(earlier) if k in COUNTABLE]
+            carried = [h for h in resolve(earlier, region=region) if h["countable"]]
             if carried:
-                keys = carried + keys
+                hits = carried + hits
                 break
-    if not keys:
+    if not hits:
         return []
+
     dist = detect_distance(question)
-    countable = [k for k in keys if k in COUNTABLE]
-    others = [k for k in keys if k not in COUNTABLE]
+    countable = [h for h in hits if h["countable"]]
+    others = [h for h in hits if not h["countable"]]
     text = _strip(question)
     results: list[dict[str, Any]] = []
 
     # The distance applies to the layer named after it; every other layer in the
-    # question is an overlay.
+    # question is an overlay. Only alias concepts have known phrasings to locate,
+    # so a semantically-found layer takes the distance only if nothing else can.
     by_distance: set[str] = set()
     if dist and others:
         metres, at = dist
-        after = [(pos, k) for k in others if (pos := _layer_position(question, k)) >= at]
-        by_distance = {min(after)[1]} if after else set(others)
+        after = [(pos, h["table"]) for h in others if h.get("concept")
+                 and (pos := _layer_position(question, h["concept"])) >= at]
+        by_distance = {min(after)[1]} if after else {h["table"] for h in others}
+
+    # An overlay is only wanted when the question asks to be inside something.
+    # Without this, "how many fire hydrants are in Ponce?" paired hydrants against
+    # a forestry-slope layer that merely scored well, and answered a question
+    # nobody asked. A bare count is the safer reading of a bare question.
+    overlay_wanted = bool(dist) or any(
+        _strip(w) in text for w in
+        ["inside", "within", "in a", "in the", "intersect", "overlap", "exposed",
+         "affected", "dentro", "en zona", "en area", "en área", "en la zona",
+         "intersecan", "expuest", "afectad"])
+    # Coverage is a different question - "what share of X is Y" - and it needs
+    # the polygon layer even though it asks about no overlay. Clearing the list
+    # unconditionally silently broke it.
+    asks_share = any(_strip(w) in text for w in _SHARE_WORDS)
+    if not overlay_wanted and not asks_share:
+        others = []
 
     try:
         if countable and others:
             metres = dist[0] if dist else None
-            for c in countable:
-                for o in others:
-                    r = (count_within_distance(c, o, metres, region)
-                         if o in by_distance and metres
-                         else count_intersecting(c, o, region))
+            for c in countable[:1]:
+                for o in others[:1]:
+                    if o["table"] in by_distance and metres:
+                        r = _within_distance_tables(c, o, metres, region)
+                    else:
+                        hit, total = intersect_tables(c["table"], o["table"], region)
+                        r = {"op": "intersect", "layer": c["label"],
+                             "against": o["label"], "region": region,
+                             "count": hit, "total": total}
                     if r:
                         results.append(r)
         elif countable:
-            for c in countable:
-                r = count_features(c, region)
-                if r:
-                    results.append(r)
+            for c in countable[:1]:
+                results.append({"op": "count", "layer": c["label"], "region": region,
+                                "count": count_in_table(c["table"], region)})
         elif others and region and any(_strip(w) in text for w in _SHARE_WORDS):
-            for o in others:
-                r = coverage_share(o, region)
+            for o in others[:1]:
+                r = _coverage_table(o, region)
                 if r:
                     results.append(r)
-    except KeyError:
-        # A concept whose layer is not loaded. Nothing computed, so nothing claimed.
+    except Exception:
+        # A layer that cannot be queried claims nothing, rather than guessing.
         return results
     return results
+
+
+def _within_distance_tables(c: dict, o: dict, metres: int,
+                            region: str | None) -> dict[str, Any]:
+    clause, params = _region_clause(region)
+    deg = metres / 111_320.0
+    with db.connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SET LOCAL statement_timeout='120s'")
+        cur.execute(
+            f'SELECT count(*) FROM "{c["table"]}" f WHERE f.geom IS NOT NULL{clause} '
+            f'AND EXISTS (SELECT 1 FROM "{o["table"]}" t '
+            f'  WHERE t.geom && ST_Expand(f.geom, {deg:.10f}) '
+            f'    AND ST_DWithin(t.geom::geography, f.geom::geography, %s))',
+            params + [metres])
+        hit = cur.fetchone()[0]
+        cur.execute(f'SELECT count(*) FROM "{c["table"]}" f WHERE f.geom IS NOT NULL{clause}',
+                    params)
+        total = cur.fetchone()[0]
+    return {"op": "within_distance", "layer": c["label"], "of": o["label"],
+            "metres": metres, "region": region, "count": hit, "total": total}
+
+
+def _coverage_table(o: dict, region: str) -> dict[str, Any] | None:
+    with db.connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SET LOCAL statement_timeout='180s'")
+        cur.execute(f"""
+            SELECT ST_Area(r.geom::geography) / 1e6,
+                   COALESCE((SELECT ST_Area(ST_Union(
+                                 ST_Intersection(ST_MakeValid(ST_Force2D(l.geom)),
+                                                 r.geom))::geography) / 1e6
+                             FROM "{o['table']}" l
+                             WHERE l.geom IS NOT NULL AND ST_Intersects(l.geom, r.geom)), 0)
+            FROM reference_units r
+            WHERE r.unit_type = 'municipio'
+              AND unaccent_fallback(lower(r.name)) = unaccent_fallback(lower(%s))
+        """, (region,))
+        row = cur.fetchone()
+    if not row:
+        return None
+    total, covered = float(row[0]), float(row[1])
+    return {"op": "coverage", "layer": o["label"], "region": region,
+            "region_km2": round(total, 1), "covered_km2": round(covered, 1),
+            "share": round(covered / total, 4) if total else 0.0}
 
 
 def describe(results: list[dict[str, Any]], lang: str = "es") -> list[str]:
     """One plain line per computed result, naming the layer the number came from."""
     out = []
     for r in results:
-        lay = label(r["layer"], lang)
+        # analyze() now puts the layer's own name here rather than a concept key,
+        # because most layers no longer have one - they are found by meaning.
+        lay = r["layer"]
         where = r.get("region") or ("Puerto Rico")
         if r["op"] == "count":
             out.append(f"{r['count']} {lay} en {where}" if lang == "es"
                        else f"{r['count']} {lay} in {where}")
         elif r["op"] == "intersect":
-            against = label(r["against"], lang)
+            against = r["against"]
             out.append(
                 f"{r['count']} de {r['total']} {lay} en {where} intersecan {against}"
                 if lang == "es" else
                 f"{r['count']} of {r['total']} {lay} in {where} intersect {against}")
         elif r["op"] == "within_distance":
-            of = label(r["of"], lang)
+            of = r["of"]
             out.append(
                 f"{r['count']} de {r['total']} {lay} en {where} están a "
                 f"{r['metres']} m o menos de {of}"
@@ -486,3 +560,140 @@ def suggested_layer_ids(question: str) -> list[str]:
             (tables,),
         )
         return [r[0] for r in cur.fetchall()]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Finding layers by meaning rather than by dictionary
+#
+# LAYERS above lists fifteen concepts by hand. There are 601 layers with data.
+# The dictionary stays, because for the concepts that matter most - schools,
+# flood zones, hospitals - we want to name the exact layer rather than whichever
+# one scores highest today. Everything else is found by meaning.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Below this, the nearest layer is not actually about what was asked. Boundary
+# layers - barrios, comunidades - sit around 0.45 against almost any question,
+# because every question mentions a place, so the floor has to clear them.
+MIN_LAYER_SCORE = 0.45
+# And a layer much weaker than the best match is not what was meant either, even
+# if it clears the floor.
+RELATIVE_DROP = 0.10
+
+# A layer with more features than this is a basemap-like surface - parcels,
+# contours, land cover. Counting its features answers nothing a person asked.
+COUNTABLE_CEILING = 60_000
+
+
+def _without_place(question: str, region: str | None) -> str:
+    """The question with the place name removed.
+
+    "How many wells are in Arecibo?" matched 'tipo de suelo arecibo' ahead of
+    'pozos', because the place name is a third of the sentence and several layers
+    carry a municipality in their name. The place is handled separately - it
+    becomes the region filter - so it only adds noise to the layer match.
+    """
+    if not region:
+        return question
+    pattern = re.sub(r"\s+", r"\\s+", re.escape(region))
+    cleaned = re.sub(pattern, " ", question, flags=re.I)
+    cleaned = re.sub(r"\b(in|en|de|del|for|para|at)\s*$", "", cleaned.strip(), flags=re.I)
+    return cleaned.strip() or question
+
+
+def _question_vector(question: str) -> str:
+    from .retrieval import _get_query_model, _vector_literal
+
+    return _vector_literal(
+        _get_query_model().encode([question], normalize_embeddings=True,
+                                  show_progress_bar=False)[0])
+
+
+def find_layers(question: str, limit: int = 4, loaded_only: bool = True,
+                region: str | None = None) -> list[dict[str, Any]]:
+    """Layers whose meaning is closest to the question.
+
+    Returns the registry row rather than a concept key, so a caller can work with
+    any of the 601 layers instead of the fifteen that happen to be named above.
+    """
+    lit = _question_vector(_without_place(question, region))
+    where = "embedding IS NOT NULL AND table_name IS NOT NULL"
+    if loaded_only:
+        where += " AND status IN ('published','loaded')"
+    with db.connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SET LOCAL statement_timeout='20s'")
+        cur.execute(f"""
+            SELECT id, table_name, name_es, geometry_type, feature_count,
+                   1 - (embedding <=> %s::vector) AS score
+            FROM layer_registry WHERE {where}
+            ORDER BY embedding <=> %s::vector LIMIT %s
+        """, (lit, lit, limit))
+        rows = cur.fetchall()
+    hits = [{"id": r[0], "table": r[1], "label": r[2], "geometry": r[3] or "",
+             "features": r[4] or 0, "score": float(r[5])}
+            for r in rows if float(r[5]) >= MIN_LAYER_SCORE]
+    if not hits:
+        return []
+
+    best = hits[0]["score"]
+    return [h for h in hits if best - h["score"] <= RELATIVE_DROP]
+
+
+def resolve(question: str, limit: int = 4,
+            region: str | None = None) -> list[dict[str, Any]]:
+    """Every layer the question is about, named ones first.
+
+    A concept in the alias table is used as given - it was written down because
+    the exact layer matters. Anything else comes from meaning, and a layer
+    already matched by alias is not offered twice.
+    """
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for key in detect_layers(question):
+        spec = LAYERS[key]
+        try:
+            table = _table(key)
+        except KeyError:
+            continue
+        out.append({"id": key, "table": table, "label": spec["label_es"],
+                    "geometry": "", "features": 0, "score": 1.0,
+                    "concept": key, "countable": key in COUNTABLE})
+        seen.add(table)
+    for hit in find_layers(question, limit=limit, region=region):
+        if hit["table"] in seen:
+            continue
+        hit["concept"] = None
+        # Points and small polygon sets are things you count; a 500,000-polygon
+        # surface is something you are inside of.
+        hit["countable"] = ("point" in hit["geometry"].lower()
+                            and 0 < hit["features"] <= COUNTABLE_CEILING)
+        out.append(hit)
+        seen.add(hit["table"])
+    return out
+
+
+def count_in_table(table: str, region: str | None = None) -> int:
+    """Features of any loaded layer, by table name rather than concept."""
+    clause, params = _region_clause(region)
+    with db.connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SET LOCAL statement_timeout='45s'")
+        cur.execute(f'SELECT count(*) FROM "{table}" f WHERE f.geom IS NOT NULL{clause}',
+                    params)
+        return cur.fetchone()[0]
+
+
+def intersect_tables(table: str, against: str, region: str | None = None) -> tuple[int, int]:
+    """How many features of one table fall inside another."""
+    clause, params = _region_clause(region)
+    with db.connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SET LOCAL statement_timeout='90s'")
+        cur.execute(
+            f'SELECT count(*) FROM "{table}" f WHERE f.geom IS NOT NULL{clause} '
+            f'AND EXISTS (SELECT 1 FROM "{against}" h WHERE ST_Intersects(h.geom, f.geom))',
+            params)
+        hit = cur.fetchone()[0]
+        cur.execute(f'SELECT count(*) FROM "{table}" f WHERE f.geom IS NOT NULL{clause}',
+                    params)
+        return hit, cur.fetchone()[0]
