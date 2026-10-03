@@ -362,8 +362,13 @@ function layerRow(l, isActive) {
       <span class="pend">${LANG === 'es' ? 'sin cargar' : 'not loaded'}</span>
       ${info}</div>`;
   }
+  // What La Maraña wrote beside a layer on their prioritization matrix -
+  // "Needs verification" - travels with it, so nobody mistakes it for settled.
+  const note = l.featured_note
+    ? `<span class="fnote">${esc(l.featured_note === 'Needs verification' && LANG === 'es'
+        ? 'Por verificar' : l.featured_note)}</span>` : '';
   return `<div class="lrow" data-act="add" data-id="${l.id}">
-    ${sw}<span class="nm">${esc(l.name)}<span class="yr">${yr}</span></span>
+    ${sw}<span class="nm">${esc(l.name)}<span class="yr">${yr}</span>${note}</span>
     ${info}<button class="ic add" data-act="add" data-id="${l.id}">+</button></div>`;
 }
 
@@ -380,6 +385,18 @@ function renderLayerPanel() {
         <span>${LANG === 'es' ? 'Activas' : 'Active'} (${active.length})</span>
         <a data-act="clear">${LANG === 'es' ? 'Quitar todas' : 'Clear all'}</a>
       </div>${active.map(l => layerRow(l, true)).join('')}</div>`;
+  }
+
+  // La Maraña's Data Quality Prioritization Matrix: the layers they consider
+  // reliable enough to show first. Always open, above the categories, so the
+  // panel leads with their judgement rather than ours. They still appear in
+  // their category too, for anyone browsing by theme.
+  const featured = RESULTS.filter(l => l.featured && !activeIds.has(l.id));
+  if (featured.length) {
+    html += `<div class="lsec feat"><div class="lsec-h">
+        <span>${LANG === 'es' ? 'Recomendadas por La Maraña' : 'Recommended by La Maraña'}</span>
+        <span class="cnt">${featured.length}</span>
+      </div>${featured.map(l => layerRow(l, false)).join('')}</div>`;
   }
 
   const shown = RESULTS.filter(l => !activeIds.has(l.id));

@@ -55,7 +55,8 @@ _LIST_COLS = """
     source_agency, source_inventory, source_url, vintage_year, license,
     metadata_status, geometry_type, feature_count, srid,
     min_zoom, max_zoom, label_column, sublabel_column, style,
-    dataset_version, status, property_labels, value_labels
+    dataset_version, status, property_labels, value_labels,
+    featured, featured_note, reliability
 """
 
 
@@ -85,6 +86,9 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
         status,
         prop_labels,
         val_labels,
+        featured,
+        featured_note,
+        reliability,
         name,
         description,
     ) = r
@@ -122,6 +126,12 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
         "value_labels": val_labels or {},
         "dataset_version": version,
         "status": status,
+        # On La Maraña's Data Quality Prioritization Matrix (28 Jul 2026): the
+        # layers they consider reliable enough to show first. The panel leads
+        # with these; the note is what they wrote beside it.
+        "featured": bool(featured),
+        "featured_note": featured_note,
+        "reliability": reliability,
         # 'catalogued' means the layer is on La Maraña's inventory but its data is
         # not in the database yet. It is listed so the catalog reflects what they
         # actually hold, and it carries no tile URL, because there is nothing to
@@ -197,7 +207,7 @@ def list_layers(
         total = cur.fetchone()[0]
         cur.execute(
             f"SELECT {_LIST_COLS}, {_lang_cols(lang)} FROM layer_registry "
-            f"WHERE {wsql} ORDER BY (status = 'published') DESC, category, "
+            f"WHERE {wsql} ORDER BY featured DESC, (status = 'published') DESC, category, "
             f"{'name_es' if lang == 'es' else 'COALESCE(name_en, name_es)'} "
             f"LIMIT %(limit)s OFFSET %(offset)s",
             params,

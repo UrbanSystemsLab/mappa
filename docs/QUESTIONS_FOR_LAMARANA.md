@@ -46,23 +46,19 @@ it is a question about **the catalogue**, not about missing deliveries.
 
 ## Open — data
 
-### 1. Which layers belong on the map? — THEY ALREADY ANSWERED THIS
+### 1. Your prioritization matrix is now applied — two small things to confirm
 
-**Ailani sent a prioritised shortlist on 28 July 2026**, as an attachment to the
-"Technical details for setting up Mappa data pipelines" thread: *"the short list
-of the layers we consider reliable enough to prioritize first based on their
-publication date and the metadata available."*
+Your Data Quality Prioritization Matrix (sent 28 July) now leads the map panel as
+**"Recomendadas por La Maraña"**: all 16 rows, which are 18 layers here because
+`PACAT2018_terrestres_marinas_amortiguamento` was loaded as three separate layers.
+Your "Needs verification" notes on FwsApproved_PRVI and batimetría lagos 2002 show
+beside those layers. The other layers stay available below, because an answer
+about schools still needs to be able to show schools on the map.
 
-That file was never used. The 80 layers currently on the map were chosen by us.
-
-**Action is ours, not theirs:** retrieve that attachment and set the map from it.
-It is not in the Drive folders they shared — it went to the NYU mailbox only. Do
-not re-ask them for it.
-
-Still worth confirming once the list is applied:
-- Has the shortlist changed since July, now that the metadata work is finished?
-- Are there layers that matter for particular audiences — funders,
-  municipalities, community workshops — even if rarely used?
+- **The Reliable / Needs Review / Outdated column is colour-coded** on your sheet,
+  and colour does not survive a copy. Could you send which of the 16 is which? It
+  would show as a badge next to each layer.
+- **Has the list changed since July**, now that the metadata work is finished?
 
 ### 2. 71 catalogue rows with no data anywhere
 
