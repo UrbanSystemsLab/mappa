@@ -222,6 +222,17 @@ async function ask() {
         })),
       }),
     });
+    // Too many questions too fast. The server says how long to wait, and saying
+    // so is the difference between a limit and the app looking broken.
+    if (r.status === 429) {
+      const d = await r.json().catch(() => ({}));
+      const s = d.retry_after;
+      turn.answer = LANG === 'es'
+        ? `Demasiadas preguntas a la vez. ${s ? `Espere ${s} segundos.` : 'Espere un momento.'}`
+        : `Too many questions at once. ${s ? `Please wait ${s} seconds.` : 'Please wait a moment.'}`;
+      render();
+      return;
+    }
     if (!r.ok || !r.body) throw new Error('HTTP ' + r.status);
 
     const reader = r.body.getReader();

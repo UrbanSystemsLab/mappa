@@ -8,7 +8,7 @@ from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import llm
+from . import limits, llm
 from .routers import catalog as catalog_router
 from .routers import places as places_router
 from .routers import tiles as tiles_router
@@ -49,6 +49,10 @@ DISCLAIMER = DISCLAIMER_ES if llm.RESPONSE_LANG == "es" else DISCLAIMER_EN
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 app = FastAPI(title="Mappa — Asistente Geoespacial de Puerto Rico (MVP)")
+
+# The app is public and has no sign-in, so this is the only thing between a
+# loop pointed at /ask and both the bill and the database the map is served from.
+app.middleware("http")(limits.middleware)
 
 
 class Turn(BaseModel):
