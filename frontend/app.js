@@ -652,10 +652,18 @@ function valueLabel(rec, val) {
 }
 
 // One card per layer present at the clicked point.
+// -9999 is the code GIS data uses for "no value here" - FEMA's flood layers use
+// it wherever a depth or base flood elevation was never computed, which in the
+// 2018 0.2% flood layer is 2,104 of 2,109 areas. It was shown as though it were a
+// real depth of minus 9,999 metres.
+const NO_VALUE = new Set(['-9999', '-9999.0', '-99999', '-999', '-999.0']);
+const isEmpty = v => v === null || v === undefined || String(v).trim() === '' ||
+  NO_VALUE.has(String(v).trim());
+
 function featureCard(rec, props) {
   const shown = (rec && rec.tile_properties_order) || Object.keys(props);
   const rows = shown
-    .filter(k => k !== 'id' && props[k] !== null && props[k] !== '' && props[k] !== undefined)
+    .filter(k => k !== 'id' && !isEmpty(props[k]))
     .slice(0, 6)
     .map(k => `<tr><th>${esc(fieldLabel(rec, k))}</th><td>${esc(String(valueLabel(rec, props[k])))}</td></tr>`)
     .join('');
