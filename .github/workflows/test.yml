@@ -12,7 +12,22 @@ on:
   workflow_call:          # so deploy.yml can require it
 
 jobs:
+  lint:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install ruff
+      # Unused imports, shadowed names, mutable defaults, silent zip truncation.
+      # A variable shadowing a function is what once froze the chat on
+      # "Consultando…" with no error anywhere.
+      - run: ruff check api pipelines tests
+      - run: ruff format --check api pipelines tests
+
   unit:
+    needs: lint
     name: Unit
     runs-on: ubuntu-latest
     steps:

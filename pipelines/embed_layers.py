@@ -37,9 +37,13 @@ def describe(row: dict) -> str:
     one most likely to appear in a question.
     """
     parts = [
-        row.get("name_es"), row.get("name_es"), row.get("name_en"),
-        row.get("description_es"), row.get("purpose"),
-        row.get("category"), row.get("subcategory"),
+        row.get("name_es"),
+        row.get("name_es"),
+        row.get("name_en"),
+        row.get("description_es"),
+        row.get("purpose"),
+        row.get("category"),
+        row.get("subcategory"),
         row.get("source_agency"),
         " ".join(row.get("keywords") or []),
     ]
@@ -71,19 +75,25 @@ def main() -> None:
         FROM layer_registry ORDER BY id
     """)
     cols = [d[0] for d in cur.description]
-    rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+    rows = [dict(zip(cols, r, strict=False)) for r in cur.fetchall()]
     print(f"[embed] {len(rows)} layers")
 
     model = SentenceTransformer(MODEL)
     texts = [describe(r) for r in rows]
-    vecs = model.encode(texts, normalize_embeddings=True, batch_size=args.batch,
-                        show_progress_bar=False)
+    vecs = model.encode(
+        texts, normalize_embeddings=True, batch_size=args.batch, show_progress_bar=False
+    )
 
-    payload = [("[" + ",".join(f"{x:.6f}" for x in v) + "]", t, r["id"])
-               for r, t, v in zip(rows, texts, vecs)]
-    execute_batch(cur,
-                  "UPDATE layer_registry SET embedding=%s::vector, embed_text=%s WHERE id=%s",
-                  payload, page_size=100)
+    payload = [
+        ("[" + ",".join(f"{x:.6f}" for x in v) + "]", t, r["id"])
+        for r, t, v in zip(rows, texts, vecs, strict=True)
+    ]
+    execute_batch(
+        cur,
+        "UPDATE layer_registry SET embedding=%s::vector, embed_text=%s WHERE id=%s",
+        payload,
+        page_size=100,
+    )
 
     # An index is only worth it above a few thousand rows; at 700 a scan is
     # faster than maintaining a graph, and exact beats approximate here.

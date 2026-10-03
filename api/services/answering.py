@@ -19,8 +19,9 @@ and what stops the two routes diverging again.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, Iterator
+from typing import Any
 
 from .. import llm, spatial, spatial_ops
 from ..retrieval import compose_answer, detect_municipio, infer_layers, retrieve_with_scores
@@ -38,6 +39,7 @@ class Turn:
 @dataclass(slots=True)
 class Ask:
     """A question, and everything the caller knows that might bear on it."""
+
     question: str
     lang: str = "en"
     history: list[Turn] = field(default_factory=list)
@@ -49,6 +51,7 @@ class Ask:
 @dataclass(slots=True)
 class MapAnswer:
     """What the map can show before a single word has been written."""
+
     municipality: str | None
     focus: list[float] | None
     layers: list[str]
@@ -57,6 +60,7 @@ class MapAnswer:
 @dataclass(slots=True)
 class Evidence:
     """What the answer is allowed to be written from."""
+
     documents: list[dict[str, Any]]
     context: dict[str, Any]
     relevant: bool
@@ -87,9 +91,9 @@ def map_answer(ask: Ask, municipality: str | None) -> MapAnswer:
     about a sixth of a second while the text is still being written.
     """
     layers = spatial_ops.suggested_layer_ids(ask.question) or infer_layers(ask.question)
-    return MapAnswer(municipality=municipality,
-                     focus=spatial.municipio_bbox(municipality),
-                     layers=layers)
+    return MapAnswer(
+        municipality=municipality, focus=spatial.municipio_bbox(municipality), layers=layers
+    )
 
 
 def gather(ask: Ask, municipality: str | None) -> Evidence:
@@ -110,8 +114,7 @@ def gather(ask: Ask, municipality: str | None) -> Evidence:
     if facilities:
         context["facilities"] = facilities
 
-    analysis = spatial_ops.analyze(ask.question, municipality,
-                                   [t.question for t in ask.history])
+    analysis = spatial_ops.analyze(ask.question, municipality, [t.question for t in ask.history])
     if analysis:
         context["analysis"] = spatial_ops.describe(analysis, ask.lang)
     elif spatial_ops.wants_number(ask.question):
@@ -131,9 +134,14 @@ def write(ask: Ask, evidence: Evidence, layers: list[str]) -> dict[str, Any]:
     """The finished answer, with citations and confidence."""
     if (evidence.documents or evidence.context) and llm.is_available():
         try:
-            return llm.narrate(ask.question, evidence.documents, layers,
-                               history=[(t.question, t.answer) for t in ask.history],
-                               spatial=evidence.context or None, lang=ask.lang)
+            return llm.narrate(
+                ask.question,
+                evidence.documents,
+                layers,
+                history=[(t.question, t.answer) for t in ask.history],
+                spatial=evidence.context or None,
+                lang=ask.lang,
+            )
         except Exception:
             # Any transport or parse failure falls back to the templated
             # composer, so the panel always resolves to something.
@@ -143,9 +151,14 @@ def write(ask: Ask, evidence: Evidence, layers: list[str]) -> dict[str, Any]:
 
 def stream(ask: Ask, evidence: Evidence, layers: list[str]) -> Iterator[str]:
     """The answer as it is written, provider permitting."""
-    messages = llm.build_messages(ask.question, evidence.documents, layers,
-                                  [(t.question, t.answer) for t in ask.history],
-                                  evidence.context or None, ask.lang)
+    messages = llm.build_messages(
+        ask.question,
+        evidence.documents,
+        layers,
+        [(t.question, t.answer) for t in ask.history],
+        evidence.context or None,
+        ask.lang,
+    )
     yield from llm.stream_answer(messages)
 
 

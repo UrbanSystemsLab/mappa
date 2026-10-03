@@ -49,11 +49,17 @@ from pathlib import Path
 # Native Google Workspace types must be *exported*; (export MIME, extension).
 EXPORT_MAP = {
     "application/vnd.google-apps.document": (
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"),
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".docx",
+    ),
     "application/vnd.google-apps.spreadsheet": (
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx"),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".xlsx",
+    ),
     "application/vnd.google-apps.presentation": (
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx"),
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ".pptx",
+    ),
 }
 
 FOLDER_MIME = "application/vnd.google-apps.folder"
@@ -61,12 +67,28 @@ SHORTCUT_MIME = "application/vnd.google-apps.shortcut"
 
 # Zone tagging for the run summary / catalog (does not affect the object path).
 ZONE_BY_EXT = {
-    ".pdf": "documents", ".docx": "documents", ".doc": "documents", ".txt": "documents",
-    ".gpkg": "spatial", ".shp": "spatial", ".shx": "spatial", ".dbf": "spatial",
-    ".prj": "spatial", ".cpg": "spatial", ".qmd": "spatial", ".geojson": "spatial",
-    ".tif": "spatial", ".tiff": "spatial", ".kml": "spatial", ".lpkx": "spatial",
-    ".csv": "tabular", ".xlsx": "tabular", ".xls": "tabular", ".parquet": "tabular",
-    ".json": "eval", ".jsonl": "eval",
+    ".pdf": "documents",
+    ".docx": "documents",
+    ".doc": "documents",
+    ".txt": "documents",
+    ".gpkg": "spatial",
+    ".shp": "spatial",
+    ".shx": "spatial",
+    ".dbf": "spatial",
+    ".prj": "spatial",
+    ".cpg": "spatial",
+    ".qmd": "spatial",
+    ".geojson": "spatial",
+    ".tif": "spatial",
+    ".tiff": "spatial",
+    ".kml": "spatial",
+    ".lpkx": "spatial",
+    ".csv": "tabular",
+    ".xlsx": "tabular",
+    ".xls": "tabular",
+    ".parquet": "tabular",
+    ".json": "eval",
+    ".jsonl": "eval",
 }
 
 
@@ -86,8 +108,10 @@ def walk(service, folder_id: str, rel_prefix: str = "") -> list[dict]:
             service.files()
             .list(
                 q=f"'{folder_id}' in parents and trashed = false",
-                fields=("nextPageToken, files(id, name, mimeType, md5Checksum, size, "
-                        "shortcutDetails(targetId, targetMimeType))"),
+                fields=(
+                    "nextPageToken, files(id, name, mimeType, md5Checksum, size, "
+                    "shortcutDetails(targetId, targetMimeType))"
+                ),
                 pageSize=1000,
                 pageToken=page_token,
                 supportsAllDrives=True,
@@ -148,7 +172,9 @@ def _md5_matches(gcs_b64_md5: str | None, drive_hex_md5: str) -> bool:
         return False
 
 
-def sync_folder(drive, bucket, bucket_name: str, folder_id: str, prefix: str, commit: bool) -> tuple[int, int]:
+def sync_folder(
+    drive, bucket, bucket_name: str, folder_id: str, prefix: str, commit: bool
+) -> tuple[int, int]:
     """Mirror one Drive folder into bucket/prefix. Returns (uploaded, skipped)."""
     print(f"[sync-drive] walking folder {folder_id} -> gs://{bucket_name}/{prefix}")
     files = walk(drive, folder_id)
@@ -179,11 +205,15 @@ def sync_folder(drive, bucket, bucket_name: str, folder_id: str, prefix: str, co
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Mirror Drive folder(s) into the GCS raw zone.")
-    parser.add_argument("--config", type=str, help="Path to sources.json (syncs every source listed).")
+    parser.add_argument(
+        "--config", type=str, help="Path to sources.json (syncs every source listed)."
+    )
     parser.add_argument("--folder-id", help="Single Drive folder ID (alternative to --config).")
     parser.add_argument("--bucket", default=os.environ.get("RAW_BUCKET"), help="Target GCS bucket.")
     parser.add_argument("--prefix", default="", help="Object key prefix for --folder-id mode.")
-    parser.add_argument("--commit", action="store_true", help="Actually download + upload. Else dry run.")
+    parser.add_argument(
+        "--commit", action="store_true", help="Actually download + upload. Else dry run."
+    )
     args = parser.parse_args()
 
     # Build the list of (folder_id, prefix) jobs from either the config or a single folder.
@@ -213,8 +243,10 @@ def main() -> None:
         total_skip += skip
 
     verb = "done" if args.commit else "dry run"
-    print(f"[sync-drive] {verb}. uploaded={total_up} skipped(unchanged)={total_skip}"
-          + ("" if args.commit else "  — use --commit to write."))
+    print(
+        f"[sync-drive] {verb}. uploaded={total_up} skipped(unchanged)={total_skip}"
+        + ("" if args.commit else "  — use --commit to write.")
+    )
 
 
 if __name__ == "__main__":

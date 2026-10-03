@@ -60,19 +60,32 @@ def list_layers() -> list[dict[str, Any]]:
 
 # Facility layers we can answer "how many / where" questions about, from the map data.
 FACILITY_LAYERS = {
-    "school":   {"table": "layer_dotacional_educacion_escuelas_2021", "label": "public schools (2021)",
-                 "kw": ["school", "schools", "escuela", "escuelas", "educacion", "education", "colegio"]},
-    "hospital": {"table": "layer_hospitales", "label": "hospitals / CDTs",
-                 "kw": ["hospital", "hospitals", "cdt", "salud", "health", "clinic", "clinica"]},
-    "shelter":  {"table": "layer_refugios_2023", "label": "emergency shelters (2023)",
-                 "kw": ["shelter", "shelters", "refugio", "refugios", "evacuation"]},
-    "road":     {"table": "layer_carreteras_estatales_segmentadas_agosto_2021", "label": "state roads",
-                 "kw": ["road", "roads", "carretera", "carreteras", "highway", "vial"]},
+    "school": {
+        "table": "layer_dotacional_educacion_escuelas_2021",
+        "label": "public schools (2021)",
+        "kw": ["school", "schools", "escuela", "escuelas", "educacion", "education", "colegio"],
+    },
+    "hospital": {
+        "table": "layer_hospitales",
+        "label": "hospitals / CDTs",
+        "kw": ["hospital", "hospitals", "cdt", "salud", "health", "clinic", "clinica"],
+    },
+    "shelter": {
+        "table": "layer_refugios_2023",
+        "label": "emergency shelters (2023)",
+        "kw": ["shelter", "shelters", "refugio", "refugios", "evacuation"],
+    },
+    "road": {
+        "table": "layer_carreteras_estatales_segmentadas_agosto_2021",
+        "label": "state roads",
+        "kw": ["road", "roads", "carretera", "carreteras", "highway", "vial"],
+    },
 }
 
 
 def _norm(text: str) -> str:
     import unicodedata
+
     t = unicodedata.normalize("NFKD", text.lower())
     return "".join(c for c in t if not unicodedata.combining(c))
 
@@ -127,7 +140,10 @@ def locate(lng: float, lat: float) -> dict[str, Any]:
 
         hazards: dict[str, bool] = {}
         for key, table in hazard_layers.items():
-            cur.execute(f'SELECT EXISTS(SELECT 1 FROM "{table}" WHERE ST_Intersects(geom, {pt}))', (lng, lat))
+            cur.execute(
+                f'SELECT EXISTS(SELECT 1 FROM "{table}" WHERE ST_Intersects(geom, {pt}))',
+                (lng, lat),
+            )
             hazards[key] = bool(cur.fetchone()[0])
     return {"municipio": municipio, "hazards": hazards}
 
@@ -162,7 +178,11 @@ def search_places(q: str, limit: int = 8) -> list[dict[str, Any]]:
             (term, term, term, limit),
         )
         return [
-            {"name": r[0], "type": r[1], "bbox": [float(r[2]), float(r[3]), float(r[4]), float(r[5])]}
+            {
+                "name": r[0],
+                "type": r[1],
+                "bbox": [float(r[2]), float(r[3]), float(r[4]), float(r[5])],
+            }
             for r in cur.fetchall()
         ]
 

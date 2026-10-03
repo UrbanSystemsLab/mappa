@@ -50,9 +50,11 @@ class TestCitationIds:
 
     def test_accepts_their_ids(self):
         from api.retrieval import citation_id
+
         for good in ("HMP-045", "DOC-128", "POT-007", "GIS-609", "WCRP-014"):
             assert citation_id(good) == good
 
     def test_hides_internal_slugs(self):
         from api.retrieval import citation_id
+
         assert citation_id("LM-REGLAMENTO-ZONIFICACIO-N-ESPECIAL-DE-SANTURCE") == ""

@@ -12,24 +12,30 @@ from api import spatial_ops as S
 
 
 class TestKnownCounts:
-    @pytest.mark.parametrize("municipality,expected", [
-        ("Cataño", 5),
-        ("Carolina", 25),
-        ("Loíza", 7),
-        ("Utuado", 12),
-    ])
+    @pytest.mark.parametrize(
+        "municipality,expected",
+        [
+            ("Cataño", 5),
+            ("Carolina", 25),
+            ("Loíza", 7),
+            ("Utuado", 12),
+        ],
+    )
     def test_schools_per_municipality(self, db, municipality, expected):
         got = S.count_features("schools", municipality)
         assert got["count"] == expected
 
 
 class TestKnownOverlays:
-    @pytest.mark.parametrize("municipality,inside,total", [
-        ("Cataño", 5, 5),      # every school, which is the striking finding
-        ("Carolina", 8, 25),
-        ("Loíza", 3, 7),
-        ("Arecibo", 0, 21),    # a real zero, verified against island-wide totals
-    ])
+    @pytest.mark.parametrize(
+        "municipality,inside,total",
+        [
+            ("Cataño", 5, 5),  # every school, which is the striking finding
+            ("Carolina", 8, 25),
+            ("Loíza", 3, 7),
+            ("Arecibo", 0, 21),  # a real zero, verified against island-wide totals
+        ],
+    )
     def test_schools_in_the_flood_zone(self, db, municipality, inside, total):
         got = S.count_intersecting("schools", "flood", municipality)
         assert (got["count"], got["total"]) == (inside, total)

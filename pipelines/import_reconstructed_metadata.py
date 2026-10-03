@@ -70,6 +70,7 @@ FIELDS = {
     "dataset name": "dataset_name",
 }
 
+
 # Their four-level vocabulary, which layer_registry already speaks.
 def confidence(*texts: str) -> str | None:
     blob = " ".join(t for t in texts if t).lower()
@@ -138,7 +139,8 @@ def match(cur, dataset: str, tab: str) -> list[str]:
         # Three ways in, because a layer may be published (has a table),
         # loaded, or still only catalogued - and the metadata is just as useful
         # on a row whose data has not arrived yet.
-        cur.execute("""
+        cur.execute(
+            """
             SELECT id FROM layer_registry
             WHERE regexp_replace(lower(translate(coalesce(table_name,''),
                       'áéíóúñü','aeiounu')), '[^a-z0-9]+', '', 'g') IN (%s, %s)
@@ -148,7 +150,9 @@ def match(cur, dataset: str, tab: str) -> list[str]:
                     SELECT gis_id FROM layer_inventory
                     WHERE regexp_replace(lower(translate(coalesce(layer_name,''),
                               'áéíóúñü','aeiounu')), '[^a-z0-9]+', '', 'g') = %s)
-        """, (key, "layer" + key, key, key))
+        """,
+            (key, "layer" + key, key, key),
+        )
         hits = [r[0] for r in cur.fetchall()]
         if hits:
             return hits
@@ -167,9 +171,14 @@ def main() -> None:
     cur = conn.cursor()
     cur.execute("SET statement_timeout='120s'")
     # Fields their reconstruction provides that the registry had nowhere to put.
-    for col in ("purpose text", "limitation text", "federal_agency text",
-                "original_metadata text", "metadata_reference text",
-                "metadata_source text"):
+    for col in (
+        "purpose text",
+        "limitation text",
+        "federal_agency text",
+        "original_metadata text",
+        "metadata_reference text",
+        "metadata_source text",
+    ):
         cur.execute(f"ALTER TABLE layer_registry ADD COLUMN IF NOT EXISTS {col}")
     conn.commit()
 
@@ -189,7 +198,8 @@ def main() -> None:
                 unmatched.append((book.name, ws.title, m.get("title", "")[:40]))
                 continue
             for lid in ids:
-                cur.execute("""
+                cur.execute(
+                    """
                     UPDATE layer_registry SET
                       description_es   = COALESCE(NULLIF(%s,''), description_es),
                       source_agency    = COALESCE(NULLIF(%s,''), source_agency),
@@ -202,10 +212,20 @@ def main() -> None:
                       metadata_source  = %s,
                       updated_at       = now()
                     WHERE id = %s
-                """, (m.get("description",""), m.get("agency",""),
-                      m.get("federal_agency",""), m.get("purpose",""),
-                      m.get("limitation",""), m.get("original_metadata",""),
-                      m.get("reference",""), m.get("confidence"), SOURCE, lid))
+                """,
+                    (
+                        m.get("description", ""),
+                        m.get("agency", ""),
+                        m.get("federal_agency", ""),
+                        m.get("purpose", ""),
+                        m.get("limitation", ""),
+                        m.get("original_metadata", ""),
+                        m.get("reference", ""),
+                        m.get("confidence"),
+                        SOURCE,
+                        lid,
+                    ),
+                )
                 applied += cur.rowcount
             print(f"   {ws.title[:34]:36} -> {', '.join(ids)[:44]}")
         wb.close()

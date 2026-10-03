@@ -33,7 +33,7 @@ from pathlib import Path
 import psycopg2
 
 DEFAULT_GPKG = Path("data/raw/la_marana.gpkg")
-GPKG = DEFAULT_GPKG          # replaced by --source at startup
+GPKG = DEFAULT_GPKG  # replaced by --source at startup
 
 # Provenance recorded against each layer: which file La Maraña sent it in.
 SOURCES = {
@@ -70,7 +70,7 @@ def table_for(layer: str, taken: set[str]) -> str:
         return name
     for n in range(2, 100):
         suffix = f"_{n}"
-        candidate = f"{name[:MAX_IDENT - len(suffix)]}{suffix}"
+        candidate = f"{name[: MAX_IDENT - len(suffix)]}{suffix}"
         if candidate not in taken:
             taken.add(candidate)
             return candidate
@@ -110,13 +110,34 @@ def load_one(layer: str, table: str, dsn: str) -> str:
     # -dim XY drops Z and M. Several of their layers are 3D measured polygons,
     # and ST_Intersection against a 2D boundary returns a degenerate result for
     # those - Cabo Rojo came back with zero protected area when it has 24 km2.
-    base = ["ogr2ogr", "-f", "PostgreSQL", f"PG:{dsn}", str(GPKG), layer,
-            "-nln", table, "-t_srs", "EPSG:4326", "-overwrite",
-            "-lco", "GEOMETRY_NAME=geom", "-lco", "SPATIAL_INDEX=GIST",
-            "-nlt", "PROMOTE_TO_MULTI", "-dim", "XY", "-gt", "20000",
-            "--config", "PG_USE_COPY", "YES"]
+    base = [
+        "ogr2ogr",
+        "-f",
+        "PostgreSQL",
+        f"PG:{dsn}",
+        str(GPKG),
+        layer,
+        "-nln",
+        table,
+        "-t_srs",
+        "EPSG:4326",
+        "-overwrite",
+        "-lco",
+        "GEOMETRY_NAME=geom",
+        "-lco",
+        "SPATIAL_INDEX=GIST",
+        "-nlt",
+        "PROMOTE_TO_MULTI",
+        "-dim",
+        "XY",
+        "-gt",
+        "20000",
+        "--config",
+        "PG_USE_COPY",
+        "YES",
+    ]
     try:
-        subprocess.run(base + ["-lco", "FID=id"], check=True, capture_output=True, text=True)
+        subprocess.run([*base, "-lco", "FID=id"], check=True, capture_output=True, text=True)
         return "id"
     except subprocess.CalledProcessError as exc:
         if "Wrong field type for ID" not in (exc.stderr or ""):
@@ -129,14 +150,16 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--redo", action="store_true")
-    ap.add_argument("--source", default=str(DEFAULT_GPKG),
-                    help="GeoPackage to load")
+    ap.add_argument("--source", default=str(DEFAULT_GPKG), help="GeoPackage to load")
     # Loading 500 layers straight onto the map would make the panel unusable.
     # They arrive queryable by the assistant and invisible to the map until
     # La Maraña names the ones worth showing.
-    ap.add_argument("--status", default="loaded",
-                    choices=["loaded", "published"],
-                    help="loaded = queryable but hidden; published = on the map")
+    ap.add_argument(
+        "--status",
+        default="loaded",
+        choices=["loaded", "published"],
+        help="loaded = queryable but hidden; published = on the map",
+    )
     args = ap.parse_args()
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
@@ -163,7 +186,7 @@ def main() -> None:
     print(f"[gpkg] {len(layers)} layers in {GPKG.name}")
     loaded = skipped = failed = linked = standalone = 0
 
-    for layer, geom_type, srid in layers:
+    for layer, _geom_type, _srid in layers:
         table = f"layer_{re.sub(r'[^a-z0-9]+', '_', norm_keep_words(layer)).strip('_')}"[:MAX_IDENT]
         exists = table in taken
         if exists and not args.redo:
@@ -180,8 +203,10 @@ def main() -> None:
             failed += 1
             continue
         taken.add(table)
-        cur.execute(f'SELECT count(*), GeometryType(geom) FROM "{table}" '
-                    f'WHERE geom IS NOT NULL GROUP BY 2 ORDER BY 1 DESC LIMIT 1')
+        cur.execute(
+            f'SELECT count(*), GeometryType(geom) FROM "{table}" '
+            f"WHERE geom IS NOT NULL GROUP BY 2 ORDER BY 1 DESC LIMIT 1"
+        )
         row = cur.fetchone()
         count, gtype = (row[0], row[1]) if row else (0, None)
         loaded += 1
@@ -190,10 +215,13 @@ def main() -> None:
         hits = [(g, n) for g, n, k in inventory if k == key]
         if len(hits) == 1:
             gis_id = hits[0][0]
-            cur.execute("""UPDATE layer_registry
+            cur.execute(
+                """UPDATE layer_registry
                            SET table_name=%s, status=%s, geometry_type=%s,
                                feature_count=%s, updated_at=now()
-                           WHERE gis_id=%s""", (table, args.status, gtype, count, gis_id))
+                           WHERE gis_id=%s""",
+                (table, args.status, gtype, count, gis_id),
+            )
             linked += 1
             note = f"-> {gis_id}"
         else:
@@ -201,16 +229,33 @@ def main() -> None:
             # catalog on its own terms rather than attached to a guessed row.
             rid = norm(layer)[:60] or table
             if table not in registered:
-                cur.execute("""
+                cur.execute(
+                    """
                     INSERT INTO layer_registry
                         (id, table_name, name_es, category, geometry_type, feature_count,
                          source_inventory, metadata_status, status, keywords)
                     VALUES (%s,%s,%s,%s,%s,%s,%s,'unknown',%s,%s)
                     ON CONFLICT (id) DO UPDATE SET table_name=EXCLUDED.table_name,
                         status=EXCLUDED.status, feature_count=EXCLUDED.feature_count
-                """, (rid, table, NOISE.sub("", layer).replace("_", " ").strip(),
-                      "Sin clasificar", gtype, count, SOURCE, args.status,
-                      sorted({w for w in re.split(r"[^a-z0-9]+", norm_keep_words(layer)) if len(w) > 2})))
+                """,
+                    (
+                        rid,
+                        table,
+                        NOISE.sub("", layer).replace("_", " ").strip(),
+                        "Sin clasificar",
+                        gtype,
+                        count,
+                        SOURCE,
+                        args.status,
+                        sorted(
+                            {
+                                w
+                                for w in re.split(r"[^a-z0-9]+", norm_keep_words(layer))
+                                if len(w) > 2
+                            }
+                        ),
+                    ),
+                )
             standalone += 1
             note = "own row (no single inventory match)"
         print(f"  loaded  {layer[:46]:46} {count:>9,} feats  {gtype or '?':<12} {note}")

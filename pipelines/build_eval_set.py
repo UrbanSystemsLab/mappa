@@ -28,8 +28,9 @@ import argparse
 import csv
 import json
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 QUESTION_KEYS = ("question_es", "question", "pregunta", "q", "consulta")
 QUESTION_EN_KEYS = ("question_en", "question_english", "pregunta_en")
@@ -56,7 +57,11 @@ def _as_list(value: Any) -> list[str]:
 def read_rows(path: Path) -> list[dict[str, Any]]:
     ext = path.suffix.lower()
     if ext == ".jsonl":
-        return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        return [
+            json.loads(line)
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
     if ext == ".json":
         data = json.loads(path.read_text(encoding="utf-8"))
         return data if isinstance(data, list) else [data]
@@ -85,7 +90,9 @@ def normalize(row: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build the validated Mappa eval set.")
-    parser.add_argument("--input", type=Path, required=True, help="Directory of labeled Q&A (json/jsonl/csv).")
+    parser.add_argument(
+        "--input", type=Path, required=True, help="Directory of labeled Q&A (json/jsonl/csv)."
+    )
     parser.add_argument("--output", type=Path, default=Path("data/eval_set.jsonl"))
     args = parser.parse_args()
 

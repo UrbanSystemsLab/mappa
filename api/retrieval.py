@@ -48,7 +48,9 @@ def _rows_to_results(rows, min_score: float) -> list[tuple[float, dict[str, Any]
         score = float(score) if score is not None else 0.0
         if score < min_score:
             continue
-        out.append((score, {"id": source_id, "title": title, "year": year, "url": url or "", "text": text}))
+        out.append(
+            (score, {"id": source_id, "title": title, "year": year, "url": url or "", "text": text})
+        )
     return out
 
 
@@ -82,7 +84,9 @@ def retrieve_cloud(
             # scan keeps searching until the filter is satisfied.
             cur.execute("SET LOCAL hnsw.iterative_scan = relaxed_order")
             cur.execute(
-                base + "WHERE d.jurisdiction ILIKE %s OR d.jurisdiction ILIKE 'Puerto Rico' " + tail,
+                base
+                + "WHERE d.jurisdiction ILIKE %s OR d.jurisdiction ILIKE 'Puerto Rico' "
+                + tail,
                 (lit, jurisdiction, lit, top_k),
             )
             rows = cur.fetchall()
@@ -101,7 +105,9 @@ def _corpus_jurisdictions() -> list[str]:
         import psycopg2
 
         with psycopg2.connect(DB_URL) as conn, conn.cursor() as cur:
-            cur.execute("SELECT DISTINCT jurisdiction FROM documents WHERE jurisdiction IS NOT NULL")
+            cur.execute(
+                "SELECT DISTINCT jurisdiction FROM documents WHERE jurisdiction IS NOT NULL"
+            )
             _jurisdictions_cache = [r[0] for r in cur.fetchall()]
     return _jurisdictions_cache
 
@@ -119,10 +125,19 @@ def detect_municipio(text: str) -> str | None:
             return j
     return None
 
+
 LAYER_KEYWORDS: dict[str, list[str]] = {
     "inundacion": ["inundacion", "inundable", "flood", "firm", "fema", "rio", "marejada"],
     "deslizamiento": ["deslizamiento", "ladera", "derrumbe", "landslide", "pendiente"],
-    "zonificacion": ["zonificacion", "zona", "distrito", "calificacion", "uso", "permiso", "construccion"],
+    "zonificacion": [
+        "zonificacion",
+        "zona",
+        "distrito",
+        "calificacion",
+        "uso",
+        "permiso",
+        "construccion",
+    ],
     "costa": ["costa", "costanera", "playa", "zmt", "maritimo", "manglar"],
     "humedal": ["humedal", "pantano", "cienaga", "wetland"],
     "uso_de_terrenos": ["uso de terreno", "uso de suelo", "land use", "clasificacion"],
@@ -172,7 +187,9 @@ class SemanticIndex:
             show_progress_bar=False,
         )
 
-    def search(self, query: str, top_k: int = 3, min_score: float = 0.15) -> list[tuple[float, dict[str, Any]]]:
+    def search(
+        self, query: str, top_k: int = 3, min_score: float = 0.15
+    ) -> list[tuple[float, dict[str, Any]]]:
         if self.embeddings is None or len(self.documents) == 0:
             return []
         q_vec = self.model.encode([query], normalize_embeddings=True, show_progress_bar=False)[0]

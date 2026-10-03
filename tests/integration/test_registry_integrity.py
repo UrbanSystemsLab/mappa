@@ -6,8 +6,6 @@ reported it - it was found by someone asking why a question had stopped working.
 These are the checks that would have caught it within a minute.
 """
 
-import pytest
-
 from api import spatial_ops as S
 
 
@@ -29,7 +27,8 @@ def test_no_orphan_layer_tables(cur):
     # their second GeoPackage replaced several layers under slightly different
     # names. Those are wasted space, reported separately. An orphan with no twin
     # is the real fault - data nothing can reach.
-    import re, unicodedata
+    import re
+    import unicodedata
 
     def key(name):
         n = unicodedata.normalize("NFKD", name.lower())
@@ -65,8 +64,7 @@ def test_every_alias_resolves(cur):
     """
     unresolved = []
     for concept, spec in S.LAYERS.items():
-        cur.execute("SELECT status FROM layer_registry WHERE table_name = %s",
-                    (spec["table"],))
+        cur.execute("SELECT status FROM layer_registry WHERE table_name = %s", (spec["table"],))
         row = cur.fetchone()
         if not row or row[0] not in ("published", "loaded"):
             unresolved.append((concept, spec["table"], row[0] if row else "no row"))

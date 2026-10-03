@@ -23,9 +23,9 @@ import argparse
 import os
 import re
 import unicodedata
+from pathlib import Path
 
 import psycopg2
-from pathlib import Path
 
 SOURCE = "La Maraña — Inventario_Territorial_Docs_GIS"
 
@@ -33,9 +33,15 @@ SOURCE = "La Maraña — Inventario_Territorial_Docs_GIS"
 # what PostGIS and the map client use; anything unrecognised stays unknown rather
 # than being guessed into a shape that would render wrong.
 GEOMETRY = {
-    "polígono": "Polygon", "poligono": "Polygon", "poligono/vector": "Polygon",
-    "punto": "Point", "point": "Point", "points": "Point",
-    "línea": "LineString", "linea": "LineString", "line": "LineString",
+    "polígono": "Polygon",
+    "poligono": "Polygon",
+    "poligono/vector": "Polygon",
+    "punto": "Point",
+    "point": "Point",
+    "points": "Point",
+    "línea": "LineString",
+    "linea": "LineString",
+    "line": "LineString",
     "raster": "Raster",
 }
 
@@ -104,17 +110,22 @@ def link_loaded_layers(cur) -> list[tuple]:
     for rid, table in loaded:
         if not table:
             continue
-        target = _key(table[len("layer_"):] if table.startswith("layer_") else table)
+        target = _key(table[len("layer_") :] if table.startswith("layer_") else table)
         exact = [(g, n) for g, n, k in inventory if k == target]
         if len(exact) == 1:
             cur.execute("UPDATE layer_registry SET gis_id=%s WHERE id=%s", (exact[0][0], rid))
-            cur.execute("UPDATE layer_inventory SET served_layer_id=%s WHERE gis_id=%s",
-                        (rid, exact[0][0]))
+            cur.execute(
+                "UPDATE layer_inventory SET served_layer_id=%s WHERE gis_id=%s", (rid, exact[0][0])
+            )
             continue
-        near = [(g, n) for g, n, k in inventory
-                if k and (k in target or target in k) and abs(len(k) - len(target)) < 24]
-        ambiguous.append((rid, table, "; ".join(g for g, _ in near[:6]),
-                          "; ".join(n for _, n in near[:6])))
+        near = [
+            (g, n)
+            for g, n, k in inventory
+            if k and (k in target or target in k) and abs(len(k) - len(target)) < 24
+        ]
+        ambiguous.append(
+            (rid, table, "; ".join(g for g, _ in near[:6]), "; ".join(n for _, n in near[:6]))
+        )
     return ambiguous
 
 
@@ -158,8 +169,19 @@ def main() -> None:
 
     added = skipped = 0
     by_status: dict[str, int] = {}
-    for (gis_id, layer_name, category, subcategory, geom, desc,
-         source, crs, pub, fmt, restrictions) in rows:
+    for (
+        gis_id,
+        layer_name,
+        category,
+        subcategory,
+        geom,
+        desc,
+        source,
+        crs,
+        pub,
+        _fmt,
+        restrictions,
+    ) in rows:
         rid = registry_id(gis_id)
         if rid in existing:
             skipped += 1
@@ -171,16 +193,31 @@ def main() -> None:
         if pub:
             m = re.search(r"(19|20)\d{2}", str(pub))
             year = int(m.group(0)) if m else None
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO layer_registry
                 (id, gis_id, table_name, name_es, name_en, description_es,
                  category, subcategory, geometry_type, keywords, source_agency,
                  source_inventory, vintage_year, license, metadata_status, status)
             VALUES (%s,%s,NULL,%s,NULL,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'catalogued')
             ON CONFLICT (id) DO NOTHING
-        """, (rid, gis_id, readable(layer_name), desc, category or "Sin clasificar",
-              subcategory, geometry, keywords_for(layer_name, category, subcategory),
-              source, SOURCE, year, restrictions, mstatus))
+        """,
+            (
+                rid,
+                gis_id,
+                readable(layer_name),
+                desc,
+                category or "Sin clasificar",
+                subcategory,
+                geometry,
+                keywords_for(layer_name, category, subcategory),
+                source,
+                SOURCE,
+                year,
+                restrictions,
+                mstatus,
+            ),
+        )
         added += cur.rowcount
 
     # Point their sheet back at the registry, so the inventory row and the layer
@@ -207,6 +244,7 @@ def main() -> None:
         print(f"    {n:>4}  {s}")
     if ambiguous:
         import csv
+
         out = Path("data/eval/layer_match_review.csv")
         out.parent.mkdir(parents=True, exist_ok=True)
         with out.open("w", newline="", encoding="utf-8") as fh:
@@ -214,9 +252,11 @@ def main() -> None:
             w.writerow(["loaded_layer", "our_table", "candidate_gis_ids", "candidate_names"])
             for row in ambiguous:
                 w.writerow(row)
-        print(f"\n[layers] {len(ambiguous)} loaded layers could not be matched to one "
-              f"inventory row -> {out}")
-        for rid, tbl, gids, names in ambiguous:
+        print(
+            f"\n[layers] {len(ambiguous)} loaded layers could not be matched to one "
+            f"inventory row -> {out}"
+        )
+        for rid, _tbl, gids, _names in ambiguous:
             print(f"    {rid:22} {gids or 'no candidate'}")
 
     if args.commit:

@@ -31,7 +31,7 @@ import psycopg2
 SOURCE = "La Maraña — Documentos de planificación (Drive)"
 # Their document IDs, as used in both the inventory and their filenames.
 ID_RE = re.compile(r"\b((?:DOC|HMP|WCRP|RV|POT|GIS)-\d{2,4})\b", re.I)
-CTRL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")   # Postgres rejects NUL
+CTRL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")  # Postgres rejects NUL
 
 
 def doc_id_for(path: Path, cur) -> tuple[str | None, str]:
@@ -72,8 +72,11 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default="data/raw/lamarana_docs")
     ap.add_argument("--commit", action="store_true")
-    ap.add_argument("--reconcile", action="store_true",
-                    help="skip staging; set load_state from what is in the corpus")
+    ap.add_argument(
+        "--reconcile",
+        action="store_true",
+        help="skip staging; set load_state from what is in the corpus",
+    )
     args = ap.parse_args()
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
@@ -101,7 +104,9 @@ def main() -> None:
         if not did:
             unmatched.append((p, how))
             continue
-        cur.execute("SELECT title, year, municipio, doc_type FROM document_registry WHERE doc_id=%s", (did,))
+        cur.execute(
+            "SELECT title, year, municipio, doc_type FROM document_registry WHERE doc_id=%s", (did,)
+        )
         row = cur.fetchone()
         if not row:
             # Not on the Documentos sheet. GIS-* ids are catalogued on their layer
@@ -109,15 +114,23 @@ def main() -> None:
             # not caught up with. Either way it is theirs, so register and keep it.
             cur.execute("SELECT layer_name, category FROM layer_inventory WHERE gis_id=%s", (did,))
             lay = cur.fetchone()
-            title = (lay[0] if lay else p.stem)
-            dtype = ("Documentación de capa" if lay else "Sin clasificar en inventario")
+            title = lay[0] if lay else p.stem
+            dtype = "Documentación de capa" if lay else "Sin clasificar en inventario"
             year, muni = None, None
-            cur.execute("""INSERT INTO document_registry (doc_id,title,doc_type,category,
+            cur.execute(
+                """INSERT INTO document_registry (doc_id,title,doc_type,category,
                                source_inventory,load_state,load_note)
                            VALUES (%s,%s,%s,%s,%s,'not_attempted',%s)
                            ON CONFLICT (doc_id) DO NOTHING""",
-                        (did, title, dtype, (lay[1] if lay else None), SOURCE,
-                         "added from their folder; not on the Documentos sheet"))
+                (
+                    did,
+                    title,
+                    dtype,
+                    (lay[1] if lay else None),
+                    SOURCE,
+                    "added from their folder; not on the Documentos sheet",
+                ),
+            )
             how = f"{how}, registered from folder"
         else:
             title, year, muni, dtype = row
@@ -129,20 +142,34 @@ def main() -> None:
             unmatched.append((p, f"unreadable: {exc}"))
             continue
         if len(text) < 500:
-            cur.execute("UPDATE document_registry SET load_state='no_text_layer', "
-                        "load_note='scanned, no text layer' WHERE doc_id=%s", (did,))
+            cur.execute(
+                "UPDATE document_registry SET load_state='no_text_layer', "
+                "load_note='scanned, no text layer' WHERE doc_id=%s",
+                (did,),
+            )
             unmatched.append((p, "no text layer (scanned)"))
             continue
-        out.append({"id": did, "title": title or p.stem, "jurisdiction": muni,
-                    "doc_type": dtype, "year": year, "url": "", "language": "es",
-                    "tags": [t for t in (muni, dtype) if t], "text": text,
-                    "source_inventory": SOURCE})
+        out.append(
+            {
+                "id": did,
+                "title": title or p.stem,
+                "jurisdiction": muni,
+                "doc_type": dtype,
+                "year": year,
+                "url": "",
+                "language": "es",
+                "tags": [t for t in (muni, dtype) if t],
+                "text": text,
+                "source_inventory": SOURCE,
+            }
+        )
         print(f"  {did:10} {len(text):>9,} chars  ({how})")
 
     if unmatched:
         # The full list, not a sample. La Maraña needs every filename and reason so
         # they can tell us which are scans, which are the wrong file, which are gone.
         import csv
+
         report = Path("data/eval/failed_documents.csv")
         report.parent.mkdir(parents=True, exist_ok=True)
         with report.open("w", newline="", encoding="utf-8") as fh:
@@ -161,7 +188,9 @@ def main() -> None:
         print(f"\n[lamarana] dry run — {len(out)} ready. Use --commit to write.")
         return
 
-    import collections, json
+    import collections
+    import json
+
     # Their folder can hold a document split across files (POT-065.1.pdf and
     # POT-065.2.pdf). Both resolve to one inventory id, which collides on insert,
     # so suffix the extras rather than dropping a document they supplied.
@@ -179,11 +208,12 @@ def main() -> None:
     staged = Path("data/corpus_lamarana.json")
     staged.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"\n[lamarana] wrote {staged} ({len(out)} docs)")
-    print("[lamarana] now run: python -m pipelines.ingest_documents "
-          f"--source {staged} --commit")
+    print(f"[lamarana] now run: python -m pipelines.ingest_documents --source {staged} --commit")
     for d in out:
-        cur.execute("UPDATE document_registry SET load_state='staged', load_note=%s "
-                    "WHERE doc_id=%s", (SOURCE, d["id"]))
+        cur.execute(
+            "UPDATE document_registry SET load_state='staged', load_note=%s WHERE doc_id=%s",
+            (SOURCE, d["id"]),
+        )
     print(f"[lamarana] marked {len(out)} documents staged from their folder")
     print("[lamarana] after ingest, run with --reconcile to mark what actually landed")
 
@@ -195,12 +225,15 @@ def reconcile(cur) -> None:
     failed halfway still read as loaded. The registry is a provenance record and
     has to match the corpus, so the state comes from the documents table.
     """
-    cur.execute("""
+    cur.execute(
+        """
         UPDATE document_registry r SET load_state='loaded', load_note=%s
         WHERE EXISTS (SELECT 1 FROM documents d
                       WHERE d.source_id = r.doc_id OR d.source_id LIKE r.doc_id || '-c%%')
           AND r.load_state IS DISTINCT FROM 'loaded'
-    """, (SOURCE,))
+    """,
+        (SOURCE,),
+    )
     promoted = cur.rowcount
     cur.execute("""
         UPDATE document_registry r SET load_state='staged'

@@ -1,0 +1,41 @@
+# Lint and format configuration.
+#
+# Until now there was none, so style drifted file by file and nothing caught an
+# unused import, a bare except, or a variable shadowing a function - which is the
+# class of mistake that produced a stuck "Consultando…" when an i18n helper named
+# `t` was shadowed by a loop variable.
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["venv", ".venv", "migrations/versions", "data"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes - unused imports, undefined names, shadowing
+    "I",         # import ordering
+    "B",         # bugbear - mutable defaults, loop variable capture
+    "UP",        # outdated idioms
+    "SIM",       # needless complexity
+    "RUF",       # ruff's own checks
+]
+ignore = [
+    "E501",      # line length is handled by the formatter
+    "B008",      # FastAPI's Depends() in defaults is the documented pattern
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The provider import sits after the provider is chosen, which is deliberate -
+# importing the Vertex SDK at module level would cost a second of start-up for
+# an installation that does not use it.
+"api/llm.py" = ["E402", "RUF001"]   # RUF001: en dashes are correct in Spanish
+"tests/*" = ["S101"]          # asserts are the point
+"pipelines/*" = ["T201"]      # pipelines print progress deliberately
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: needs a database"]

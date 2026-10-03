@@ -60,9 +60,34 @@ _LIST_COLS = """
 
 
 def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
-    (lid, table, category, subcategory, theme, keywords, agency, inventory, src_url,
-     year, license_, mstatus, gtype, fcount, srid, minz, maxz, label_col, sub_col,
-     style, version, status, prop_labels, val_labels, name, description) = r
+    (
+        lid,
+        table,
+        category,
+        subcategory,
+        theme,
+        keywords,
+        agency,
+        inventory,
+        src_url,
+        year,
+        license_,
+        mstatus,
+        gtype,
+        fcount,
+        srid,
+        minz,
+        maxz,
+        label_col,
+        sub_col,
+        style,
+        version,
+        status,
+        prop_labels,
+        val_labels,
+        name,
+        description,
+    ) = r
     return {
         "id": lid,
         "name": name,
@@ -111,9 +136,12 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
 
 
 def _lang_cols(lang: str) -> str:
-    return ("name_es AS name, description_es AS description" if lang == "es"
-            else "COALESCE(name_en, name_es) AS name, "
-                 "COALESCE(description_en, description_es) AS description")
+    return (
+        "name_es AS name, description_es AS description"
+        if lang == "es"
+        else "COALESCE(name_en, name_es) AS name, "
+        "COALESCE(description_en, description_es) AS description"
+    )
 
 
 def list_layers(
@@ -140,9 +168,11 @@ def list_layers(
     params: dict[str, Any] = {}
 
     if category:
-        where.append("regexp_replace(lower(translate(category,"
-                     "'áéíóúñüÁÉÍÓÚÑÜ','aeiounuAEIOUNU')), '[^a-z0-9]+', '', 'g') "
-                     "= %(category)s")
+        where.append(
+            "regexp_replace(lower(translate(category,"
+            "'áéíóúñüÁÉÍÓÚÑÜ','aeiounuAEIOUNU')), '[^a-z0-9]+', '', 'g') "
+            "= %(category)s"
+        )
         params["category"] = _category_key(category)
     if q:
         # Prose match OR keyword-array match, so "flood" finds a layer whose only
@@ -196,8 +226,9 @@ def categories(lang: str = "es", available_only: bool = False) -> list[dict[str,
         cur.execute(
             "SELECT category, count(*) FILTER (WHERE status = 'published'), count(*) "
             "FROM layer_registry WHERE status = 'published' "
-            "GROUP BY category" if available_only else
-            "SELECT category, count(*) FILTER (WHERE status = 'published'), count(*) "
+            "GROUP BY category"
+            if available_only
+            else "SELECT category, count(*) FILTER (WHERE status = 'published'), count(*) "
             "FROM layer_registry WHERE status IN ('published','catalogued') "
             "GROUP BY category"
         )

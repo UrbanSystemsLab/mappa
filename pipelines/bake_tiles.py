@@ -39,14 +39,16 @@ MAX_TILE_BYTES = 160_000
 
 def layer_meta(cur, table: str) -> tuple[str, str, list[str]]:
     """The layer's catalog id, geometry type, and the columns worth carrying."""
-    cur.execute("""SELECT id, geometry_type, label_column, sublabel_column, tile_properties
+    cur.execute(
+        """SELECT id, geometry_type, label_column, sublabel_column, tile_properties
                    FROM layer_registry WHERE table_name = %s AND status = 'published'""",
-                (table,))
+        (table,),
+    )
     row = cur.fetchone()
     if not row:
         raise SystemExit(f"{table} is not a published layer")
     lid, geom, label, sub, props = row
-    cols = [c for c in ([label, sub] + list(props or [])) if c]
+    cols = [c for c in ([label, sub, *list(props or [])]) if c]
     return lid, geom or "", sorted(set(cols))
 
 
@@ -58,10 +60,19 @@ def dump_geojson(table: str, cols: list[str], dsn: str, path: Path) -> None:
     """
     select = ", ".join([f'"{c}"' for c in cols]) or "1 AS _"
     subprocess.run(
-        ["ogr2ogr", "-f", "GeoJSONSeq", str(path), f"PG:{dsn}",
-         "-sql", f'SELECT {select}, geom FROM "{table}" WHERE geom IS NOT NULL',
-         "-lco", "RS=NO"],
-        check=True, capture_output=True,
+        [
+            "ogr2ogr",
+            "-f",
+            "GeoJSONSeq",
+            str(path),
+            f"PG:{dsn}",
+            "-sql",
+            f'SELECT {select}, geom FROM "{table}" WHERE geom IS NOT NULL',
+            "-lco",
+            "RS=NO",
+        ],
+        check=True,
+        capture_output=True,
     )
 
 
@@ -73,20 +84,30 @@ def bake(path_in: Path, path_out: Path, layer_name: str) -> None:
     or producing a tile no browser will accept.
     """
     subprocess.run(
-        ["tippecanoe", "-o", str(path_out), "-f",
-         "-l", layer_name,
-         "-Z", str(MIN_ZOOM), "-z", str(MAX_ZOOM),
-         # Drop the smallest features first, which is what the on-demand path
-         # does: a shape under a pixel across costs bytes and draws nothing.
-         # The default (--drop-densest-as-needed) thins uniformly and only once a
-         # tile is already oversized, which produced tiles three times heavier
-         # than the ones it was replacing.
-         "--drop-smallest-as-needed",
-         "--extend-zooms-if-still-dropping",
-         "--simplification=10",
-         f"--maximum-tile-bytes={MAX_TILE_BYTES}",
-         str(path_in)],
-        check=True, capture_output=True,
+        [
+            "tippecanoe",
+            "-o",
+            str(path_out),
+            "-f",
+            "-l",
+            layer_name,
+            "-Z",
+            str(MIN_ZOOM),
+            "-z",
+            str(MAX_ZOOM),
+            # Drop the smallest features first, which is what the on-demand path
+            # does: a shape under a pixel across costs bytes and draws nothing.
+            # The default (--drop-densest-as-needed) thins uniformly and only once a
+            # tile is already oversized, which produced tiles three times heavier
+            # than the ones it was replacing.
+            "--drop-smallest-as-needed",
+            "--extend-zooms-if-still-dropping",
+            "--simplification=10",
+            f"--maximum-tile-bytes={MAX_TILE_BYTES}",
+            str(path_in),
+        ],
+        check=True,
+        capture_output=True,
     )
 
 
@@ -115,7 +136,7 @@ def main() -> None:
         raise SystemExit("pass --layer or --all")
 
     for table in tables:
-        lid, geom, cols = layer_meta(cur, table)
+        lid, _geom, cols = layer_meta(cur, table)
         gj = OUT / f"{table}.geojsonl"
         pm = OUT / f"{table}.pmtiles"
         t0 = time.time()
@@ -124,8 +145,9 @@ def main() -> None:
         print(f"       exported {gj.stat().st_size / 1e6:.1f} MB  ({time.time() - t0:.0f}s)")
         bake(gj, pm, lid)
         gj.unlink()
-        print(f"       -> {pm.name}  {pm.stat().st_size / 1e6:.1f} MB  "
-              f"total {time.time() - t0:.0f}s")
+        print(
+            f"       -> {pm.name}  {pm.stat().st_size / 1e6:.1f} MB  total {time.time() - t0:.0f}s"
+        )
 
 
 if __name__ == "__main__":

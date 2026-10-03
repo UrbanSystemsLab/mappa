@@ -26,7 +26,8 @@ from psycopg2.extras import execute_batch
 
 INVENTORY_NAME = "La Maraña — Inventario_Territorial_Docs_GIS"
 
-DDL = """
+DDL = (
+    """
 -- Their document inventory, verbatim. Our loaded copies reference this.
 CREATE TABLE IF NOT EXISTS document_registry (
     doc_id            text PRIMARY KEY,          -- their ID_DOC, e.g. DOC-033
@@ -51,7 +52,9 @@ CREATE TABLE IF NOT EXISTS document_registry (
     related_layer     text,                      -- Capa asociada — links a doc to a map layer
     status            text,                      -- Estado: Validado / ...
     comments          text,
-    source_inventory  text NOT NULL DEFAULT '""" + INVENTORY_NAME + """',
+    source_inventory  text NOT NULL DEFAULT '"""
+    + INVENTORY_NAME
+    + """',
     -- how far this document has got in our pipeline
     load_state        text NOT NULL DEFAULT 'not_attempted',
     load_note         text,
@@ -89,13 +92,16 @@ CREATE TABLE IF NOT EXISTS layer_inventory (
     quality_level     text,                      -- Nivel de calidad
     priority          text,                      -- Prioridad
     status            text,
-    source_inventory  text NOT NULL DEFAULT '""" + INVENTORY_NAME + """',
+    source_inventory  text NOT NULL DEFAULT '"""
+    + INVENTORY_NAME
+    + """',
     served_layer_id   text,                      -- FK-ish to layer_registry.id when loaded
     updated_at        timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_layinv_category ON layer_inventory (category);
 CREATE INDEX IF NOT EXISTS idx_layinv_served   ON layer_inventory (served_layer_id);
 """
+)
 
 
 def cell(v):
@@ -119,7 +125,7 @@ def rows_of(wb, sheet):
     for r in it:
         if not any(c not in (None, "") for c in r):
             continue
-        yield dict(zip(hdr, r))
+        yield dict(zip(hdr, r, strict=False))
 
 
 def main() -> None:
@@ -142,17 +148,35 @@ def main() -> None:
         did = cell(r.get("ID_DOC"))
         if not did:
             continue
-        docs.append((
-            did, cell(r.get("Título")) or did, as_int(r.get("Año")), cell(r.get("Autor")),
-            cell(r.get("Tipo de documento")), cell(r.get("Jurisdicción")), cell(r.get("Región")),
-            cell(r.get("Municipio")), cell(r.get("Comunidad")), cell(r.get("Categoría")),
-            cell(r.get("Subcategoría")), cell(r.get("Enlace")), cell(r.get("Ubicación del archivo")),
-            cell(r.get("Formato")), cell(r.get("Disponible")), cell(r.get("Accesibilidad")),
-            cell(r.get("Actualización")), cell(r.get("Brecha identificada")),
-            cell(r.get("Acción requerida")), cell(r.get("Capa asociada")),
-            cell(r.get("Estado")), cell(r.get("Comentarios")),
-        ))
-    execute_batch(cur, """
+        docs.append(
+            (
+                did,
+                cell(r.get("Título")) or did,
+                as_int(r.get("Año")),
+                cell(r.get("Autor")),
+                cell(r.get("Tipo de documento")),
+                cell(r.get("Jurisdicción")),
+                cell(r.get("Región")),
+                cell(r.get("Municipio")),
+                cell(r.get("Comunidad")),
+                cell(r.get("Categoría")),
+                cell(r.get("Subcategoría")),
+                cell(r.get("Enlace")),
+                cell(r.get("Ubicación del archivo")),
+                cell(r.get("Formato")),
+                cell(r.get("Disponible")),
+                cell(r.get("Accesibilidad")),
+                cell(r.get("Actualización")),
+                cell(r.get("Brecha identificada")),
+                cell(r.get("Acción requerida")),
+                cell(r.get("Capa asociada")),
+                cell(r.get("Estado")),
+                cell(r.get("Comentarios")),
+            )
+        )
+    execute_batch(
+        cur,
+        """
         INSERT INTO document_registry (doc_id,title,year,author,doc_type,jurisdiction,region,
             municipio,community,category,subcategory,source_link,file_location,file_format,
             available,accessibility,currency,identified_gap,action_required,related_layer,
@@ -164,7 +188,10 @@ def main() -> None:
             subcategory=EXCLUDED.subcategory, source_link=EXCLUDED.source_link,
             currency=EXCLUDED.currency, related_layer=EXCLUDED.related_layer,
             status=EXCLUDED.status, updated_at=now()
-    """, docs, page_size=100)
+    """,
+        docs,
+        page_size=100,
+    )
     print(f"[inventory] documents: {len(docs)}")
 
     # ---- layers: Capas_GIS, enriched with the name-mapping sheet ----
@@ -174,7 +201,8 @@ def main() -> None:
         if gdb:
             names[gdb.lower()] = {
                 "platform": cell(r.get("Nombre Plataforma")),
-                "original": cell(r.get("Nombre de capa orginal ")) or cell(r.get("Nombre de capa orginal")),
+                "original": cell(r.get("Nombre de capa orginal "))
+                or cell(r.get("Nombre de capa orginal")),
                 "dataset": cell(r.get("Feature Dataset")),
                 "crs": cell(r.get("Coordenada ")) or cell(r.get("Coordenada")),
             }
@@ -188,19 +216,36 @@ def main() -> None:
                 continue
             seen.add(gid)
             nm = names.get(lname.lower(), {})
-            layers.append((
-                gid, lname, nm.get("platform"), lname if nm else None, nm.get("original"),
-                nm.get("dataset"), cell(r.get("Tipo de geometría")), cell(r.get("Categoría")),
-                cell(r.get("Subcategoría")), cell(r.get("File format")) or cell(r.get("Formato")),
-                cell(r.get("Description")), cell(r.get("Data source")) or cell(r.get("Fuente")),
-                cell(r.get("Publication date")), cell(r.get("Revision date")),
-                cell(r.get("Geographic coverage")) or cell(r.get("Cobertura")),
-                cell(r.get("CRS")) or nm.get("crs") or cell(r.get("Proyección")),
-                cell(r.get("Attribute definitions")), cell(r.get("Usage restrictions/license")),
-                cell(r.get("Documento relacionado")), cell(r.get("Brecha identificada")),
-                cell(r.get("Nivel de calidad")), cell(r.get("Prioridad")), cell(r.get("Estado")),
-            ))
-    execute_batch(cur, """
+            layers.append(
+                (
+                    gid,
+                    lname,
+                    nm.get("platform"),
+                    lname if nm else None,
+                    nm.get("original"),
+                    nm.get("dataset"),
+                    cell(r.get("Tipo de geometría")),
+                    cell(r.get("Categoría")),
+                    cell(r.get("Subcategoría")),
+                    cell(r.get("File format")) or cell(r.get("Formato")),
+                    cell(r.get("Description")),
+                    cell(r.get("Data source")) or cell(r.get("Fuente")),
+                    cell(r.get("Publication date")),
+                    cell(r.get("Revision date")),
+                    cell(r.get("Geographic coverage")) or cell(r.get("Cobertura")),
+                    cell(r.get("CRS")) or nm.get("crs") or cell(r.get("Proyección")),
+                    cell(r.get("Attribute definitions")),
+                    cell(r.get("Usage restrictions/license")),
+                    cell(r.get("Documento relacionado")),
+                    cell(r.get("Brecha identificada")),
+                    cell(r.get("Nivel de calidad")),
+                    cell(r.get("Prioridad")),
+                    cell(r.get("Estado")),
+                )
+            )
+    execute_batch(
+        cur,
+        """
         INSERT INTO layer_inventory (gis_id,layer_name,platform_name,gdb_name,original_name,
             feature_dataset,geometry_type,category,subcategory,file_format,description,
             data_source,publication_date,revision_date,coverage,crs,attribute_defs,
@@ -210,7 +255,10 @@ def main() -> None:
             layer_name=EXCLUDED.layer_name, platform_name=EXCLUDED.platform_name,
             category=EXCLUDED.category, data_source=EXCLUDED.data_source,
             crs=EXCLUDED.crs, priority=EXCLUDED.priority, updated_at=now()
-    """, layers, page_size=100)
+    """,
+        layers,
+        page_size=100,
+    )
     print(f"[inventory] layers: {len(layers)}")
 
     # ---- mark what we have actually loaded ----

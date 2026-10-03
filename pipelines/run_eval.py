@@ -28,7 +28,9 @@ from api.retrieval import retrieve_with_scores
 
 
 def load_eval(path: Path) -> list[dict[str, Any]]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
 
 
 def evaluate(eval_items: list[dict[str, Any]], k: int) -> dict[str, Any]:
@@ -50,13 +52,15 @@ def evaluate(eval_items: list[dict[str, Any]], k: int) -> dict[str, Any]:
         recall_hits += int(hit)
         reciprocal_ranks += (1.0 / first_hit_rank) if first_hit_rank else 0.0
 
-        per_item.append({
-            "id": item["id"],
-            "question": item["question_es"],
-            "expected": sorted(expected),
-            "retrieved": retrieved_ids,
-            "hit_rank": first_hit_rank,
-        })
+        per_item.append(
+            {
+                "id": item["id"],
+                "question": item["question_es"],
+                "expected": sorted(expected),
+                "retrieved": retrieved_ids,
+                "hit_rank": first_hit_rank,
+            }
+        )
 
     n = len(eval_items) or 1
     return {
@@ -72,11 +76,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate Mappa retrieval against the eval set.")
     parser.add_argument("--eval", type=Path, default=Path("data/eval_set.jsonl"))
     parser.add_argument("--k", type=int, default=5)
-    parser.add_argument("--show-misses", action="store_true", help="Print questions with no expected doc in top-k.")
+    parser.add_argument(
+        "--show-misses", action="store_true", help="Print questions with no expected doc in top-k."
+    )
     args = parser.parse_args()
 
     if not args.eval.exists():
-        raise SystemExit(f"eval set not found: {args.eval} (build it with pipelines.build_eval_set)")
+        raise SystemExit(
+            f"eval set not found: {args.eval} (build it with pipelines.build_eval_set)"
+        )
 
     eval_items = load_eval(args.eval)
     if not eval_items:

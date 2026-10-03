@@ -35,8 +35,10 @@ def _get_pool():
     if _POOL is None:
         from psycopg2.pool import ThreadedConnectionPool
 
-        opts = (f"-c statement_timeout={STATEMENT_TIMEOUT_MS} "
-                f"-c idle_in_transaction_session_timeout={IDLE_TX_TIMEOUT_MS}")
+        opts = (
+            f"-c statement_timeout={STATEMENT_TIMEOUT_MS} "
+            f"-c idle_in_transaction_session_timeout={IDLE_TX_TIMEOUT_MS}"
+        )
         _POOL = ThreadedConnectionPool(POOL_MIN, POOL_MAX, DB_URL, options=opts)
     return _POOL
 
@@ -56,8 +58,8 @@ def _alive(conn) -> bool:
 class connection:
     """Context manager yielding a pooled connection, returned to the pool on exit.
 
-        with db.connection() as conn:
-            cur = conn.cursor()
+    with db.connection() as conn:
+        cur = conn.cursor()
     """
 
     def __enter__(self):

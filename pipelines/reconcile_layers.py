@@ -68,25 +68,37 @@ def main() -> None:
             superseded.append((table, twin))
             continue
         # Nothing replaced it, so it would simply vanish from the catalog.
-        cur.execute(f'SELECT count(*), GeometryType(geom) FROM "{table}" '
-                    f'WHERE geom IS NOT NULL GROUP BY 2 ORDER BY 1 DESC LIMIT 1')
+        cur.execute(
+            f'SELECT count(*), GeometryType(geom) FROM "{table}" '
+            f"WHERE geom IS NOT NULL GROUP BY 2 ORDER BY 1 DESC LIMIT 1"
+        )
         row = cur.fetchone()
         count, gtype = (row[0], row[1]) if row else (0, None)
         rid = key(table)[:60]
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO layer_registry (id, table_name, name_es, category, geometry_type,
                                         feature_count, source_inventory, metadata_status,
                                         status, keywords)
             VALUES (%s,%s,%s,'Otras capas',%s,%s,%s,'unknown','loaded',%s)
             ON CONFLICT (id) DO UPDATE SET table_name=EXCLUDED.table_name,
                 status='loaded', feature_count=EXCLUDED.feature_count
-        """, (rid, table, table.replace("layer_", "").replace("_", " "),
-              gtype, count, SOURCE,
-              sorted({w for w in re.split(r"[^a-z0-9]+", key(table)) if len(w) > 2})))
+        """,
+            (
+                rid,
+                table,
+                table.replace("layer_", "").replace("_", " "),
+                gtype,
+                count,
+                SOURCE,
+                sorted({w for w in re.split(r"[^a-z0-9]+", key(table)) if len(w) > 2}),
+            ),
+        )
         recovered.append((table, count))
 
     # An alias is only useful if its table is still registered.
     from api.spatial_ops import LAYERS
+
     broken = []
     for concept, spec in LAYERS.items():
         if spec["table"] in registered:

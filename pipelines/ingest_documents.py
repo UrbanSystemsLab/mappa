@@ -18,9 +18,9 @@ import argparse
 import json
 import os
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 import numpy as np
 import psycopg2
@@ -75,7 +75,9 @@ def _rough_tokens(text: str) -> int:
     return max(1, len(text) // 4)
 
 
-def chunk_text(text: str, target: int = CHUNK_TOKENS_TARGET, overlap: int = CHUNK_OVERLAP_TOKENS) -> list[str]:
+def chunk_text(
+    text: str, target: int = CHUNK_TOKENS_TARGET, overlap: int = CHUNK_OVERLAP_TOKENS
+) -> list[str]:
     """Split text into ~target-token chunks with sentence-aware boundaries and small overlap."""
     sentences = _split_sentences(text)
     chunks: list[str] = []
@@ -170,7 +172,9 @@ def upsert_documents(conn, documents: list[dict]) -> dict[str, int]:
     return id_map
 
 
-def replace_chunks(conn, id_map: dict[str, int], chunks: list[Chunk], embeddings: np.ndarray) -> int:
+def replace_chunks(
+    conn, id_map: dict[str, int], chunks: list[Chunk], embeddings: np.ndarray
+) -> int:
     """Replace chunks for the given documents in one transaction."""
     if not chunks:
         return 0
@@ -205,8 +209,14 @@ def _vector_literal(vec: np.ndarray) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest documents into Mappa database.")
-    parser.add_argument("--source", type=Path, default=DOCUMENTS_JSON, help="Path to documents.json")
-    parser.add_argument("--commit", action="store_true", help="Actually write to the database (requires DATABASE_URL).")
+    parser.add_argument(
+        "--source", type=Path, default=DOCUMENTS_JSON, help="Path to documents.json"
+    )
+    parser.add_argument(
+        "--commit",
+        action="store_true",
+        help="Actually write to the database (requires DATABASE_URL).",
+    )
     parser.add_argument("--model", default=os.environ.get("EMBED_MODEL", DEFAULT_MODEL))
     args = parser.parse_args()
 

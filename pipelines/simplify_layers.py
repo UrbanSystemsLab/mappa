@@ -31,10 +31,10 @@ import psycopg2
 # city block. geom_simple is read at mid zooms; geom_coarse at zoomed-out views
 # where a screen pixel covers hundreds of metres. This is a small tile pyramid -
 # the same thing a pre-rendered tile build would produce per zoom level.
-TOLERANCE_DEG = 0.0003     # ~30m  — zooms 10-13
-COARSE_DEG    = 0.0035     # ~350m — zooms below 10
+TOLERANCE_DEG = 0.0003  # ~30m  — zooms 10-13
+COARSE_DEG = 0.0035  # ~350m — zooms below 10
 MIN_VERTICES = 200_000
-BATCH = 200          # rows per transaction; single polygons can be huge
+BATCH = 200  # rows per transaction; single polygons can be huge
 
 
 def connect():
@@ -62,10 +62,10 @@ def simplify_layer(conn, lid: str, table: str, tol: float) -> None:
             # introduce; one invalid geometry fails ST_AsMVTGeom for the whole tile.
             cur.execute(
                 f'UPDATE "{table}" SET '
-                f'  geom_simple = ST_MakeValid(ST_SimplifyPreserveTopology(geom, %s)), '
-                f'  geom_coarse = ST_MakeValid(ST_SimplifyPreserveTopology(geom, %s)) '
+                f"  geom_simple = ST_MakeValid(ST_SimplifyPreserveTopology(geom, %s)), "
+                f"  geom_coarse = ST_MakeValid(ST_SimplifyPreserveTopology(geom, %s)) "
                 f'WHERE id IN (SELECT id FROM "{table}" '
-                f'             WHERE geom IS NOT NULL AND geom_simple IS NULL LIMIT %s)',
+                f"             WHERE geom IS NOT NULL AND geom_simple IS NULL LIMIT %s)",
                 (tol, COARSE_DEG, BATCH),
             )
             n = cur.rowcount
@@ -81,16 +81,22 @@ def simplify_layer(conn, lid: str, table: str, tol: float) -> None:
         print(f"       {done:,}/{todo:,}  ({time.time() - t0:5.0f}s)", flush=True)
 
     cur = conn.cursor()
-    cur.execute(f'CREATE INDEX IF NOT EXISTS idx_{table}_geom_simple ON "{table}" USING gist (geom_simple)')
-    cur.execute(f'SELECT coalesce(sum(ST_NPoints(geom)),0), coalesce(sum(ST_NPoints(geom_simple)),0), '
-                f'       coalesce(sum(ST_NPoints(geom_coarse)),0) FROM "{table}"')
+    cur.execute(
+        f'CREATE INDEX IF NOT EXISTS idx_{table}_geom_simple ON "{table}" USING gist (geom_simple)'
+    )
+    cur.execute(
+        f"SELECT coalesce(sum(ST_NPoints(geom)),0), coalesce(sum(ST_NPoints(geom_simple)),0), "
+        f'       coalesce(sum(ST_NPoints(geom_coarse)),0) FROM "{table}"'
+    )
     before, after, coarse = cur.fetchone()
     cur.execute("UPDATE layer_registry SET simplified = true WHERE id = %s", (lid,))
     conn.commit()
     pct = (1 - after / before) * 100 if before else 0
     pctc = (1 - coarse / before) * 100 if before else 0
-    print(f"[done] {lid:22} {before:,} -> simple {after:,} ({pct:.1f}%) "
-          f"-> coarse {coarse:,} ({pctc:.1f}%)")
+    print(
+        f"[done] {lid:22} {before:,} -> simple {after:,} ({pct:.1f}%) "
+        f"-> coarse {coarse:,} ({pctc:.1f}%)"
+    )
 
 
 def main() -> None:
@@ -104,7 +110,9 @@ def main() -> None:
     conn = connect()
     conn.autocommit = False
     cur = conn.cursor()
-    cur.execute("ALTER TABLE layer_registry ADD COLUMN IF NOT EXISTS simplified boolean NOT NULL DEFAULT false")
+    cur.execute(
+        "ALTER TABLE layer_registry ADD COLUMN IF NOT EXISTS simplified boolean NOT NULL DEFAULT false"
+    )
     conn.commit()
 
     if args.layer:
@@ -112,10 +120,12 @@ def main() -> None:
     else:
         # Only layers whose data is actually loaded. A catalogued layer has no
         # table, and building a query around a NULL table name fails the run.
-        cur.execute("SELECT id, table_name FROM layer_registry "
-                    "WHERE status = 'published' AND table_name IS NOT NULL "
-                    "  AND (geometry_type ILIKE '%%polygon%%' OR geometry_type ILIKE '%%line%%') "
-                    "ORDER BY id")
+        cur.execute(
+            "SELECT id, table_name FROM layer_registry "
+            "WHERE status = 'published' AND table_name IS NOT NULL "
+            "  AND (geometry_type ILIKE '%%polygon%%' OR geometry_type ILIKE '%%line%%') "
+            "ORDER BY id"
+        )
     for lid, table in cur.fetchall():
         c2 = conn.cursor()
         c2.execute(f'SELECT coalesce(sum(ST_NPoints(geom)),0) FROM "{table}"')

@@ -30,10 +30,21 @@ _BARE_URL = re.compile(r"\(?\b(?:https?://|www\.)\S+\)?")
 
 # Phrases the model uses when the sources don't answer the question (both languages).
 _DECLINE_MARKERS = (
-    "not enough information", "isn't enough information", "is not enough information",
-    "there is not enough", "do not contain", "does not contain", "couldn't find",
-    "could not find", "no hay información suficiente", "no hay suficiente información",
-    "no cuento con", "no encontré", "no se encontró", "no contienen", "no contiene",
+    "not enough information",
+    "isn't enough information",
+    "is not enough information",
+    "there is not enough",
+    "do not contain",
+    "does not contain",
+    "couldn't find",
+    "could not find",
+    "no hay información suficiente",
+    "no hay suficiente información",
+    "no cuento con",
+    "no encontré",
+    "no se encontró",
+    "no contienen",
+    "no contiene",
     "información suficiente en los documentos",
 )
 
@@ -46,14 +57,14 @@ def _is_decline(text: str) -> bool:
 
 from .retrieval import citation_id
 
-
 # The model cites the map-facts block the way it cites a document. It appears
 # alone - "[MAP FACTS]" - and also mixed into a citation list - "[1, MAP FACTS]" -
 # which the first version of this missed, so readers saw it in the answer.
 _MAP_LABEL = r"(?:MAP FACTS?|DATOS? DEL MAPA|Dato del mapa|Map data|Datos del mapa)"
 _MAP_MARKER_ALONE = re.compile(rf"\s*[\[(]\s*{_MAP_LABEL}\s*[\])]", re.I)
-_MAP_MARKER_IN_LIST = re.compile(rf"(?<=[\[(])([^\[\]()]*?){_MAP_LABEL}([^\[\]()]*?)(?=[\])])",
-                                 re.I)
+_MAP_MARKER_IN_LIST = re.compile(
+    rf"(?<=[\[(])([^\[\]()]*?){_MAP_LABEL}([^\[\]()]*?)(?=[\])])", re.I
+)
 
 
 def _strip_map_markers(text: str) -> str:
@@ -65,9 +76,9 @@ def _strip_map_markers(text: str) -> str:
     text = _MAP_MARKER_ALONE.sub("", text)
 
     def tidy(m: re.Match) -> str:
-        rest = (m.group(1) + m.group(2))
-        rest = re.sub(r"\s*,\s*,\s*", ", ", rest)          # gap left in the middle
-        return re.sub(r"^[\s,]+|[\s,]+$", "", rest)         # or at either end
+        rest = m.group(1) + m.group(2)
+        rest = re.sub(r"\s*,\s*,\s*", ", ", rest)  # gap left in the middle
+        return re.sub(r"^[\s,]+|[\s,]+$", "", rest)  # or at either end
 
     return _MAP_MARKER_IN_LIST.sub(tidy, text)
 
@@ -80,6 +91,7 @@ def _strip_urls(text: str) -> str:
     text = _BARE_URL.sub("", text)
     text = re.sub(r"(?m)^\s*[\*\-]\s+", "• ", text)  # normalize markdown bullets to •
     return re.sub(r"[ \t]{2,}", " ", text).strip()
+
 
 # Provider: "gemini" (Vertex AI — GCP-native, no key, auth via the service
 # account), "ollama" (a local model), or "openai" (any OpenAI-compatible API).
@@ -169,20 +181,24 @@ def is_available() -> bool:
 
 def _chat_gemini(messages: list[dict[str, str]]) -> str:
     """Vertex AI Gemini via the google-genai SDK. Auth via the service account (ADC)."""
-    from google import genai
     from google.genai import types
 
     client = _gemini_client()
     system = next((m["content"] for m in messages if m["role"] == "system"), None)
     contents = [
-        types.Content(role=("model" if m["role"] == "assistant" else "user"),
-                      parts=[types.Part.from_text(text=m["content"])])
-        for m in messages if m["role"] != "system"
+        types.Content(
+            role=("model" if m["role"] == "assistant" else "user"),
+            parts=[types.Part.from_text(text=m["content"])],
+        )
+        for m in messages
+        if m["role"] != "system"
     ]
     resp = client.models.generate_content(
         model=LLM_MODEL,
         contents=contents,
-        config=types.GenerateContentConfig(system_instruction=system, temperature=0.2, max_output_tokens=900),
+        config=types.GenerateContentConfig(
+            system_instruction=system, temperature=0.2, max_output_tokens=900
+        ),
     )
     return (resp.text or "").strip()
 
@@ -198,15 +214,19 @@ def _chat_gemini_stream(messages: list[dict[str, str]]):
     client = _gemini_client()
     system = next((m["content"] for m in messages if m["role"] == "system"), None)
     contents = [
-        types.Content(role=("model" if m["role"] == "assistant" else "user"),
-                      parts=[types.Part.from_text(text=m["content"])])
-        for m in messages if m["role"] != "system"
+        types.Content(
+            role=("model" if m["role"] == "assistant" else "user"),
+            parts=[types.Part.from_text(text=m["content"])],
+        )
+        for m in messages
+        if m["role"] != "system"
     ]
     for chunk in client.models.generate_content_stream(
         model=LLM_MODEL,
         contents=contents,
-        config=types.GenerateContentConfig(system_instruction=system, temperature=0.2,
-                                           max_output_tokens=900),
+        config=types.GenerateContentConfig(
+            system_instruction=system, temperature=0.2, max_output_tokens=900
+        ),
     ):
         if chunk.text:
             yield chunk.text
@@ -241,7 +261,12 @@ def _chat(messages: list[dict[str, str]]) -> str:
     # default: local Ollama
     resp = _post_json(
         f"{OLLAMA_URL}/api/chat",
-        {"model": LLM_MODEL, "messages": messages, "stream": False, "options": {"temperature": 0.2}},
+        {
+            "model": LLM_MODEL,
+            "messages": messages,
+            "stream": False,
+            "options": {"temperature": 0.2},
+        },
         {"Content-Type": "application/json"},
     )
     return (resp.get("message", {}).get("content") or "").strip()
@@ -276,50 +301,58 @@ def _spatial_block(spatial: dict[str, Any], lang: str) -> str:
         lines.append(f"- {_HAZARD_LABELS.get(key, key)}: {yes if val else no}")
     for label, count in (spatial.get("facilities") or {}).items():
         lines.append(f"- {label}: {count}")
-    for line in (spatial.get("analysis") or []):
+    for line in spatial.get("analysis") or []:
         lines.append(f"- {line}")
     shown = spatial.get("active_layers") or []
     if shown:
-        head_l = ("Capas visibles ahora en el mapa" if lang == "es"
-                  else "Layers the user currently has on the map")
+        head_l = (
+            "Capas visibles ahora en el mapa"
+            if lang == "es"
+            else "Layers the user currently has on the map"
+        )
         names = ", ".join(
-            f"{l.get('name')}" + (f" ({l.get('year')})" if l.get("year") else "")
-            for l in shown if l.get("name"))
+            f"{lay.get('name')}" + (f" ({lay.get('year')})" if lay.get("year") else "")
+            for lay in shown
+            if lay.get("name")
+        )
         lines.append(f"- {head_l}: {names}")
     # A figure was asked for and the layers could not produce one. Saying nothing
     # here is what let a number be lifted out of the retrieved text - a table
     # headed "10 pies" once became "10 schools".
     if spatial.get("no_figure"):
-        warn = ("NO HAY CIFRA CALCULABLE: las capas cargadas no permiten contar ni medir "
-                "lo que pide esta pregunta. No des ningún número. Di que los datos "
-                "disponibles no permiten calcularlo y explica qué haría falta."
-                if lang == "es" else
-                "NO FIGURE CAN BE COMPUTED: the loaded layers cannot count or measure what "
-                "this question asks. Do not give any number. Say the available data cannot "
-                "answer it and explain what would be needed.")
+        warn = (
+            "NO HAY CIFRA CALCULABLE: las capas cargadas no permiten contar ni medir "
+            "lo que pide esta pregunta. No des ningún número. Di que los datos "
+            "disponibles no permiten calcularlo y explica qué haría falta."
+            if lang == "es"
+            else "NO FIGURE CAN BE COMPUTED: the loaded layers cannot count or measure what "
+            "this question asks. Do not give any number. Say the available data cannot "
+            "answer it and explain what would be needed."
+        )
         return warn + "\n\n" + (("\n".join(lines) + "\n\n") if lines else "")
     if not lines:
         return ""
     # Naming which features made up a count is the tempting next sentence, and the
     # model does not have them: told "3 of 7 schools", it named the one school it
     # claimed was outside the flood zone. Four were.
-    head = ("DATOS DEL MAPA (calculados sobre las capas oficiales; son las únicas cifras "
-            "que puedes dar, cítalas con su año). Repórtalas tal cual: no nombres "
-            "instalaciones concretas ni deduzcas cuáles son, porque no se te han dado."
-            if lang == "es"
-            else "MAP FACTS (computed against the official layers; these are the only "
-            "figures you may state, cite them with their year). Report them as given: "
-            "do not name individual facilities or infer which ones they are - you have "
-            "not been told.")
+    head = (
+        "DATOS DEL MAPA (calculados sobre las capas oficiales; son las únicas cifras "
+        "que puedes dar, cítalas con su año). Repórtalas tal cual: no nombres "
+        "instalaciones concretas ni deduzcas cuáles son, porque no se te han dado."
+        if lang == "es"
+        else "MAP FACTS (computed against the official layers; these are the only "
+        "figures you may state, cite them with their year). Report them as given: "
+        "do not name individual facilities or infer which ones they are - you have "
+        "not been told."
+    )
     return head + "\n" + "\n".join(lines) + "\n\n"
-
 
 
 def build_messages(question, docs, layers=None, history=None, spatial=None, lang=None):
     """Assemble the prompt. Shared so the streaming and non-streaming paths cannot
     drift apart - the grounding rules live here, and an answer written under
     different rules would be a different product."""
-    lang = (lang or RESPONSE_LANG)
+    lang = lang or RESPONSE_LANG
     lang = lang if lang in SYSTEM_PROMPTS else "en"
     loc = _spatial_block(spatial, lang) if spatial else ""
     user = (
@@ -351,7 +384,6 @@ def finish(answer: str, docs, layers, lang: str) -> dict:
     return _assemble(answer, docs, layers, lang)
 
 
-
 def _assemble(answer: str, docs, layers, lang: str) -> dict[str, Any]:
     """Citations and confidence for a finished answer. Shared by the streaming
     and non-streaming paths so they cannot disagree about what backed an answer."""
@@ -378,9 +410,14 @@ def _assemble(answer: str, docs, layers, lang: str) -> dict[str, Any]:
             # a link for meant the answer pointed at a government site. Every
             # answer now cites their document by the ID on their own inventory,
             # which is the thing they can look up and verify.
-            citations.append({"id": d["id"], "title": d["title"],
-                              "year": d.get("year"),
-                              "doc_id": citation_id(d["id"])})
+            citations.append(
+                {
+                    "id": d["id"],
+                    "title": d["title"],
+                    "year": d.get("year"),
+                    "doc_id": citation_id(d["id"]),
+                }
+            )
     if declined:
         confidence = "baja" if lang == "es" else "low"
     elif lang == "es":

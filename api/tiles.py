@@ -48,7 +48,7 @@ TILE_TIMEOUT_LOWZOOM_MS = int(os.environ.get("TILE_TIMEOUT_LOWZOOM_MS", "45000")
 # low-zoom tiles are both the most expensive to build and the most requested, so
 # caching them turns a repeated multi-second query into a dictionary lookup. A CDN
 # does this properly in front; this keeps a single instance sane without one.
-_CACHE: "OrderedDict[str, bytes]" = OrderedDict()
+_CACHE: OrderedDict[str, bytes] = OrderedDict()
 _CACHE_MAX = int(os.environ.get("TILE_CACHE_ENTRIES", "600"))
 _CACHE_LOCK = threading.Lock()
 
@@ -68,12 +68,13 @@ def tile_bounds_4326(z: int, x: int, y: int) -> tuple[float, float, float, float
     to a full scan, reprojecting every row. Passing plain numbers into
     ST_MakeEnvelope keeps the bbox test index-backed.
     """
-    n = 2.0 ** z
+    n = 2.0**z
     lon1 = x / n * 360.0 - 180.0
     lon2 = (x + 1) / n * 360.0 - 180.0
     lat1 = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / n))))
     lat2 = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (y + 1) / n))))
     return lon1, min(lat1, lat2), lon2, max(lat1, lat2)
+
 
 # MVT extent in tile-local units. 4096 is the de-facto standard (Mapbox/MapLibre).
 _EXTENT = 4096
@@ -116,8 +117,13 @@ def layer_meta(name: str) -> dict[str, Any] | None:
         row = cur.fetchone()
     if row is None:
         return None
-    meta = {"layer_name": row[0], "geometry_type": row[1], "feature_count": row[2],
-            "tile_properties": list(row[3] or []), "simplified": bool(row[4])}
+    meta = {
+        "layer_name": row[0],
+        "geometry_type": row[1],
+        "feature_count": row[2],
+        "tile_properties": list(row[3] or []),
+        "simplified": bool(row[4]),
+    }
     _LAYER_META[name] = meta
     return meta
 
@@ -131,14 +137,14 @@ def tile(name: str, z: int, x: int, y: int) -> bytes | None:
     meta = layer_meta(name)
     if meta is None:
         return None
-    if not (0 <= z <= 22) or not (0 <= x < 2 ** z) or not (0 <= y < 2 ** z):
+    if not (0 <= z <= 22) or not (0 <= x < 2**z) or not (0 <= y < 2**z):
         return None
 
     # Attributes to carry into the tile, from layer_registry. Every property is
     # repeated per feature per tile, so the registry keeps this list deliberately
     # short rather than shipping the whole row.
     props = [c for c in (meta.get("tile_properties") or []) if _SAFE_COL.match(c)]
-    select_extra = ("， " if False else ", ") + ", ".join(f'l."{c}"' for c in props) if props else ""
+    select_extra = ", " + ", ".join(f'l."{c}"' for c in props) if props else ""
 
     w, s, e, n = tile_bounds_4326(z, x, y)
 

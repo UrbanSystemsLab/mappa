@@ -48,15 +48,28 @@ MIN_WORDS = 120
 def ocr_page_range(pdf: Path, first: int, last: int) -> str:
     with tempfile.TemporaryDirectory() as tmp:
         subprocess.run(
-            ["pdftoppm", "-r", str(DPI), "-f", str(first), "-l", str(last), "-png",
-             str(pdf), f"{tmp}/pg"],
-            check=True, capture_output=True,
+            [
+                "pdftoppm",
+                "-r",
+                str(DPI),
+                "-f",
+                str(first),
+                "-l",
+                str(last),
+                "-png",
+                str(pdf),
+                f"{tmp}/pg",
+            ],
+            check=True,
+            capture_output=True,
         )
         out = []
         for img in sorted(Path(tmp).glob("pg*.png")):
             res = subprocess.run(
                 ["tesseract", str(img), "stdout", "-l", "spa", "--psm", "1"],
-                check=True, capture_output=True, text=True,
+                check=True,
+                capture_output=True,
+                text=True,
             )
             out.append(res.stdout)
     return "\n".join(out)
@@ -66,6 +79,7 @@ def ocr_document(pdf: Path, chunk: int = 10) -> str:
     """OCR a whole document a few pages at a time, so memory stays flat and a
     large plan does not hold hundreds of rendered images at once."""
     import fitz
+
     doc = fitz.open(pdf)
     pages = doc.page_count
     doc.close()
@@ -105,6 +119,7 @@ def main() -> None:
     todo = []
     for pdf in scans:
         import fitz
+
         try:
             doc = fitz.open(pdf)
             has_text = any(len(pg.get_text("text").strip()) > 40 for pg in doc)
@@ -132,16 +147,17 @@ def main() -> None:
         done += 1
         if not prose:
             print(f"  image   {pdf.name[:44]:44} {why}")
-            cur.execute("""UPDATE document_registry SET load_note=%s
+            cur.execute(
+                """UPDATE document_registry SET load_note=%s
                            WHERE doc_id = %s""",
-                        (f"scanned; OCR found no prose ({why})", pdf.stem))
+                (f"scanned; OCR found no prose ({why})", pdf.stem),
+            )
             continue
         target.write_text(text, encoding="utf-8")
         ok += 1
         print(f"  read    {pdf.name[:44]:44} {len(text):>8,} chars  {why}")
 
-    print(f"\n[ocr] {ok} documents read, {done - ok} image-only, "
-          f"{skipped} already done -> {OUT}")
+    print(f"\n[ocr] {ok} documents read, {done - ok} image-only, {skipped} already done -> {OUT}")
 
 
 if __name__ == "__main__":

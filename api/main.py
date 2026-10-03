@@ -1,18 +1,15 @@
-from pathlib import Path
-
-from fastapi import FastAPI, HTTPException
 import hashlib
 import json
 import re
+from pathlib import Path
 
-from fastapi.responses import (FileResponse, JSONResponse, Response,
-                               StreamingResponse)
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import catalog, llm, spatial, spatial_ops, tiles
+from . import catalog, llm, spatial, tiles
 from .services import answering
-from .retrieval import compose_answer, detect_municipio, infer_layers, retrieve_with_scores
 
 # Minimum retrieval relevance (cosine similarity) to attempt an answer. Below this,
 # nothing in the corpus is genuinely relevant (gibberish / off-topic), so we decline
@@ -20,12 +17,16 @@ from .retrieval import compose_answer, detect_municipio, infer_layers, retrieve_
 MIN_RELEVANCE = 0.45
 
 NO_MATCH = {
-    "en": ("I couldn't find relevant information in the available documents for that "
-           "question. Try rephrasing it, or ask about land use, permits, flood or "
-           "landslide risk, or planning in Puerto Rico."),
-    "es": ("No encontré información relevante en los documentos disponibles para esa "
-           "pregunta. Intente reformularla o pregunte sobre uso de terrenos, permisos, "
-           "riesgo de inundación o deslizamiento, o planificación en Puerto Rico."),
+    "en": (
+        "I couldn't find relevant information in the available documents for that "
+        "question. Try rephrasing it, or ask about land use, permits, flood or "
+        "landslide risk, or planning in Puerto Rico."
+    ),
+    "es": (
+        "No encontré información relevante en los documentos disponibles para esa "
+        "pregunta. Intente reformularla o pregunte sobre uso de terrenos, permisos, "
+        "riesgo de inundación o deslizamiento, o planificación en Puerto Rico."
+    ),
 }
 
 DISCLAIMER_ES = (
@@ -118,16 +119,19 @@ def ask(req: AskRequest) -> AskResponse:
     evidence = answering.gather(ask_in, municipality)
 
     if not evidence.relevant:
-        return AskResponse(answer_es=NO_MATCH[lang], citations=[],
-                           suggested_layers=on_map.layers,
-                           confidence="baja" if lang == "es" else "low",
-                           disclaimer=disclaimer, municipio=municipality,
-                           focus=on_map.focus)
+        return AskResponse(
+            answer_es=NO_MATCH[lang],
+            citations=[],
+            suggested_layers=on_map.layers,
+            confidence="baja" if lang == "es" else "low",
+            disclaimer=disclaimer,
+            municipio=municipality,
+            focus=on_map.focus,
+        )
 
     result = answering.write(ask_in, evidence, on_map.layers)
     result["suggested_layers"] = on_map.layers
-    return AskResponse(disclaimer=disclaimer, municipio=municipality,
-                       focus=on_map.focus, **result)
+    return AskResponse(disclaimer=disclaimer, municipio=municipality, focus=on_map.focus, **result)
 
 
 @app.post("/ask/stream")
@@ -148,15 +152,20 @@ def ask_stream(req: AskRequest) -> StreamingResponse:
     def generate():
         municipality = answering.place_in_scope(ask_in)
         on_map = answering.map_answer(ask_in, municipality)
-        yield event("meta", {"municipio": on_map.municipality, "focus": on_map.focus,
-                             "suggested_layers": on_map.layers,
-                             "disclaimer": disclaimer})
+        yield event(
+            "meta",
+            {
+                "municipio": on_map.municipality,
+                "focus": on_map.focus,
+                "suggested_layers": on_map.layers,
+                "disclaimer": disclaimer,
+            },
+        )
 
         evidence = answering.gather(ask_in, municipality)
         if not evidence.relevant:
             yield event("delta", {"text": NO_MATCH[lang]})
-            yield event("done", {"citations": [],
-                                 "confidence": "baja" if lang == "es" else "low"})
+            yield event("done", {"citations": [], "confidence": "baja" if lang == "es" else "low"})
             return
 
         try:
@@ -173,13 +182,20 @@ def ask_stream(req: AskRequest) -> StreamingResponse:
         # stray URL, the model citing the computed-facts block as though it were
         # a document - stayed on screen. The finished text comes with the done
         # event and replaces what was streamed.
-        yield event("done", {"citations": result.get("citations", []),
-                             "confidence": result.get("confidence", ""),
-                             "answer": result.get("answer_es", "")})
+        yield event(
+            "done",
+            {
+                "citations": result.get("citations", []),
+                "confidence": result.get("confidence", ""),
+                "answer": result.get("answer_es", ""),
+            },
+        )
 
-    return StreamingResponse(generate(), media_type="text/event-stream",
-                             headers={"Cache-Control": "no-cache",
-                                      "X-Accel-Buffering": "no"})
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/layers")
@@ -191,8 +207,9 @@ def layers() -> JSONResponse:
 @app.get("/places")
 def places(q: str, limit: int = 8) -> JSONResponse:
     """Search municipios and barrios by name, for the map's location search."""
-    return JSONResponse(spatial.search_places(q, min(limit, 20)),
-                        headers={"Cache-Control": "public, max-age=600"})
+    return JSONResponse(
+        spatial.search_places(q, min(limit, 20)), headers={"Cache-Control": "public, max-age=600"}
+    )
 
 
 @app.get("/locate")
@@ -202,23 +219,36 @@ def locate(lng: float, lat: float) -> dict:
 
 
 @app.get("/catalog/layers")
-def catalog_layers(lang: str = "es", q: str | None = None, category: str | None = None,
-                   available_only: bool = False,
-                   limit: int = 100, offset: int = 0) -> JSONResponse:
+def catalog_layers(
+    lang: str = "es",
+    q: str | None = None,
+    category: str | None = None,
+    available_only: bool = False,
+    limit: int = 100,
+    offset: int = 0,
+) -> JSONResponse:
     """Search/filter the layer catalog. Replaces the hardcoded layer list that used
     to ship inside the frontend bundle."""
     limit = max(1, min(limit, 1000))
     return JSONResponse(
-        catalog.list_layers(lang=lang, q=q, category=category,
-                            available_only=available_only, limit=limit, offset=offset),
+        catalog.list_layers(
+            lang=lang,
+            q=q,
+            category=category,
+            available_only=available_only,
+            limit=limit,
+            offset=offset,
+        ),
         headers={"Cache-Control": "public, max-age=300"},
     )
 
 
 @app.get("/catalog/categories")
 def catalog_categories(lang: str = "es", available_only: bool = False) -> JSONResponse:
-    return JSONResponse(catalog.categories(lang, available_only=available_only),
-                        headers={"Cache-Control": "public, max-age=300"})
+    return JSONResponse(
+        catalog.categories(lang, available_only=available_only),
+        headers={"Cache-Control": "public, max-age=300"},
+    )
 
 
 @app.get("/catalog/layers/{layer_id}")
@@ -289,7 +319,7 @@ def index() -> Response:
         if not path.exists():
             continue
         digest = hashlib.sha1(path.read_bytes()).hexdigest()[:10]
-        html = re.sub(rf"/static/{re.escape(asset)}(\?v=[^\"\']*)?",
-                      f"/static/{asset}?v={digest}", html)
-    return Response(html, media_type="text/html",
-                    headers={"Cache-Control": "no-store"})
+        html = re.sub(
+            rf"/static/{re.escape(asset)}(\?v=[^\"\']*)?", f"/static/{asset}?v={digest}", html
+        )
+    return Response(html, media_type="text/html", headers={"Cache-Control": "no-store"})

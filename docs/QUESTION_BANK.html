@@ -1,0 +1,376 @@
+<title>Mappealo Scoping Questions</title>
+<style>
+  :root{
+    --bg:#F5F3EE; --card:#FFFFFF; --card-2:#ECE9E1; --ink:#16201C; --ink-2:#5C6862;
+    --line:#DBD5CA; --line-2:#EDEAE3;
+    --brand:#0B5D4B; --teal:#0D9488; --amber:#A8760A; --red:#AF3A2B; --slate:#56788A;
+    --shadow:0 1px 2px rgba(22,32,28,.05),0 6px 20px rgba(22,32,28,.06);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#101514; --card:#18201E; --card-2:#1F2926; --ink:#E9E5DC; --ink-2:#96A49E;
+      --line:#2B3734; --line-2:#222C29;
+      --brand:#4FB79B; --teal:#2FC7B4; --amber:#D5AF41; --red:#DE6E5A; --slate:#7FA3B5;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#101514; --card:#18201E; --card-2:#1F2926; --ink:#E9E5DC; --ink-2:#96A49E;
+    --line:#2B3734; --line-2:#222C29;
+    --brand:#4FB79B; --teal:#2FC7B4; --amber:#D5AF41; --red:#DE6E5A; --slate:#7FA3B5;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto;padding:44px 24px 90px}
+
+  .mast{border-bottom:2px solid var(--ink);padding-bottom:16px;display:flex;
+        justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+  .mast .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;
+           color:var(--brand);margin-bottom:7px}
+  .mast h1{font-family:var(--serif);font-size:37px;margin:0;letter-spacing:-.025em;line-height:1.05}
+  .mast .meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);text-align:right;line-height:1.9}
+
+  .why{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--brand);
+       border-radius:5px;padding:19px 23px;margin:24px 0 10px;box-shadow:var(--shadow)}
+  .why p{margin:0 0 10px;font-size:14.5px;max-width:78ch}
+  .why p:last-child{margin:0}
+  .why b{color:var(--ink)}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0 6px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:14px 16px;
+        border-top:3px solid var(--sc)}
+  .stat .v{font-family:var(--serif);font-size:29px;line-height:1;letter-spacing:-.02em;color:var(--sc)}
+  .stat .l{font-size:11.5px;color:var(--ink-2);margin-top:6px;line-height:1.4}
+  .s1{--sc:var(--red)} .s2{--sc:var(--amber)} .s3{--sc:var(--slate)} .s4{--sc:var(--teal)}
+
+  h2.sec{font-family:var(--serif);font-size:25px;margin:56px 0 5px;letter-spacing:-.015em;
+         display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:9px}
+  h2.sec .num{font-family:var(--mono);font-size:11px;color:var(--brand);letter-spacing:.12em}
+  h2.sec .aud{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;
+              text-transform:uppercase;padding:3px 9px;border-radius:3px}
+  .aud-int{background:rgba(86,120,138,.16);color:var(--slate)}
+  .aud-lm{background:rgba(13,148,136,.15);color:var(--teal)}
+  .aud-both{background:rgba(168,118,10,.16);color:var(--amber)}
+  .lead{color:var(--ink-2);font-size:13.5px;margin:14px 0 18px;max-width:80ch}
+
+  .q{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:16px 19px;margin:11px 0}
+  .q .qh{display:flex;gap:11px;align-items:baseline;flex-wrap:wrap}
+  .q .qn{font-family:var(--mono);font-size:10px;color:#fff;background:var(--brand);padding:2px 7px;
+         border-radius:3px;letter-spacing:.06em;flex:0 0 auto}
+  .q h4{font-family:var(--serif);font-size:16.5px;margin:0;letter-spacing:-.01em;flex:1;min-width:200px}
+  .q .why2{font-size:12.5px;color:var(--ink-2);margin:9px 0 0;line-height:1.55}
+  .q .why2 b{color:var(--ink)}
+  .q .opts{margin:10px 0 0;padding:10px 0 0;border-top:1px solid var(--line-2);font-size:12.5px}
+  .q .opts .ol{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+               color:var(--ink-2);margin-bottom:6px}
+  .q .opts ul{margin:0;padding-left:17px;color:var(--ink-2)}
+  .q .opts li{margin:4px 0}
+  .q .opts li b{color:var(--ink)}
+  .blocks{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;
+          background:rgba(175,58,43,.13);color:var(--red);letter-spacing:.04em;text-transform:uppercase}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin:14px 0;background:var(--card);
+        border:1px solid var(--line);border-radius:5px;overflow:hidden}
+  thead th{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+           color:var(--ink-2);background:var(--card-2);padding:8px 12px;text-align:left;font-weight:600}
+  td{padding:9px 12px;border-top:1px solid var(--line-2);vertical-align:top}
+  td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .yes{color:var(--teal);font-weight:600} .no{color:var(--red);font-weight:600}
+  .tw{overflow-x:auto}
+
+  footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);
+         font-family:var(--mono);font-size:10.5px;color:var(--ink-2);
+         display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  @media(max-width:720px){ .mast h1{font-size:28px} }
+  @media print{
+    :root{--bg:#fff;--card:#fff;--card-2:#F1EFE9;--shadow:none}
+    *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+    @page{size:Letter portrait;margin:14mm 12mm}
+    .wrap{max-width:none;padding:0}
+    .q,.stats,table,.why{break-inside:avoid;page-break-inside:avoid}
+    h2.sec{break-after:avoid;page-break-after:avoid}
+  }
+</style>
+
+<div class="wrap">
+
+<div class="mast">
+  <div>
+    <div class="k">Scoping · For discussion</div>
+    <h1>Questions before we build the scaled platform</h1>
+  </div>
+  <div class="meta">
+    NYU Urban Systems Lab<br>
+    La Maraña · Rebuild by Design<br>
+    Prepared 14 Sep 2026
+  </div>
+</div>
+
+<div class="why">
+  <p>La Maraña's 100-question test set is the clearest statement of the product we have. Read as a
+  specification rather than a test, it describes something materially larger than what we have built:
+  <b>a spatial analysis platform with a conversational interface</b>, not a document assistant with a
+  map beside it.</p>
+  <p>Separately, La Maraña is sending a <b>600-layer geodatabase</b> and reconstructed metadata. Both
+  arrive at the same moment. Before we commit an architecture to carry them, these are the questions
+  whose answers change what we build.</p>
+  <p>Each question below states <b>why it matters</b> and, where useful, the options we see. Sections
+  are marked for the audience they need to reach.</p>
+</div>
+
+<div class="stats">
+  <div class="stat s1"><div class="v">93%</div><div class="l">of the 100 questions need spatial analysis — overlay, buffer, distance, zonal statistics</div></div>
+  <div class="stat s2"><div class="v">48%</div><div class="l">need map selection — a pin, a parcel, or a drawn polygon</div></div>
+  <div class="stat s3"><div class="v">13%</div><div class="l">need the user to upload a document and reason against it</div></div>
+  <div class="stat s4"><div class="v">7%</div><div class="l">are pure document retrieval — approximately what exists today</div></div>
+</div>
+<p class="lead" style="margin-top:10px">Balanced by design: 25 questions at each specificity level
+S1–S4, 10 in each of 10 domains. <b>Five of the ten domains have no data loaded at all</b> — Water,
+Environment, Demographics, Agriculture and Cadastre — which makes 50 of the 100 unanswerable on data
+grounds regardless of engine capability.</p>
+
+<!-- ============ 1 ============ -->
+<h2 class="sec"><span class="num">01</span>Scope — what are we actually building?<span class="aud aud-both">Both</span></h2>
+<p class="lead">The gap between the test set and the current build is not a backlog; it is a different
+category of system. This needs to be said out loud and agreed before estimates mean anything.</p>
+
+<div class="q">
+  <div class="qh"><span class="qn">1.1</span><h4>Is the 100-question set the product specification, or an aspirational ceiling?</h4></div>
+  <p class="why2">This is the single highest-leverage question in the document. If it is the spec, we
+  are building a spatial analysis engine and the roadmap roughly triples. If it is aspirational, we
+  need to know <b>which subset is the committed deliverable</b> for the current scope of work
+  (through April 2027).</p>
+  <div class="opts"><div class="ol">Options as we see them</div><ul>
+    <li><b>Full set</b> — commit to spatial analysis, map selection and uploads. Largest scope.</li>
+    <li><b>S1–S2 only</b> (50 questions) — thematic and municipality-level. No drawing, no uploads. Closest to today.</li>
+    <li><b>Depth-first by domain</b> — do 2–3 domains completely, including S3/S4, and stage the rest.</li>
+  </ul></div>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">1.2</span><h4>Which of the five empty domains are in scope, and who supplies the data?</h4></div>
+  <p class="why2">Water, Environment, Demographics, Agriculture and Cadastre have <b>no data loaded</b>.
+  The 600-layer GDB likely covers water, environment and agriculture. <b>Census demographics and CRIM
+  cadastre are probably separate acquisitions</b> with their own licensing and privacy questions —
+  Q081 explicitly limits cadastre to "non-personal information", which implies a data-handling policy
+  we have not written.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">1.3</span><h4>Is document upload in scope for this phase? <span class="blocks">Affects privacy review</span></h4></div>
+  <p class="why2">Thirteen questions have a user upload their own plan, study or EIS. That introduces
+  user-generated content into a system whose entire trust claim is "only La Maraña's verified data" —
+  and it reopens the privacy, retention and security questions currently in front of NYU IT. It is
+  also the feature most likely to require IRB consideration if uploads are studied.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">1.4</span><h4>Does the platform need map export and download?</h4></div>
+  <p class="why2">Q023, Q033 and Q043 all ask to produce a map for a presentation, class or community
+  use. That is a publishing feature — layout, attribution, licensing of derived products — not a
+  minor addition to the viewer.</p>
+</div>
+
+<!-- ============ 2 ============ -->
+<h2 class="sec"><span class="num">02</span>Data &amp; the 600 layers<span class="aud aud-lm">La Maraña</span></h2>
+<p class="lead">These determine whether the incoming geodatabase can be ingested automatically or
+layer-by-layer by hand. At 600 layers the difference is weeks.</p>
+
+<div class="q">
+  <div class="qh"><span class="qn">2.1</span><h4>Do the reconstructed metadata sheets share consistent column headers?</h4></div>
+  <p class="why2">If every sheet uses the same fields, we load all 600 with one script. If each sheet
+  differs, it becomes manual work multiplied by 600. <b>The single most cost-relevant question we can
+  ask right now.</b></p>
+  <div class="opts"><div class="ol">Fields most useful to us, in priority order</div><ul>
+    <li>Layer name · source agency · vintage year · category · short description</li>
+    <li>Then: license or use restrictions, methodology note, update frequency</li>
+    <li>And explicitly: <b>"unknown" recorded as unknown</b>, never inferred — which is what you have already done</li>
+  </ul></div>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">2.2</span><h4>How should layers with missing metadata be presented to users?</h4></div>
+  <p class="why2">Some layers will have gaps. We would rather show "source not documented" than guess —
+  consistent with the standard set after the FEMA placeholder. But should such layers be
+  <b>published with a warning, held back, or shown only to planners</b>? This is a policy call, not a
+  technical one.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">2.3</span><h4>Which of the 600 layers matter most?</h4></div>
+  <p class="why2">We can ingest all of them, but we cannot style, translate, categorize and validate
+  600 with equal care at once. A ranked first tranche — the 40–60 layers the test questions actually
+  need — lets us deliver working answers sooner.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">2.4</span><h4>Are Census demographics and CRIM cadastre available to this project?</h4></div>
+  <p class="why2">Twenty questions depend on them. If they are not obtainable, those two domains should
+  be removed from the test set so we are not measured against data we cannot have.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">2.5</span><h4>How often does each layer change, and who republishes it?</h4></div>
+  <p class="why2">Determines whether ingestion is one-off or a standing pipeline — and after handoff,
+  whether La Maraña can refresh a layer without engineering support. This shapes the operational
+  design more than any other data question.</p>
+</div>
+
+<!-- ============ 3 ============ -->
+<h2 class="sec"><span class="num">03</span>Users &amp; access<span class="aud aud-both">Both</span></h2>
+<p class="lead">The test set names fifteen distinct personas, from residents to government agencies.
+They do not want the same product.</p>
+
+<div class="q">
+  <div class="qh"><span class="qn">3.1</span><h4>Who is the primary user — and who are we willing to serve badly?</h4></div>
+  <p class="why2">A resident asking "can I build here?" and an engineering firm comparing three road
+  corridors need different interfaces. Designing for both without saying which leads first produces a
+  tool that serves neither. <b>Our reading is that the community leader and resident lead, and the
+  planner is served second</b> — worth confirming.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">3.2</span><h4>Do users need accounts? <span class="blocks">Contradiction on record</span></h4></div>
+  <p class="why2">We told NYU IT that login is deferred because persistent accounts are not feasible
+  for La Maraña to manage long-term. The design scope lists accounts, saved sessions and tier-gating
+  as P0. <b>Both cannot be true.</b> Saved areas and history are genuinely useful, but they commit
+  someone to operating an identity system after handoff.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">3.3</span><h4>Is there a partner or API tier?</h4></div>
+  <p class="why2">If municipalities or agencies will query programmatically, that is a contract, a
+  rate limit and a support obligation. It changes the architecture now rather than later.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">3.4</span><h4>What is the answer on public access? <span class="blocks">Blocking launch</span></h4></div>
+  <p class="why2">NYU policy still blocks anonymous access. Org-policy exception or the ClimateIQ
+  pattern — either is workable, but nothing public ships until one is chosen. Cynthia's CAPTCHA point
+  is the right instinct and is in the plan either way.</p>
+</div>
+
+<!-- ============ 4 ============ -->
+<h2 class="sec"><span class="num">04</span>Architecture &amp; scaling<span class="aud aud-int">Internal</span></h2>
+<p class="lead">Decisions we should settle among ourselves before committing to the partner.</p>
+
+<div class="q">
+  <div class="qh"><span class="qn">4.1</span><h4>Do we accept vector tiles as the map delivery model?</h4></div>
+  <p class="why2">Whole-layer GeoJSON already fails at ten layers: one land-use layer is <b>26.4 MB</b>,
+  and the landslide layer is <b>silently truncated to 6,000 of 53,935 features</b> — users see 11% of a
+  hazard layer with no warning. Tiles fix both. We consider this settled unless someone disagrees, but
+  it should be said aloud because everything downstream assumes it.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">4.2</span><h4>Do we build a spatial query engine, and how far does it go?</h4></div>
+  <p class="why2">The largest single decision. 93 of 100 questions need it. There is a real ladder
+  here and we should pick a rung deliberately.</p>
+  <div class="opts"><div class="ol">Capability ladder</div><ul>
+    <li><b>Tier 1</b> — point-in-polygon, counts within an area, straight-line distance. <i>Mostly exists.</i></li>
+    <li><b>Tier 2</b> — buffers ("within 500 m"), multi-layer overlay, percentage of a parcel in a zone.</li>
+    <li><b>Tier 3</b> — multi-criteria scoring and ranking (Q020, Q058, Q068, Q088).</li>
+    <li><b>Tier 4</b> — network analysis: travel time, evacuation routing (Q042, Q049).</li>
+  </ul></div>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">4.3</span><h4>How does a natural-language question become a spatial query, safely?</h4></div>
+  <p class="why2">"Schools within 500 m of a river in Arecibo" must become real PostGIS. Letting a model
+  emit SQL against the database is the fast path and the dangerous one. <b>Our recommendation is a
+  constrained tool layer</b> — a fixed set of parameterized spatial operations the model may call, never
+  free-form SQL. Slower to build, but auditable, and every result stays explainable and citable.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">4.4</span><h4>Is a computed result allowed to be an answer?</h4></div>
+  <p class="why2">Today every claim traces to a document or an official layer. A computed distance or a
+  ranked comparison is a <b>new kind of claim the system itself generates</b>. The confidence taxonomy
+  handles this by labelling it "calculated" with its method stated — but La Maraña should confirm that
+  a system-generated number, clearly marked, is acceptable given the concerns they raised about
+  sourcing.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">4.5</span><h4>What is the performance target, and at what concurrency?</h4></div>
+  <p class="why2">"Thousands of questions" needs a number. Answer latency, tile latency, and expected
+  peak concurrent users determine caching strategy, replica count and budget. A public launch tied to
+  a community event behaves very differently from steady traffic.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">4.6</span><h4>What must La Maraña be able to do without engineers after handoff?</h4></div>
+  <p class="why2">Add a layer? Correct metadata? Retire a dataset? Review flagged answers? Each
+  answered "yes" is an admin interface that has to be designed and built. <b>This is the question most
+  likely to be discovered too late</b>, and it should shape the build from here rather than be
+  retrofitted in the final months.</p>
+</div>
+
+<!-- ============ 5 ============ -->
+<h2 class="sec"><span class="num">05</span>Interface — from La Maraña's feedback<span class="aud aud-lm">La Maraña</span></h2>
+<p class="lead">Their Demo 1 notes were specific and useful. Most are already reflected in the
+wireframes; these are the points where we need a decision rather than a preference.</p>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Their feedback</th><th>Who</th><th>Our read</th><th>In plan</th></tr></thead>
+  <tbody>
+    <tr><td>Collapsible chat; map feels too small</td><td>Edgardo, Ailani, Nias</td><td>Map-first layout with chat as a collapsible bar</td><td class="yes">Yes</td></tr>
+    <tr><td>Layers + chat ≈ ⅓, map ≈ ⅔</td><td>Edgardo</td><td>Adopt as the default layout</td><td class="yes">Yes</td></tr>
+    <tr><td>Active layers pushed to the top</td><td>Edgardo</td><td>Already implemented</td><td class="yes">Built</td></tr>
+    <tr><td>Metadata popup per layer</td><td>Ailani</td><td>Direct output of the layer registry</td><td class="yes">Yes</td></tr>
+    <tr><td>Legend</td><td>Nias</td><td>Needed once layers overlap; carries provenance too</td><td class="yes">Yes</td></tr>
+    <tr><td>Search for municipios and barrios</td><td>Nias</td><td>Needs a gazetteer — small but not free</td><td class="yes">Yes</td></tr>
+    <tr><td>Basemap gallery</td><td>Nias</td><td><b>Needs decision</b> — satellite imagery may require a paid provider</td><td class="no">Open</td></tr>
+    <tr><td>Measurement tools</td><td>Nias</td><td>Straightforward; pairs with the "calculated" tier</td><td class="yes">Yes</td></tr>
+    <tr><td>CAPTCHA / abuse protection</td><td>Cynthia</td><td>Correct; part of the public-access work</td><td class="yes">Yes</td></tr>
+    <tr><td>"What is the map popup for? What is 'Ask about this place'?"</td><td>Edgardo</td><td><b>Discoverability failure</b> — the feature exists but did not explain itself</td><td class="no">Redesign</td></tr>
+    <tr><td>Turn suggested topics into suggested questions</td><td>Edgardo</td><td>Agreed; helps users learn what the tool can do</td><td class="yes">Yes</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">5.1</span><h4>Is SIGE PR the benchmark?</h4></div>
+  <p class="why2">Nias linked the SIGE viewers twice. If that is the bar for map capability, it sets a
+  clear and useful target — and it tells us the audience expects a professional GIS viewer, with
+  Mappealo's contribution being the conversational and provenance layer on top rather than the map
+  alone.</p>
+</div>
+
+<div class="q">
+  <div class="qh"><span class="qn">5.2</span><h4>Who owns Spanish-language quality?</h4></div>
+  <p class="why2">Register and tone matter more than literal translation, particularly for uncertainty
+  and disclaimer text. We would like a standing review loop with La Maraña for all user-facing
+  copy — but it needs a named owner and a cadence to be real.</p>
+</div>
+
+<!-- ============ 6 ============ -->
+<h2 class="sec"><span class="num">06</span>What we need to proceed<span class="aud aud-both">Both</span></h2>
+<p class="lead">Ordered by what unblocks the most work.</p>
+<div class="tw">
+<table>
+  <thead><tr><th>Need</th><th>From</th><th>Unblocks</th></tr></thead>
+  <tbody>
+    <tr><td>Scope decision on the 100 questions (Q1.1)</td><td>Both</td><td>Every estimate and the roadmap</td></tr>
+    <tr><td>Metadata sheet structure (Q2.1)</td><td>La Maraña</td><td>Automated ingest of 600 layers</td></tr>
+    <tr><td>Ranked first tranche of layers (Q2.3)</td><td>La Maraña</td><td>Working answers in new domains sooner</td></tr>
+    <tr><td>Public access decision (Q3.4)</td><td>NYU IT</td><td>Any public launch</td></tr>
+    <tr><td>Accounts: yes or no (Q3.2)</td><td>Internal</td><td>Auth design; resolves a contradiction on record</td></tr>
+    <tr><td>Spatial engine tier (Q4.2)</td><td>Internal</td><td>The core of the remaining build</td></tr>
+    <tr><td>Confirmation that computed answers are acceptable (Q4.4)</td><td>La Maraña</td><td>Half the test set</td></tr>
+    <tr><td>Handoff capability list (Q4.6)</td><td>Both</td><td>Admin tooling, and the shape of the handoff itself</td></tr>
+  </tbody>
+</table>
+</div>
+
+<footer>
+  <span>Mappealo — scoping questions · prepared for the joint working session</span>
+  <span>NYU Urban Systems Lab · La Maraña · Rebuild by Design</span>
+</footer>
+</div>
