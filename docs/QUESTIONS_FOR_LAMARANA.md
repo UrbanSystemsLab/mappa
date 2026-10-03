@@ -48,11 +48,25 @@ and most would never be opened.
 *Our suggestion: a core of 30–50 that load fast and are properly labelled, with
 the rest reachable through search.*
 
-### 2. 119 layers on the inventory still have no data
+### 2. 42 layers we cannot find anywhere in the Drive
 
-After loading `IPRS_DATA.gpkg`, 119 catalogue rows still have nothing behind
-them. Are these layers that exist somewhere we have not received, or rows added
-in anticipation?
+The catalogue listed 119 layers with no data. We went through all of them against
+your Drive on 3 October, and most were our problem rather than yours: 46 are
+already loaded and just not linked, 16 are in your Drive and we had not loaded
+them, and 15 are PDF maps catalogued as though they were GIS layers.
+
+That leaves **42 we cannot find under any name**, including Cuevas, Playas,
+Islotes y cayos, Superfunds sites, Yacimientos arqueológicos, Hoteles OCT2014,
+Puentes, RUTAS PÚBLICOS TERMINALES and the PREPA transmission data. The full list
+is in `docs/DATA_GAPS.md`.
+
+For each: is there a copy we have not been given, or was the row added in
+anticipation of data you never received either?
+
+Also worth knowing: the **AAA water and sewer network** — gravity lines, pump
+stations, filtration plants, sampling points, 13 layers in total — is fully
+documented in your reconstructed metadata workbook, but we hold none of the data.
+Was it ever shared?
 
 ### 3. 46 metadata tabs do not match any layer name
 
