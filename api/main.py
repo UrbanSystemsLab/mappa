@@ -117,9 +117,9 @@ def ask(req: AskRequest) -> AskResponse:
     disclaimer = DISCLAIMER_ES if lang == "es" else DISCLAIMER_EN
     ask_in = _to_ask(req, lang)
 
-    municipality = answering.place_in_scope(ask_in)
-    on_map = answering.map_answer(ask_in, municipality)
-    evidence = answering.gather(ask_in, municipality)
+    place = answering.place_in_scope(ask_in)
+    on_map = answering.map_answer(ask_in, place)
+    evidence = answering.gather(ask_in, place)
 
     if not evidence.relevant:
         return AskResponse(
@@ -128,13 +128,15 @@ def ask(req: AskRequest) -> AskResponse:
             suggested_layers=on_map.layers,
             confidence="baja" if lang == "es" else "low",
             disclaimer=disclaimer,
-            municipio=municipality,
+            municipio=on_map.municipality,
             focus=on_map.focus,
         )
 
     result = answering.write(ask_in, evidence, on_map.layers)
     result["suggested_layers"] = on_map.layers
-    return AskResponse(disclaimer=disclaimer, municipio=municipality, focus=on_map.focus, **result)
+    return AskResponse(
+        disclaimer=disclaimer, municipio=on_map.municipality, focus=on_map.focus, **result
+    )
 
 
 @app.post("/ask/stream")
@@ -153,8 +155,8 @@ def ask_stream(req: AskRequest) -> StreamingResponse:
         return f"event: {name}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
     def generate():
-        municipality = answering.place_in_scope(ask_in)
-        on_map = answering.map_answer(ask_in, municipality)
+        place = answering.place_in_scope(ask_in)
+        on_map = answering.map_answer(ask_in, place)
         yield event(
             "meta",
             {
@@ -165,7 +167,7 @@ def ask_stream(req: AskRequest) -> StreamingResponse:
             },
         )
 
-        evidence = answering.gather(ask_in, municipality)
+        evidence = answering.gather(ask_in, place)
         if not evidence.relevant:
             yield event("delta", {"text": NO_MATCH[lang]})
             yield event("done", {"citations": [], "confidence": "baja" if lang == "es" else "low"})

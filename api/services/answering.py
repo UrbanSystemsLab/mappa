@@ -23,8 +23,9 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
-from .. import llm, spatial, spatial_ops
-from ..retrieval import compose_answer, detect_municipio, infer_layers, retrieve_with_scores
+from .. import llm, places, spatial, spatial_ops
+from ..places import Place
+from ..retrieval import compose_answer, infer_layers, retrieve_with_scores
 
 # Below this, the closest passage is not about the question.
 MIN_RELEVANCE = 0.25
@@ -55,6 +56,7 @@ class MapAnswer:
     municipality: str | None
     focus: list[float] | None
     layers: list[str]
+    place: Place | None = None
 
 
 @dataclass(slots=True)
@@ -66,37 +68,46 @@ class Evidence:
     relevant: bool
 
 
-def place_in_scope(ask: Ask) -> str | None:
-    """Which municipality the question is about, including when it does not say.
+def place_in_scope(ask: Ask) -> Place | None:
+    """Which place the question is about, including when it does not say.
 
     A follow-up rarely repeats the name - "and the flood risk there?", "how many
     schools in that municipality?". Reading only the current question left those
     turns with no region, so nothing could be counted and the map did not move.
     A place named now still wins, so changing subject works.
+
+    This used to read only the 78 municipalities. It now reads all 1,693 named
+    places, so "¿cuántas escuelas hay en Santurce?" scopes to the barrio rather
+    than silently answering for the whole of San Juan.
     """
-    named = detect_municipio(ask.question)
+    named = places.resolve(ask.question)
     if named:
         return named
     for turn in reversed(ask.history):
-        earlier = detect_municipio(turn.question)
+        earlier = places.resolve(turn.question)
         if earlier:
             return earlier
-    return ask.location
+    # The map's own selection, which is a municipality the user clicked.
+    return places.municipio(ask.location)
 
 
-def map_answer(ask: Ask, municipality: str | None) -> MapAnswer:
-    """The map's half, which is a name match and a bounding box.
+def map_answer(ask: Ask, place: Place | None) -> MapAnswer:
+    """The map's half, which is a place match and a bounding box.
 
     Cheap enough to send before anything else, which is why the map moves in
-    about a sixth of a second while the text is still being written.
+    about a sixth of a second while the text is still being written. The box now
+    comes from the place itself, so asking about a barrio zooms to the barrio.
     """
     layers = spatial_ops.suggested_layer_ids(ask.question) or infer_layers(ask.question)
     return MapAnswer(
-        municipality=municipality, focus=spatial.municipio_bbox(municipality), layers=layers
+        municipality=place.label if place else None,
+        focus=places.bbox(place),
+        layers=layers,
+        place=place,
     )
 
 
-def gather(ask: Ask, municipality: str | None) -> Evidence:
+def gather(ask: Ask, place: Place | None) -> Evidence:
     """The documents and the computed figures, and nothing else.
 
     When the question asks for a number the layers cannot produce, that absence
@@ -106,15 +117,17 @@ def gather(ask: Ask, municipality: str | None) -> Evidence:
     query = ask.question
     if ask.history:
         query = f"{ask.history[-1].question} {ask.question}"
-    scored = retrieve_with_scores(query, top_k=6, jurisdiction=municipality)
+    # Documents are filed by municipality, so a question about a barrio reads the
+    # plans of the municipality it sits in.
+    scored = retrieve_with_scores(query, top_k=6, jurisdiction=place.municipio if place else None)
     documents = [doc for _, doc in scored]
 
     context: dict[str, Any] = dict(ask.spatial or {})
-    facilities = spatial.facility_counts(ask.question, municipality)
+    facilities = spatial.facility_counts(ask.question, place)
     if facilities:
         context["facilities"] = facilities
 
-    analysis = spatial_ops.analyze(ask.question, municipality, [t.question for t in ask.history])
+    analysis = spatial_ops.analyze(ask.question, place, [t.question for t in ask.history])
     if analysis:
         context["analysis"] = spatial_ops.describe(analysis, ask.lang)
     elif spatial_ops.wants_number(ask.question):

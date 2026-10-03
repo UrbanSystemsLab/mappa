@@ -95,27 +95,42 @@ def detect_facilities(text: str) -> list[str]:
     return [k for k, v in FACILITY_LAYERS.items() if any(w in t for w in v["kw"])]
 
 
-def facility_counts(text: str, municipio: str | None = None) -> dict[str, int]:
-    """Count facility features the question asks about — within a municipio if given,
-    else island-wide. Answers 'how many schools / hospitals' from real map data."""
+def facility_counts(text: str, place: Any = None) -> dict[str, int]:
+    """Count facility features the question asks about — within one place if given,
+    else island-wide. Answers 'how many schools / hospitals' from real map data.
+
+    The scope is a place code rather than a municipality name, so this counts
+    inside a barrio as readily as inside a municipality.
+    """
     keys = detect_facilities(text)
     if not keys:
         return {}
+    from .places import Place
+
+    code = place.unit_code if isinstance(place, Place) else None
+    where = place.label if isinstance(place, Place) else (place or None)
     out: dict[str, int] = {}
     with _conn() as conn, conn.cursor() as cur:
         for k in keys:
             v = FACILITY_LAYERS[k]
             table = v["table"]  # from a fixed whitelist above, safe to interpolate
-            if municipio:
+            if code:
+                cur.execute(
+                    f'SELECT count(*) FROM "{table}" f '
+                    "JOIN reference_units r ON r.unit_code = %s "
+                    "AND ST_Intersects(f.geom, r.geom)",
+                    (code,),
+                )
+            elif where:
                 cur.execute(
                     f'SELECT count(*) FROM "{table}" f '
                     "JOIN reference_units r ON r.unit_type='municipio' "
                     "AND ST_Intersects(f.geom, r.geom) WHERE r.name ILIKE %s",
-                    (municipio,),
+                    (where,),
                 )
             else:
                 cur.execute(f'SELECT count(*) FROM "{table}"')
-            label = v["label"] + (f" in {municipio}" if municipio else " (Puerto Rico)")
+            label = v["label"] + (f" in {where}" if where else " (Puerto Rico)")
             out[label] = cur.fetchone()[0]
     return out
 
@@ -149,7 +164,7 @@ def locate(lng: float, lat: float) -> dict[str, Any]:
 
 
 def search_places(q: str, limit: int = 8) -> list[dict[str, Any]]:
-    """Look up a municipio or barrio by name and return its bounds.
+    """Look up any named place - municipio, barrio or comunidad - and return its bounds.
 
     Accent- and case-insensitive: a resident typing "anasco" or "ANASCO" should
     find Añasco. Exact prefix matches sort first so the obvious answer is on top.
@@ -160,19 +175,19 @@ def search_places(q: str, limit: int = 8) -> list[dict[str, Any]]:
     with _conn() as conn, conn.cursor() as cur:
         cur.execute(
             """
-            SELECT name, unit_type,
+            SELECT name, unit_type, parent_name,
                    ST_XMin(g), ST_YMin(g), ST_XMax(g), ST_YMax(g)
             FROM (
-              SELECT name, unit_type, ST_Envelope(geom) AS g,
+              SELECT name, unit_type, parent_name, ST_Envelope(geom) AS g,
                      translate(lower(name),
                                'áéíóúñüÁÉÍÓÚÑÜ','aeiounuAEIOUNU') AS plain
               FROM reference_units
-              WHERE unit_type IN ('municipio','barrio')
             ) t
             WHERE plain LIKE translate(lower(%s),'áéíóúñüÁÉÍÓÚÑÜ','aeiounuAEIOUNU') || '%%'
                OR plain LIKE '%%' || translate(lower(%s),'áéíóúñüÁÉÍÓÚÑÜ','aeiounuAEIOUNU') || '%%'
             ORDER BY (plain LIKE translate(lower(%s),'áéíóúñüÁÉÍÓÚÑÜ','aeiounuAEIOUNU') || '%%') DESC,
-                     unit_type, name
+                     CASE unit_type WHEN 'municipio' THEN 0 WHEN 'barrio' THEN 1 ELSE 2 END,
+                     name
             LIMIT %s
             """,
             (term, term, term, limit),
@@ -181,7 +196,11 @@ def search_places(q: str, limit: int = 8) -> list[dict[str, Any]]:
             {
                 "name": r[0],
                 "type": r[1],
-                "bbox": [float(r[2]), float(r[3]), float(r[4]), float(r[5])],
+                # A barrio's name does not identify it - there are nine called
+                # Buena Vista - so the list shows which municipality it is in.
+                "parent": r[2],
+                "label": f"{r[0]}, {r[2]}" if r[2] and r[1] != "municipio" else r[0],
+                "bbox": [float(r[3]), float(r[4]), float(r[5]), float(r[6])],
             }
             for r in cur.fetchall()
         ]

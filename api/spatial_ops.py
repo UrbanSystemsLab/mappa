@@ -21,7 +21,8 @@ import re
 import unicodedata
 from typing import Any
 
-from . import db
+from . import db, places
+from .places import Place
 
 # Concepts a question can name, mapped to the layers actually loaded. A concept
 # with several layers (flooding has two FEMA vintages) names the one to use by
@@ -265,19 +266,32 @@ def label(key: str, lang: str = "es") -> str:
     return spec["label_es"] if lang == "es" else spec["label_en"]
 
 
-def _region_clause(region: str | None) -> tuple[str, list[Any]]:
-    """SQL fragment limiting to a municipio, plus its parameters."""
-    if not region:
-        return "", []
-    return (
-        " AND EXISTS (SELECT 1 FROM reference_units r WHERE r.unit_type='municipio' "
-        "AND unaccent_fallback(lower(r.name)) = unaccent_fallback(lower(%s)) "
-        "AND ST_Intersects(r.geom, f.geom))",
-        [region],
-    )
+def _region_clause(region: Place | str | None) -> tuple[str, list[Any]]:
+    """SQL fragment limiting to one place, plus its parameters.
+
+    It scopes by the place's code, so a barrio or a comunidad works exactly as a
+    municipality does. The old clause hard-coded unit_type='municipio' because a
+    name was all it had to go on, which is why nothing smaller than a
+    municipality could ever be asked about.
+    """
+    return places.scope_clause(region)
 
 
-def count_features(layer: str, region: str | None = None) -> dict[str, Any] | None:
+def _region_label(region: Place | str | None) -> str | None:
+    """How a result names its place - "Santurce, San Juan", not "Santurce"."""
+    if region is None:
+        return None
+    return region.label if isinstance(region, Place) else region
+
+
+def _region_code(region: Place | str | None) -> str | None:
+    if isinstance(region, Place):
+        return region.unit_code
+    resolved = places.municipio(region) if region else None
+    return resolved.unit_code if resolved else None
+
+
+def count_features(layer: str, region: Place | str | None = None) -> dict[str, Any] | None:
     """How many features of a layer, island-wide or inside one municipio."""
     if layer not in COUNTABLE:
         return None
@@ -288,10 +302,12 @@ def count_features(layer: str, region: str | None = None) -> dict[str, Any] | No
         cur.execute("SET LOCAL statement_timeout='30s'")
         cur.execute(f'SELECT count(*) FROM "{table}" f WHERE f.geom IS NOT NULL{clause}', params)
         n = cur.fetchone()[0]
-    return {"op": "count", "layer": layer, "region": region, "count": n}
+    return {"op": "count", "layer": layer, "region": _region_label(region), "count": n}
 
 
-def count_intersecting(layer: str, hazard: str, region: str | None = None) -> dict[str, Any] | None:
+def count_intersecting(
+    layer: str, hazard: str, region: Place | str | None = None
+) -> dict[str, Any] | None:
     """How many features of one layer fall inside another - schools in a flood zone.
 
     ST_Intersects against the hazard polygons, so the number is the overlay, not
@@ -316,14 +332,14 @@ def count_intersecting(layer: str, hazard: str, region: str | None = None) -> di
         "op": "intersect",
         "layer": layer,
         "against": hazard,
-        "region": region,
+        "region": _region_label(region),
         "count": n,
         "total": total,
     }
 
 
 def count_within_distance(
-    layer: str, other: str, metres: int, region: str | None = None
+    layer: str, other: str, metres: int, region: Place | str | None = None
 ) -> dict[str, Any] | None:
     """How many features lie within N metres of another layer.
 
@@ -354,13 +370,13 @@ def count_within_distance(
         "layer": layer,
         "of": other,
         "metres": metres,
-        "region": region,
+        "region": _region_label(region),
         "count": n,
         "total": total,
     }
 
 
-def coverage_share(layer: str, region: str) -> dict[str, Any] | None:
+def coverage_share(layer: str, region: Place | str) -> dict[str, Any] | None:
     """What share of a municipio a polygon layer covers.
 
     Areas are measured on the geography type and returned in km², because a share
@@ -383,10 +399,9 @@ def coverage_share(layer: str, region: str) -> dict[str, Any] | None:
                        WHERE l.geom IS NOT NULL AND ST_Intersects(l.geom, r.geom)
                    ), 0)
             FROM reference_units r
-            WHERE r.unit_type = 'municipio'
-              AND unaccent_fallback(lower(r.name)) = unaccent_fallback(lower(%s))
+            WHERE r.unit_code = %s
             """,
-            (region,),
+            (_region_code(region),),
         )
         row = cur.fetchone()
     if not row:
@@ -395,7 +410,7 @@ def coverage_share(layer: str, region: str) -> dict[str, Any] | None:
     return {
         "op": "coverage",
         "layer": layer,
-        "region": region,
+        "region": _region_label(region),
         "region_km2": round(total_km2, 1),
         "covered_km2": round(covered_km2, 1),
         "share": round(covered_km2 / total_km2, 4) if total_km2 else 0.0,
@@ -491,7 +506,7 @@ def wants_number(question: str) -> bool:
 
 
 def analyze(
-    question: str, region: str | None = None, history: list[str] | None = None
+    question: str, region: Place | str | None = None, history: list[str] | None = None
 ) -> list[dict[str, Any]]:
     """Run whatever spatial question this is, and return only what was computed.
 
@@ -581,7 +596,7 @@ def analyze(
                             "op": "intersect",
                             "layer": c["label"],
                             "against": o["label"],
-                            "region": region,
+                            "region": _region_label(region),
                             "count": hit,
                             "total": total,
                         }
@@ -593,7 +608,7 @@ def analyze(
                     {
                         "op": "count",
                         "layer": c["label"],
-                        "region": region,
+                        "region": _region_label(region),
                         "count": count_in_table(c["table"], region),
                     }
                 )
@@ -608,7 +623,9 @@ def analyze(
     return results
 
 
-def _within_distance_tables(c: dict, o: dict, metres: int, region: str | None) -> dict[str, Any]:
+def _within_distance_tables(
+    c: dict, o: dict, metres: int, region: Place | str | None
+) -> dict[str, Any]:
     clause, params = _region_clause(region)
     deg = metres / 111_320.0
     with db.connection() as conn:
@@ -631,13 +648,13 @@ def _within_distance_tables(c: dict, o: dict, metres: int, region: str | None) -
         "layer": c["label"],
         "of": o["label"],
         "metres": metres,
-        "region": region,
+        "region": _region_label(region),
         "count": hit,
         "total": total,
     }
 
 
-def _coverage_table(o: dict, region: str) -> dict[str, Any] | None:
+def _coverage_table(o: dict, region: Place | str) -> dict[str, Any] | None:
     with db.connection() as conn:
         cur = conn.cursor()
         cur.execute("SET LOCAL statement_timeout='180s'")
@@ -650,10 +667,9 @@ def _coverage_table(o: dict, region: str) -> dict[str, Any] | None:
                              FROM "{o["table"]}" l
                              WHERE l.geom IS NOT NULL AND ST_Intersects(l.geom, r.geom)), 0)
             FROM reference_units r
-            WHERE r.unit_type = 'municipio'
-              AND unaccent_fallback(lower(r.name)) = unaccent_fallback(lower(%s))
+            WHERE r.unit_code = %s
         """,
-            (region,),
+            (_region_code(region),),
         )
         row = cur.fetchone()
     if not row:
@@ -662,7 +678,7 @@ def _coverage_table(o: dict, region: str) -> dict[str, Any] | None:
     return {
         "op": "coverage",
         "layer": o["label"],
-        "region": region,
+        "region": _region_label(region),
         "region_km2": round(total, 1),
         "covered_km2": round(covered, 1),
         "share": round(covered / total, 4) if total else 0.0,
@@ -753,7 +769,7 @@ RELATIVE_DROP = 0.10
 COUNTABLE_CEILING = 60_000
 
 
-def _without_place(question: str, region: str | None) -> str:
+def _without_place(question: str, region: Place | str | None) -> str:
     """The question with the place name removed.
 
     "How many wells are in Arecibo?" matched 'tipo de suelo arecibo' ahead of
@@ -763,7 +779,8 @@ def _without_place(question: str, region: str | None) -> str:
     """
     if not region:
         return question
-    pattern = re.sub(r"\s+", r"\\s+", re.escape(region))
+    name = region.name if isinstance(region, Place) else region
+    pattern = re.sub(r"\s+", r"\\s+", re.escape(name))
     cleaned = re.sub(pattern, " ", question, flags=re.I)
     cleaned = re.sub(r"\b(in|en|de|del|for|para|at)\s*$", "", cleaned.strip(), flags=re.I)
     return cleaned.strip() or question
@@ -778,7 +795,7 @@ def _question_vector(question: str) -> str:
 
 
 def find_layers(
-    question: str, limit: int = 4, loaded_only: bool = True, region: str | None = None
+    question: str, limit: int = 4, loaded_only: bool = True, region: Place | str | None = None
 ) -> list[dict[str, Any]]:
     """Layers whose meaning is closest to the question.
 
@@ -821,7 +838,9 @@ def find_layers(
     return [h for h in hits if best - h["score"] <= RELATIVE_DROP]
 
 
-def resolve(question: str, limit: int = 4, region: str | None = None) -> list[dict[str, Any]]:
+def resolve(
+    question: str, limit: int = 4, region: Place | str | None = None
+) -> list[dict[str, Any]]:
     """Every layer the question is about, named ones first.
 
     A concept in the alias table is used as given - it was written down because
@@ -863,7 +882,7 @@ def resolve(question: str, limit: int = 4, region: str | None = None) -> list[di
     return out
 
 
-def count_in_table(table: str, region: str | None = None) -> int:
+def count_in_table(table: str, region: Place | str | None = None) -> int:
     """Features of any loaded layer, by table name rather than concept."""
     clause, params = _region_clause(region)
     with db.connection() as conn:
@@ -873,7 +892,9 @@ def count_in_table(table: str, region: str | None = None) -> int:
         return cur.fetchone()[0]
 
 
-def intersect_tables(table: str, against: str, region: str | None = None) -> tuple[int, int]:
+def intersect_tables(
+    table: str, against: str, region: Place | str | None = None
+) -> tuple[int, int]:
     """How many features of one table fall inside another."""
     clause, params = _region_clause(region)
     with db.connection() as conn:
