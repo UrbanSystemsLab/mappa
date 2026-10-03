@@ -8,10 +8,9 @@ capped to keep payloads browser-friendly.
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
-DB_URL = os.environ.get("DATABASE_URL")
+from core import DATABASE_URL as DB_URL
 
 # Simplification tolerance in degrees by geometry type; points unchanged. Bigger =
 # smaller/faster payloads (island-wide overview doesn't need street-level precision).

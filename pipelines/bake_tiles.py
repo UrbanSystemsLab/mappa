@@ -27,11 +27,13 @@ from pathlib import Path
 
 import psycopg2
 
+from core import TILE_MAX_ZOOM as MAX_ZOOM
+from core import TILE_MIN_ZOOM as MIN_ZOOM
+
 OUT = Path("data/tiles")
 
 # Zoom range. Below 4 the whole island is a few pixels; above 14 the full-precision
 # geometry is small enough that building on demand is cheap.
-MIN_ZOOM, MAX_ZOOM = 4, 14
 # Roughly what the on-demand path produces at low zoom, so baking is a
 # straight improvement rather than a trade of speed against weight.
 MAX_TILE_BYTES = 160_000

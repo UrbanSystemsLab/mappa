@@ -27,9 +27,9 @@ import threading
 from collections import OrderedDict
 from typing import Any
 
-from . import db
+from core import TILE_MAX_ZOOM as MAX_ZOOM
 
-DB_URL = os.environ.get("DATABASE_URL")
+from . import db
 
 log = logging.getLogger(__name__)
 
@@ -80,8 +80,6 @@ def tile_bounds_4326(z: int, x: int, y: int) -> tuple[float, float, float, float
 _EXTENT = 4096
 # Buffer in tile units, so shapes crossing a tile edge render without seams.
 _BUFFER = 64
-# Max zoom we serve; beyond this the client over-zooms the z14 tile (standard practice).
-MAX_ZOOM = 14
 
 # Property columns to carry into the tile, per layer. Kept small on purpose —
 # every property is repeated per feature per tile, so this is the main size lever.

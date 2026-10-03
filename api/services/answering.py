@@ -23,12 +23,11 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
+from core import MIN_RELEVANCE
+
 from .. import llm, places, spatial, spatial_ops
 from ..places import Place
 from ..retrieval import compose_answer, infer_layers, retrieve_with_scores
-
-# Below this, the closest passage is not about the question.
-MIN_RELEVANCE = 0.25
 
 
 @dataclass(slots=True)

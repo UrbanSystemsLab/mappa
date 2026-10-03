@@ -1,5 +1,4 @@
 import json
-import os
 import re
 import unicodedata
 from pathlib import Path
@@ -7,6 +6,9 @@ from typing import Any
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
+
+from core import DATABASE_URL as DB_URL
+from core import EMBEDDING_MODEL as EMBEDDING_MODEL_NAME
 
 # Their inventory IDs. A document they supplied that is not on the sheet gets an
 # LM- slug from its filename, which is an internal key rather than a reference a
@@ -23,11 +25,9 @@ DATA_PATH = DATA_DIR / "documents.json"
 # Extra local corpora merged in if present (e.g. documents pulled from Drive).
 EXTRA_PATHS = [DATA_DIR / "planning_docs.json", DATA_DIR / "drive_docs.json"]
 
-EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
 # When DATABASE_URL is set, retrieval runs against Cloud SQL (pgvector) over the full
 # corpus; otherwise it falls back to the in-memory index over the local JSON corpus.
-DB_URL = os.environ.get("DATABASE_URL")
 _query_model: SentenceTransformer | None = None
 
 

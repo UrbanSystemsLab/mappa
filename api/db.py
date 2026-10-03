@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import os
 
-DB_URL = os.environ.get("DATABASE_URL")
+from core import DATABASE_URL as DB_URL
 
 _POOL = None
 POOL_MIN = int(os.environ.get("DB_POOL_MIN", "1"))

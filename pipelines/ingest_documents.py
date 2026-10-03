@@ -27,11 +27,12 @@ import psycopg2
 from psycopg2.extras import execute_batch
 from sentence_transformers import SentenceTransformer
 
+from core import EMBED_DIM  # noqa: F401
+from core import EMBEDDING_MODEL as DEFAULT_MODEL
+
 ROOT = Path(__file__).resolve().parent.parent
 DOCUMENTS_JSON = ROOT / "data" / "documents.json"
 
-DEFAULT_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-EMBED_DIM = 384
 CHUNK_TOKENS_TARGET = 400
 CHUNK_OVERLAP_TOKENS = 60
 

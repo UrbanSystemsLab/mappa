@@ -25,7 +25,8 @@ import os
 import psycopg2
 from psycopg2.extras import execute_batch
 
-MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+from core import EMBED_DIM
+from core import EMBEDDING_MODEL as MODEL
 
 
 def describe(row: dict) -> str:
@@ -65,7 +66,9 @@ def main() -> None:
     conn.autocommit = False
     cur = conn.cursor()
     cur.execute("SET statement_timeout='300s'")
-    cur.execute("ALTER TABLE layer_registry ADD COLUMN IF NOT EXISTS embedding vector(384)")
+    cur.execute(
+        f"ALTER TABLE layer_registry ADD COLUMN IF NOT EXISTS embedding vector({EMBED_DIM})"
+    )
     cur.execute("ALTER TABLE layer_registry ADD COLUMN IF NOT EXISTS embed_text text")
     conn.commit()
 

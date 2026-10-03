@@ -16,11 +16,6 @@ from .routers import places as places_router
 from .routers import tiles as tiles_router
 from .services import answering
 
-# Minimum retrieval relevance (cosine similarity) to attempt an answer. Below this,
-# nothing in the corpus is genuinely relevant (gibberish / off-topic), so we decline
-# instead of fabricating. Calibrated: real questions score ~0.6+, gibberish ~0.3.
-MIN_RELEVANCE = 0.45
-
 NO_MATCH = {
     "en": (
         "I couldn't find relevant information in the available documents for that "
@@ -46,7 +41,6 @@ DISCLAIMER_EN = (
     "the Planning Board (Junta de Planificación), OGPe, DRNA, or the relevant municipality "
     "before making decisions."
 )
-DISCLAIMER = DISCLAIMER_ES if llm.RESPONSE_LANG == "es" else DISCLAIMER_EN
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 

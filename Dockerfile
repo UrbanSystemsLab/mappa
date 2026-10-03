@@ -26,6 +26,7 @@ RUN python -c "from sentence_transformers import SentenceTransformer; \
 ENV HF_HUB_OFFLINE=1 \
     TRANSFORMERS_OFFLINE=1
 
+COPY core ./core
 COPY api ./api
 COPY frontend ./frontend
 COPY data ./data
