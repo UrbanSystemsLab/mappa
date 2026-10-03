@@ -56,7 +56,7 @@ _LIST_COLS = """
     metadata_status, geometry_type, feature_count, srid,
     min_zoom, max_zoom, label_column, sublabel_column, style,
     dataset_version, status, property_labels, value_labels,
-    featured, featured_note, reliability
+    featured, featured_note, reliability, tile_properties
 """
 
 
@@ -89,6 +89,7 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
         featured,
         featured_note,
         reliability,
+        tile_props,
         name,
         description,
     ) = r
@@ -131,6 +132,9 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
         "featured": bool(featured),
         "featured_note": featured_note,
         "reliability": reliability,
+        # The order a click lists a feature's details in - the column the layer
+        # is coloured by first - chosen from the layer's own data.
+        "tile_properties_order": list(tile_props or []),
         # 'catalogued' means the layer is on La Maraña's inventory but its data is
         # not in the database yet. It is listed so the catalog reflects what they
         # actually hold, and it carries no tile URL, because there is nothing to
