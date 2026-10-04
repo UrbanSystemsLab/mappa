@@ -162,6 +162,25 @@ Is that the right line? Owner data in the CRIM register is public record, but a
 public website that shows a resident's name and mailing address on a click is a
 different thing, and the decision should be yours.
 
+### 5d. Layer names in English — and checking the Spanish ones
+
+The app has a Spanish/English switch, but your inventory only gives each layer
+one name, usually Spanish or a file name (`g23_riesgo_inundacion_fema_firms_2009`).
+We had written English names for ten layers ourselves; those are now removed,
+so in English mode every layer shows its Spanish name.
+
+For the ten most-used layers we had also rewritten the Spanish name into
+something readable — *Zonas inundables FEMA 2009*, *Susceptibilidad a
+deslizamientos*, *Hospitales y CDTs*. Those are our words too.
+
+- Would you like to give English names, at least for the layers people use most?
+- Are our readable Spanish names acceptable, or should each layer use exactly
+  the name on your inventory?
+
+Your reconstructed metadata already has one English title we could use: the
+2009 flood layer as *"Digital Flood Insurance Rate Map Database, Commonwealth of
+Puerto Rico"*.
+
 ### 6. Two duplicate rows on the inventory
 
 `Census2020` and `Agroturismo_2021` each appear twice under different GIS IDs,
