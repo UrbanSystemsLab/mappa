@@ -274,8 +274,9 @@ def main() -> None:
         style = dict(style or {})
         style.pop("by", None)
         style.pop("categories", None)
+        # Colouring by category was tried on 3 Oct and made the map harder to
+        # read. The choice is still worked out and reported, but not written.
         if by:
-            style.update(by)
             coloured += 1
         if shown:
             clickable += 1
@@ -294,7 +295,7 @@ def main() -> None:
 
     print(f"\n[profile] {len(layers)} layers with data")
     print(f"    {clickable:>4}  now show their information when clicked")
-    print(f"    {coloured:>4}  coloured by their own categories")
+    print(f"    {coloured:>4}  could be coloured by category (not applied)")
     print(f"    {nothing:>4}  hold nothing beyond their shape")
     if failed:
         print(f"    {failed:>4}  could not be read")

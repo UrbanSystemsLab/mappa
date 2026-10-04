@@ -212,6 +212,15 @@ if (clearBtn) clearBtn.onclick = () => {
   if (en) en.onclick = () => { LANG = 'en'; applyLang(); };
 }
 
+// The answer as a reader should see it. While it streams, the raw text still
+// carries the model's "[1, 2]" citation numbers - the server removes them from
+// the finished answer, and this removes them as it arrives. "**Natural
+// Hazards:**" was shown with its asterisks; it is now bold.
+function answerHtml(text) {
+  return esc(String(text || '').replace(/\s*\[\s*\d+(?:\s*[,;–-]\s*\d+)*\s*\]/g, ''))
+    .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+}
+
 function render() {
   if (!conversation.length) {
     const hint = LANG === 'es'
@@ -236,7 +245,7 @@ function render() {
       <div class="row user"><div class="bubble">${esc(m.question)}</div></div>
       <div class="row bot"><div class="bubble">
         <div class="who">Mappa</div>
-        <div class="answer${thinking ? ' typing' : ''}">${thinking ? (LANG === 'es' ? 'Consultando…' : 'Thinking…') : esc(m.answer)}</div>
+        <div class="answer${thinking ? ' typing' : ''}">${thinking ? (LANG === 'es' ? 'Consultando…' : 'Thinking…') : answerHtml(m.answer)}</div>
         ${cites ? `<div class="cites"><div class="cites-h">${t('sources')}</div>${cites}</div>` : ''}
         ${layers ? `<div class="layers">${layers}</div>` : ''}
       </div></div>`;
@@ -485,22 +494,8 @@ function renderLegend() {
   const active = [...ACTIVE.values()];
   if (!active.length) { el.style.display = 'none'; return; }
   el.style.display = 'block';
-  // A layer coloured by kind lists its kinds, in its own words and in order of
-  // how much of the layer each covers. Long lists are cut so the legend does not
-  // bury the map; the rest are still visible on click.
-  const SHOW = 8;
-  const block = l => {
-    const st = l.style || {};
-    if (st.by && Array.isArray(st.categories) && st.categories.length > 1) {
-      const rest = st.categories.length - SHOW;
-      return `<div class="lg-l">${esc(l.name)}</div>` +
-        st.categories.slice(0, SHOW).map(c => `<div class="lg-r lg-c">
-          <span class="lg-k" style="background:${c.color}"></span><span>${esc(c.value)}</span></div>`).join('') +
-        (rest > 0 ? `<div class="lg-more">+${rest} ${LANG === 'es' ? 'más' : 'more'}</div>` : '');
-    }
-    return `<div class="lg-r"><span class="lg-k" style="background:${st.color || '#09814A'}"></span>
-        <span>${esc(l.name)}</span></div>`;
-  };
+  const block = l => `<div class="lg-r"><span class="lg-k" style="background:${
+    (l.style && l.style.color) || '#09814A'}"></span><span>${esc(l.name)}</span></div>`;
   el.innerHTML = `<div class="lg-h">${LANG === 'es' ? 'Leyenda' : 'Legend'}</div>` +
     active.map(block).join('') +
     `<div class="lg-src">${LANG === 'es' ? 'Fuente' : 'Source'}: ${
@@ -530,20 +525,6 @@ document.getElementById('lyrq').addEventListener('input', (e) => {
 });
 
 // --- map wiring: vector tiles, not whole-layer GeoJSON ---
-// A layer that sorts its features into kinds is coloured by them: land use by
-// type of land, flood by zone, hospitals by public or private. The categories
-// and their order come from the layer's own data (pipelines/profile_layers), so
-// the legend shows their values, never a label we wrote.
-function colorExpr(l) {
-  const st = l.style || {};
-  const fallback = st.color || '#09814A';
-  if (!st.by || !Array.isArray(st.categories) || st.categories.length < 2) return fallback;
-  const expr = ['match', ['to-string', ['get', st.by]]];
-  st.categories.forEach(c => { expr.push(String(c.value), c.color); });
-  expr.push('#9aa5b1');   // anything outside the listed kinds
-  return expr;
-}
-
 function addLayer(id) {
   if (!map) return;
   if (ACTIVE.has(id)) return;
@@ -559,17 +540,17 @@ function addLayer(id) {
       maxzoom: l.max_zoom != null ? l.max_zoom : 14,
     });
   }
-  const color = colorExpr(l);
-  const byKind = typeof color !== 'string';
+  // One colour per layer. Colouring by category was tried on 3 Oct and made
+  // the map harder to read, so it is off; the categories stay recorded.
+  const color = (l.style && l.style.color) || '#09814A';
   const g = (l.geometry_type || '').toLowerCase();
   const common = { source: srcId, 'source-layer': 'layer' };
   if (g.includes('polygon')) {
     const fillOp = l.style && l.style.fillOpacity != null ? l.style.fillOpacity : 0.35;
     if (fillOp > 0) map.addLayer({ id: base, type: 'fill', ...common,
       paint: { 'fill-color': color, 'fill-opacity': fillOp } });
-    // Coloured fills read better with a quiet outline than with seventeen.
     map.addLayer({ id: base + '_ln', type: 'line', ...common,
-      paint: { 'line-color': byKind ? 'rgba(255,255,255,0.75)' : color,
+      paint: { 'line-color': color,
                'line-width': (l.style && l.style.lineWidth) || 0.8 } });
   } else if (g.includes('line')) {
     map.addLayer({ id: base, type: 'line', ...common,
@@ -691,15 +672,6 @@ const NO_VALUE = new Set(['-9999', '-9999.0', '-99999', '-999', '-999.0']);
 const isEmpty = v => v === null || v === undefined || String(v).trim() === '' ||
   NO_VALUE.has(String(v).trim());
 
-function kindColor(rec, props) {
-  const st = (rec && rec.style) || {};
-  if (st.by && Array.isArray(st.categories)) {
-    const hit = st.categories.find(c => String(c.value) === String(props[st.by]).trim());
-    if (hit) return hit.color;
-  }
-  return st.color || '#09814A';
-}
-
 function featureCard(rec, props) {
   const shown = (rec && rec.tile_properties_order) || Object.keys(props);
   const rows = shown
@@ -707,7 +679,7 @@ function featureCard(rec, props) {
     .slice(0, 6)
     .map(k => `<tr><th>${esc(fieldLabel(rec, k))}</th><td>${esc(String(valueLabel(rec, props[k])))}</td></tr>`)
     .join('');
-  const sw = `<span class="fp-sw" style="background:${kindColor(rec, props)}"></span>`;
+  const sw = `<span class="fp-sw" style="background:${(rec && rec.style && rec.style.color) || '#09814A'}"></span>`;
   const yr = rec && rec.source && rec.source.year ? ` · ${rec.source.year}` : '';
   return `<div class="fp-card">
       <div class="fp-h">${sw}${esc(rec ? rec.name : 'Capa')}${yr}</div>

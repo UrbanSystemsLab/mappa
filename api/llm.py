@@ -297,8 +297,20 @@ def _spatial_block(spatial: dict[str, Any], lang: str) -> str:
     muni = spatial.get("municipio")
     if muni:
         lines.append(f"- Municipio: {muni}")
-    for key, val in (spatial.get("hazards") or {}).items():
-        lines.append(f"- {_HAZARD_LABELS.get(key, key)}: {yes if val else no}")
+    # These are checked at the single spot the user clicked, not across the
+    # municipality. Unlabelled, the model read "flood zone: No" for one spot in
+    # Mayagüez as "Mayagüez is not in a flood zone" - when 41% of it is.
+    hazards = spatial.get("hazards") or {}
+    if hazards:
+        lines.append(
+            "- En el punto exacto donde el usuario hizo clic (NO en todo el municipio; "
+            "no lo generalices al municipio):"
+            if lang == "es"
+            else "- At the single spot the user clicked (NOT the whole municipality; "
+            "never generalise this to the municipality):"
+        )
+    for key, val in hazards.items():
+        lines.append(f"  - {_HAZARD_LABELS.get(key, key)}: {yes if val else no}")
     for label, count in (spatial.get("facilities") or {}).items():
         lines.append(f"- {label}: {count}")
     for line in spatial.get("analysis") or []:
@@ -377,10 +389,22 @@ def stream_answer(messages):
         yield _chat(messages)
 
 
+# "[1, 2, 3, 4]" after every sentence. The model is asked to cite by number
+# because it keeps the answer tied to its documents, but a reader got nothing
+# from the numbers: most sentences carried four to six of them, which says
+# "several documents" and nothing else. They are removed from what is shown; the
+# sources are still listed under the answer.
+_CITE_NUMBERS = re.compile(r"\s*\[\s*\d+(?:\s*[,;–-]\s*\d+)*\s*\]")
+
+
+def strip_citation_numbers(text: str) -> str:
+    return _CITE_NUMBERS.sub("", text)
+
+
 def finish(answer: str, docs, layers, lang: str) -> dict:
-    """Post-process a finished answer the same way narrate() does - strip URLs and
-    the map-facts marker, decide citations."""
-    answer = _strip_map_markers(_strip_urls(answer)).strip()
+    """Post-process a finished answer the same way narrate() does - strip URLs,
+    the map-facts marker and the citation numbers, decide citations."""
+    answer = strip_citation_numbers(_strip_map_markers(_strip_urls(answer))).strip()
     return _assemble(answer, docs, layers, lang)
 
 
@@ -448,5 +472,5 @@ def narrate(
     answer = _chat(messages)
     if not answer:
         raise RuntimeError("empty LLM response")
-    answer = _strip_map_markers(_strip_urls(answer))
+    answer = strip_citation_numbers(_strip_map_markers(_strip_urls(answer))).strip()
     return _assemble(answer, docs, layers, lang)

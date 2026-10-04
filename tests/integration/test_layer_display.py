@@ -53,12 +53,3 @@ def test_most_layers_show_something_when_clicked(cur):
     )
     total, clickable = cur.fetchone()
     assert clickable / total > 0.9, f"only {clickable} of {total} layers show anything"
-
-
-def test_land_use_is_coloured_by_its_land_classes(cur):
-    """The case that started this: seventeen kinds of land, all one green."""
-    cur.execute(
-        "SELECT style->>'by', jsonb_array_length(style->'categories') FROM layer_registry "
-        "WHERE table_name = 'layer_plan_uso_terrenos_2015'"
-    )
-    assert cur.fetchone() == ("descripput", 17)
