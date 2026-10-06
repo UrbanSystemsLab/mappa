@@ -146,7 +146,10 @@ def summary(recs: list[dict], label: str) -> dict:
     graded = [
         r["grade"] for r in recs if isinstance(r.get("grade"), dict) and "relevant" in r["grade"]
     ]
-    avg = lambda k: sum(g[k] for g in graded) / len(graded) if graded else 0.0  # noqa: E731
+
+    def avg(k: str) -> float:
+        return sum(g[k] for g in graded) / len(graded) if graded else 0.0
+
     secs = sorted(r["seconds"] for r in recs if r.get("seconds") is not None)
     s = {
         "label": label,
@@ -166,9 +169,9 @@ def summary(recs: list[dict], label: str) -> dict:
 
 
 def compare(a: str, b: str) -> None:
-    load = lambda lbl: [
-        json.loads(x) for x in (RESULTS / f"{lbl}.jsonl").read_text().splitlines() if x
-    ]  # noqa: E731
+    def load(lbl: str) -> list[dict]:
+        return [json.loads(x) for x in (RESULTS / f"{lbl}.jsonl").read_text().splitlines() if x]
+
     ra, rb = load(a), load(b)
     sa, sb = summary(ra, a), summary(rb, b)
     print(f"\n{'':<22} {a:>10} {b:>10}")
