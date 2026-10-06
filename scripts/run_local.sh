@@ -29,5 +29,7 @@ DB=mappa_staging
 [ "${1:-}" = production ] && DB=mappa
 export DATABASE_URL="postgresql://mappa:$(cat .mappa_db_pw)@127.0.0.1:5432/$DB"
 export APP_ENV=local
+# Local testing runs whole question sets; the public rate limit would block them.
+export RATE_LIMIT_PER_MINUTE=600 RATE_LIMIT_PER_HOUR=20000
 echo "Starting Mappa at http://127.0.0.1:8765 on database $DB (Ctrl+C to stop) ..."
 exec ./venv/bin/uvicorn api.main:app --port 8765
