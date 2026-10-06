@@ -32,6 +32,9 @@ from pathlib import Path
 
 import psycopg2
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from core import NOT_LAYER_TABLES
+
 ROOT = Path(__file__).resolve().parents[1]
 BIN = Path("/opt/homebrew/opt/libpq/bin")
 PROJECT = os.environ.get("GCP_PROJECT", "mappa-lamarana-aecc")
@@ -47,8 +50,10 @@ def dsn(db: str) -> str:
     # Keepalives, because one table can take minutes during which the connection
     # carries nothing - and the link to the server dropped exactly then, at
     # table 609 of 636 on the first full run.
-    return (f"postgresql://mappa:{password()}@127.0.0.1:5432/{db}"
-            "?keepalives=1&keepalives_idle=30&keepalives_interval=10&keepalives_count=6")
+    return (
+        f"postgresql://mappa:{password()}@127.0.0.1:5432/{db}"
+        "?keepalives=1&keepalives_idle=30&keepalives_interval=10&keepalives_count=6"
+    )
 
 
 def server_address() -> str:
@@ -172,14 +177,14 @@ def link(s, host: str) -> None:
     s.execute("IMPORT FOREIGN SCHEMA public FROM SERVER prod_src INTO prod_src")
 
 
-
 def copy_tables(live, s) -> None:
     # What the app needs first, so the useful part of staging is ready soonest:
     # its own tables, then the map layers, then the hidden ones.
     with live.cursor() as c:
-        c.execute("""
+        c.execute(
+            """
             SELECT t.relname, pg_total_relation_size(t.oid),
-                   CASE WHEN t.relname NOT LIKE 'layer\\_%' OR t.relname IN ('layer_registry','layer_inventory') THEN 0
+                   CASE WHEN t.relname NOT LIKE 'layer\\_%%' OR t.relname = ANY(%s) THEN 0
                         WHEN r.status = 'published' THEN 1 WHEN r.status = 'loaded' THEN 2 ELSE 3 END
             FROM pg_class t JOIN pg_namespace n ON n.oid = t.relnamespace
             LEFT JOIN layer_registry r ON r.table_name = t.relname
@@ -188,7 +193,9 @@ def copy_tables(live, s) -> None:
               -- already exist in staging, filled by the extension itself.
               AND NOT EXISTS (SELECT 1 FROM pg_depend d
                               WHERE d.objid = t.oid AND d.deptype = 'e')
-            ORDER BY 3, 2""")
+            ORDER BY 3, 2""",
+            (list(NOT_LAYER_TABLES),),
+        )
         tables = c.fetchall()
     total_bytes = sum(b for _, b, _ in tables)
 
@@ -210,7 +217,6 @@ def copy_tables(live, s) -> None:
                 f"{name[:48]:<48} {s.rowcount:>9,} rows  {time.monotonic() - t0:5.0f}s",
                 flush=True,
             )
-
 
 
 def finish(live, s, host: str, started: float) -> None:

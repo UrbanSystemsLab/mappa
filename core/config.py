@@ -32,6 +32,12 @@ def _with_database(url: str | None, name: str | None) -> str | None:
 
 DATABASE_URL = _with_database(_URL, DATABASE_NAME)
 
+# Tables whose names start with layer_ but which hold no map data. Anything
+# that scans for layer tables has to skip these, and three places each kept
+# their own copy of this list - so adding layer_roles made one of them treat it
+# as a lost map layer.
+NOT_LAYER_TABLES = frozenset({"layer_registry", "layer_inventory", "layer_roles"})
+
 # Which copy of the app this is: "production" or "staging". Staging shows a
 # banner and asks search engines not to index it, so nobody mistakes it for
 # the live site or finds it by searching.

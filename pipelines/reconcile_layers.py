@@ -35,8 +35,7 @@ import unicodedata
 
 import psycopg2
 
-# Tables that merely start with layer_ but are not layers.
-NOT_LAYERS = {"layer_registry", "layer_inventory"}
+from core import NOT_LAYER_TABLES as NOT_LAYERS
 
 SOURCE = "La Maraña — recovered during reconciliation"
 

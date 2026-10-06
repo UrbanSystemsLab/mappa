@@ -15,12 +15,17 @@ def test_no_orphan_layer_tables(cur):
     A table with no row is invisible to the catalog, the map and the assistant -
     loaded data that nothing can reach.
     """
-    cur.execute("""
+    from core import NOT_LAYER_TABLES
+
+    cur.execute(
+        """
         SELECT t.table_name FROM information_schema.tables t
-        WHERE t.table_schema = 'public' AND t.table_name LIKE 'layer_%'
-          AND t.table_name NOT IN ('layer_registry', 'layer_inventory')
+        WHERE t.table_schema = 'public' AND t.table_name LIKE 'layer_%%'
+          AND NOT (t.table_name = ANY(%s))
           AND NOT EXISTS (SELECT 1 FROM layer_registry r WHERE r.table_name = t.table_name)
-    """)
+        """,
+        (list(NOT_LAYER_TABLES),),
+    )
     orphans = [r[0] for r in cur.fetchall()]
 
     # A table superseded by a newer copy of the same layer is expected: loading
