@@ -83,9 +83,16 @@ def retrieve_cloud(
             # the answer read as though the corpus had nothing on Loíza. Iterative
             # scan keeps searching until the filter is satisfied.
             cur.execute("SET LOCAL hnsw.iterative_scan = relaxed_order")
+            # Island-wide documents apply everywhere, and their inventory marks
+            # them "N/A" or leaves the municipality blank - not "Puerto Rico",
+            # which is all this used to accept. So every question that named a
+            # place left out the Reglamento Conjunto and the island-wide laws:
+            # "can I build in a flood zone in Ponce?" never read the permitting
+            # rules. Found on 6 Oct 2026; no document was labelled "Puerto Rico".
             cur.execute(
                 base
-                + "WHERE d.jurisdiction ILIKE %s OR d.jurisdiction ILIKE 'Puerto Rico' "
+                + "WHERE d.jurisdiction ILIKE %s OR d.jurisdiction IS NULL "
+                + "OR d.jurisdiction IN ('Puerto Rico', 'N/A', '') "
                 + tail,
                 (lit, jurisdiction, lit, top_k),
             )

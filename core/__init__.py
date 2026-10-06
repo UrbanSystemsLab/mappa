@@ -10,6 +10,7 @@ written, and one pair had already drifted.
 """
 
 from .config import (
+    APP_ENV,
     DATABASE_URL,
     EMBED_DIM,
     EMBEDDING_MODEL,
@@ -19,6 +20,7 @@ from .config import (
 )
 
 __all__ = [
+    "APP_ENV",
     "DATABASE_URL",
     "EMBEDDING_MODEL",
     "EMBED_DIM",

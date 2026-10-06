@@ -23,8 +23,8 @@ jobs:
       # Unused imports, shadowed names, mutable defaults, silent zip truncation.
       # A variable shadowing a function is what once froze the chat on
       # "Consultando…" with no error anywhere.
-      - run: ruff check api pipelines tests
-      - run: ruff format --check api pipelines tests
+      - run: ruff check api pipelines tests core
+      - run: ruff format --check api pipelines tests core
 
   unit:
     needs: lint
@@ -40,14 +40,16 @@ jobs:
       - name: Unit tests
         run: pytest tests/unit -q
 
-  integration:
-    name: Integration
+  schema:
+    name: Database builds from scratch
     runs-on: ubuntu-latest
-    # PostGIS and pgvector, because the spatial and retrieval tests are the ones
-    # that catch real defects and both need the extensions.
+    # The data tests need the real data and run against staging, in
+    # scripts/release.sh. They used to run here against an empty database,
+    # which meant this job could never pass and its failure meant nothing.
+    # What an empty database can check is that the schema is reproducible.
     services:
       postgres:
-        image: pgvector/pgvector:pg16
+        image: postgis/postgis:16-3.4
         env:
           POSTGRES_PASSWORD: test
           POSTGRES_DB: mappa_test
@@ -61,19 +63,19 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-      - run: pip install -r requirements-api.txt pytest
-      - name: Apply migrations to an empty database
+      - run: pip install -r requirements-api.txt
+      - name: pgvector
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          docker exec $(docker ps -q --filter ancestor=postgis/postgis:16-3.4) \
+            sh -c "apt-get update -qq && apt-get install -y -qq postgresql-16-pgvector"
+      - name: Every migration applies to an empty database, and rolls back
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/mappa_test
         run: |
-          # The schema must be reproducible from source. Eleven ad-hoc ALTER
-          # statements in pipeline scripts meant it was not, and La Maraña could
-          # not have rebuilt this after handover.
           alembic upgrade head
-      - name: Integration tests
-        env:
-          DATABASE_URL: postgresql://postgres:test@localhost:5432/mappa_test
-        run: pytest tests/integration -q
+          alembic downgrade base
+          alembic upgrade head
 
   frontend-shape:
     name: Frontend integrity

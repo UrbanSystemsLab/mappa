@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Run Mappa on this laptop, against the real data, to check a change before it
-# is deployed. Open http://127.0.0.1:8765 when it says it is ready.
+# Run Mappa on this laptop to check a change before it is released.
+# Open http://127.0.0.1:8765 when it says it is ready.
 #
-# It only READS the live database. Nothing done in the local app changes the
-# live site - but pipelines run with --commit against this same database do.
+#   ./scripts/run_local.sh              against the staging database (default)
+#   ./scripts/run_local.sh production   against the live database, read-only use
+#
+# Staging is the default so that trying things locally can never change the
+# live data.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -22,6 +25,9 @@ if lsof -nP -iTCP:8765 -sTCP:LISTEN >/dev/null 2>&1; then
   exit 1
 fi
 
-export DATABASE_URL="postgresql://mappa:$(cat .mappa_db_pw)@127.0.0.1:5432/mappa"
-echo "Starting Mappa at http://127.0.0.1:8765 (Ctrl+C to stop) ..."
+DB=mappa_staging
+[ "${1:-}" = production ] && DB=mappa
+export DATABASE_URL="postgresql://mappa:$(cat .mappa_db_pw)@127.0.0.1:5432/$DB"
+export APP_ENV=local
+echo "Starting Mappa at http://127.0.0.1:8765 on database $DB (Ctrl+C to stop) ..."
 exec ./venv/bin/uvicorn api.main:app --port 8765

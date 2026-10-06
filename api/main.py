@@ -20,6 +20,8 @@ from fastapi import FastAPI
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
+from core import APP_ENV
+
 from . import limits
 from .routers import ask as ask_router
 from .routers import catalog as catalog_router
@@ -105,4 +107,17 @@ def index() -> Response:
         html = re.sub(
             rf"/static/{re.escape(asset)}(\?v=[^\"\']*)?", f"/static/{asset}?v={digest}", html
         )
-    return Response(html, media_type="text/html", headers={"Cache-Control": "no-store"})
+    headers = {"Cache-Control": "no-store"}
+    if APP_ENV != "production":
+        # A test copy says so on every screen, and stays out of search results.
+        banner = (
+            # Fixed, so it sits over the page rather than pushing its
+            # full-height layout down.
+            '<div style="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;'
+            "background:#b45309;color:#fff;font:600 12px/1.7 system-ui,sans-serif;"
+            f'padding:2px 12px;border-radius:0 0 7px 7px">{APP_ENV.upper()} · test copy, not '
+            "the live site · copia de prueba</div>"
+        )
+        html = html.replace("<body>", "<body>" + banner, 1)
+        headers["X-Robots-Tag"] = "noindex, nofollow"
+    return Response(html, media_type="text/html", headers=headers)

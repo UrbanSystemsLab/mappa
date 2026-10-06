@@ -10,10 +10,32 @@ simplification tolerances all still live, on purpose.
 from __future__ import annotations
 
 import os
+from urllib.parse import urlsplit, urlunsplit
 
 # Where everything reads and writes. Four modules each called os.environ.get for
 # this, which meant four places to change and four chances to miss one.
-DATABASE_URL = os.environ.get("DATABASE_URL")
+_URL = os.environ.get("DATABASE_URL")
+
+# Which database on that server. Staging and production share one server and
+# one stored connection address; DATABASE_NAME picks the database, so staging
+# needs no secret of its own - creating one needs a permission nobody on the
+# project has.
+DATABASE_NAME = os.environ.get("DATABASE_NAME")
+
+
+def _with_database(url: str | None, name: str | None) -> str | None:
+    if not url or not name:
+        return url
+    parts = urlsplit(url)
+    return urlunsplit(parts._replace(path="/" + name))
+
+
+DATABASE_URL = _with_database(_URL, DATABASE_NAME)
+
+# Which copy of the app this is: "production" or "staging". Staging shows a
+# banner and asks search engines not to index it, so nobody mistakes it for
+# the live site or finds it by searching.
+APP_ENV = os.environ.get("APP_ENV", "production")
 
 # The embedding model, and the width of the vectors it makes.
 #
