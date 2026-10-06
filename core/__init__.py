@@ -1,17 +1,6 @@
-"""Values that more than one part of the system has to agree on.
+"""What the API, the pipelines and the scripts share: settings and fixed facts."""
 
-Nothing here is a general-purpose dumping ground for constants. A threshold used
-in one place belongs next to the code it tunes, where a reader can see what it
-does. What belongs here is narrower and more dangerous: a value where `api` and
-`pipelines` have to say the same thing, and where disagreeing is silent.
-
-Each one below had already been declared two or three times by the time this was
-written, and one pair had already drifted.
-"""
-
-from .config import (
-    APP_ENV,
-    DATABASE_URL,
+from .constants import (
     EMBED_DIM,
     EMBEDDING_MODEL,
     MIN_RELEVANCE,
@@ -19,14 +8,15 @@ from .config import (
     TILE_MAX_ZOOM,
     TILE_MIN_ZOOM,
 )
+from .settings import Settings, settings
 
 __all__ = [
-    "APP_ENV",
-    "DATABASE_URL",
     "EMBEDDING_MODEL",
     "EMBED_DIM",
     "MIN_RELEVANCE",
     "NOT_LAYER_TABLES",
     "TILE_MAX_ZOOM",
     "TILE_MIN_ZOOM",
+    "Settings",
+    "settings",
 ]

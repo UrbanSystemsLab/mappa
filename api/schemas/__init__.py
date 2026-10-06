@@ -6,6 +6,25 @@ reasons: a field is added here when the frontend needs something, and main.py
 changes when the service is wired differently.
 """
 
-from .ask import AskRequest, AskResponse, Citation, Turn
+from .ask import AskRequest, AskResponse, Citation, Step, StreamDelta, StreamDone, StreamMeta, Turn
+from .catalog import Category, Layer, LayerList, LayerSource
+from .places import Location, PlaceMatch, PointCheck, TileJSON
 
-__all__ = ["AskRequest", "AskResponse", "Citation", "Turn"]
+__all__ = [
+    "AskRequest",
+    "AskResponse",
+    "Category",
+    "Citation",
+    "Layer",
+    "LayerList",
+    "LayerSource",
+    "Location",
+    "PlaceMatch",
+    "PointCheck",
+    "Step",
+    "StreamDelta",
+    "StreamDone",
+    "StreamMeta",
+    "TileJSON",
+    "Turn",
+]

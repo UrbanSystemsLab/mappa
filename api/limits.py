@@ -38,7 +38,7 @@ PER_HOUR = int(os.environ.get("RATE_LIMIT_PER_HOUR", "150"))
 # Only the routes that cost money or hold the database. Tiles and the catalogue
 # are cached and cheap, and limiting them would break the map for a classroom on
 # one connection.
-LIMITED_PATHS = ("/ask",)
+LIMITED_PATHS = ("/ask", "/api/v1/ask")
 
 # A bound on what this can hold, so the limiter cannot itself become the leak.
 MAX_CLIENTS = 20_000

@@ -1,0 +1,1381 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Mappa API",
+    "description": "Planning and hazard assistant for Puerto Rico. Everything a frontend needs is under /api/v1; see docs/API.md.",
+    "version": "1"
+  },
+  "paths": {
+    "/api/v1/ask": {
+      "post": {
+        "tags": [
+          "ask"
+        ],
+        "summary": "Ask",
+        "description": "A complete answer. Same service as /ask/stream, so they cannot diverge.",
+        "operationId": "ask_api_v1_ask_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ask/stream": {
+      "post": {
+        "tags": [
+          "ask"
+        ],
+        "summary": "Ask Stream",
+        "description": "The same answer, sent as it is written.\n\nThe map's half goes first, in a `meta` event, so the map moves while the text\nis still being written. An answer that takes two seconds is fine; two seconds\nof a blank panel reading 'Thinking...' is what people experience as broken.",
+        "operationId": "ask_stream_api_v1_ask_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/layers": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Layers",
+        "description": "Search the catalogue. `available_only` returns only layers that can be drawn.",
+        "operationId": "layers_api_v1_catalog_layers_get",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "es",
+              "title": "Lang"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "name": "available_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Available Only"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LayerList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/categories": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Categories",
+        "description": "Categories, with how many layers each holds and how many can be drawn.",
+        "operationId": "categories_api_v1_catalog_categories_get",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "es",
+              "title": "Lang"
+            }
+          },
+          {
+            "name": "available_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Available Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  },
+                  "title": "Response Categories Api V1 Catalog Categories Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/layers/{layer_id}": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Layer",
+        "operationId": "layer_api_v1_catalog_layers__layer_id__get",
+        "parameters": [
+          {
+            "name": "layer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Layer Id"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "es",
+              "title": "Lang"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Layer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/places": {
+      "get": {
+        "tags": [
+          "places"
+        ],
+        "summary": "Search",
+        "description": "Municipios, barrios and comunidades by name, accent- and case-insensitive.",
+        "operationId": "search_api_v1_places_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 8,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlaceMatch"
+                  },
+                  "title": "Response Search Api V1 Places Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/locate": {
+      "get": {
+        "tags": [
+          "places"
+        ],
+        "summary": "Locate",
+        "description": "What the click-checked layers say about one point.",
+        "operationId": "locate_api_v1_locate_get",
+        "parameters": [
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lng"
+            }
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lat"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Location"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tiles/{name}/{z}/{x}/{y}.mvt": {
+      "get": {
+        "tags": [
+          "tiles"
+        ],
+        "summary": "Tile",
+        "description": "One vector tile, built from PostGIS on demand.",
+        "operationId": "tile_api_v1_tiles__name___z___x___y__mvt_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "z",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Z"
+            }
+          },
+          {
+            "name": "x",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "X"
+            }
+          },
+          {
+            "name": "y",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Y"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tiles/{name}.json": {
+      "get": {
+        "tags": [
+          "tiles"
+        ],
+        "summary": "Tilejson",
+        "description": "The layer as a vector source - pass this URL straight to a map library.",
+        "operationId": "tilejson_api_v1_tiles__name__json_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TileJSON"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Api V1 Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AskRequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Question"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/Turn"
+            },
+            "type": "array",
+            "title": "History"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "spatial": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spatial"
+          },
+          "lang": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lang"
+          },
+          "active_layers": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Active Layers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "AskRequest"
+      },
+      "AskResponse": {
+        "properties": {
+          "answer_es": {
+            "type": "string",
+            "title": "Answer Es"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "type": "array",
+            "title": "Citations"
+          },
+          "suggested_layers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggested Layers"
+          },
+          "disclaimer": {
+            "type": "string",
+            "title": "Disclaimer"
+          },
+          "municipio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Municipio"
+          },
+          "focus": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focus"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/Step"
+            },
+            "type": "array",
+            "title": "Steps",
+            "description": "What the assistant did to answer."
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer_es",
+          "citations",
+          "suggested_layers",
+          "disclaimer"
+        ],
+        "title": "AskResponse"
+      },
+      "Category": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "available": {
+            "type": "integer",
+            "title": "Available",
+            "description": "Layers in this category that can be drawn."
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "description": "All layers in this category."
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "available",
+          "count"
+        ],
+        "title": "Category"
+      },
+      "Citation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "doc_id": {
+            "type": "string",
+            "title": "Doc Id",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "Citation"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Layer": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable identifier. Use it to fetch one layer or to turn it on."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "In the language asked for; Spanish when no English name exists."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "category_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Source",
+            "description": "The category exactly as their inventory writes it."
+          },
+          "subcategory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subcategory"
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Theme"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords",
+            "default": []
+          },
+          "source": {
+            "$ref": "#/components/schemas/LayerSource"
+          },
+          "geometry_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geometry Type",
+            "description": "POINT, MULTIPOLYGON, MULTILINESTRING..."
+          },
+          "feature_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Count"
+          },
+          "srid": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Srid"
+          },
+          "min_zoom": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Zoom"
+          },
+          "max_zoom": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Zoom"
+          },
+          "label_column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Column"
+          },
+          "sublabel_column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sublabel Column"
+          },
+          "style": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Style",
+            "description": "Display hints; at least `color`.",
+            "default": {}
+          },
+          "property_labels": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Property Labels",
+            "description": "Readable names for property keys, per language.",
+            "default": {}
+          },
+          "value_labels": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Value Labels",
+            "default": {}
+          },
+          "dataset_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "loaded",
+              "catalogued",
+              "duplicate",
+              "draft",
+              "hidden"
+            ],
+            "title": "Status"
+          },
+          "featured": {
+            "type": "boolean",
+            "title": "Featured",
+            "description": "On La Maraña's prioritization matrix.",
+            "default": false
+          },
+          "featured_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Featured Note"
+          },
+          "reliability": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "reliable",
+                  "needs_review",
+                  "outdated"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reliability"
+          },
+          "tile_properties_order": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tile Properties Order",
+            "description": "The feature properties carried in this layer's tiles, in display order.",
+            "default": []
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "description": "True if the layer can be drawn: its tiles exist."
+          },
+          "queryable": {
+            "type": "boolean",
+            "title": "Queryable",
+            "description": "True if the assistant can answer from it."
+          },
+          "tiles_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tiles Url",
+            "description": "Vector tile URL template, relative to the API's origin: /api/v1/tiles/{table}/{z}/{x}/{y}.mvt?v=N. Null when there is no data to draw."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "category",
+          "source",
+          "status",
+          "available",
+          "queryable"
+        ],
+        "title": "Layer"
+      },
+      "LayerList": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "layers": {
+            "items": {
+              "$ref": "#/components/schemas/Layer"
+            },
+            "type": "array",
+            "title": "Layers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "limit",
+          "offset",
+          "layers"
+        ],
+        "title": "LayerList"
+      },
+      "LayerSource": {
+        "properties": {
+          "agency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agency"
+          },
+          "inventory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inventory",
+            "description": "Which La Maraña inventory the layer comes from."
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "metadata_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "confirmed",
+                  "inferred",
+                  "reconstructed",
+                  "unknown"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Status",
+            "description": "La Maraña's own rating of the layer's metadata. Null unless they gave one."
+          }
+        },
+        "type": "object",
+        "title": "LayerSource"
+      },
+      "Location": {
+        "properties": {
+          "municipio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Municipio"
+          },
+          "hazards": {
+            "items": {
+              "$ref": "#/components/schemas/PointCheck"
+            },
+            "type": "array",
+            "title": "Hazards"
+          }
+        },
+        "type": "object",
+        "required": [
+          "municipio",
+          "hazards"
+        ],
+        "title": "Location",
+        "description": "What the data says about one clicked point. Facts about that point only."
+      },
+      "PlaceMatch": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "municipio",
+              "barrio",
+              "comunidad"
+            ],
+            "title": "Type"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent",
+            "description": "The municipio a barrio or comunidad is in."
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "What to show: \"Santurce, San Juan\"."
+          },
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Bbox"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "label",
+          "bbox"
+        ],
+        "title": "PlaceMatch"
+      },
+      "PointCheck": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "The layer role checked, e.g. 'flood'."
+          },
+          "name_es": {
+            "type": "string",
+            "title": "Name Es"
+          },
+          "name_en": {
+            "type": "string",
+            "title": "Name En"
+          },
+          "inside": {
+            "type": "boolean",
+            "title": "Inside",
+            "description": "Whether the clicked point falls inside that layer."
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name_es",
+          "name_en",
+          "inside"
+        ],
+        "title": "PointCheck"
+      },
+      "Step": {
+        "properties": {
+          "tool": {
+            "type": "string",
+            "title": "Tool",
+            "description": "find_place, search_documents, count_features..."
+          },
+          "arguments": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Arguments"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "What it found, in a few words.",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "tool"
+        ],
+        "title": "Step",
+        "description": "One thing the assistant did to reach the answer - a tool it called."
+      },
+      "TileJSON": {
+        "properties": {
+          "tilejson": {
+            "type": "string",
+            "title": "Tilejson",
+            "default": "3.0.0"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "tiles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tiles"
+          },
+          "minzoom": {
+            "type": "integer",
+            "title": "Minzoom"
+          },
+          "maxzoom": {
+            "type": "integer",
+            "title": "Maxzoom"
+          },
+          "bounds": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Bounds"
+          },
+          "vector_layers": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Vector Layers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "tiles",
+          "minzoom",
+          "maxzoom",
+          "bounds",
+          "vector_layers"
+        ],
+        "title": "TileJSON",
+        "description": "A TileJSON 3.0 descriptor - accepted directly by MapLibre GL and Mapbox GL."
+      },
+      "Turn": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question",
+          "answer"
+        ],
+        "title": "Turn",
+        "description": "One exchange already on screen."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

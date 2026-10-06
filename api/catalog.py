@@ -16,6 +16,8 @@ import re
 import unicodedata
 from typing import Any
 
+from core import settings
+
 from . import db
 
 # Their sheet spells five categories more than one way - Conservacion and
@@ -144,7 +146,11 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
         "queryable": bool(table) and status in ("published", "loaded"),
         # Version in the path means a republished layer gets fresh tile URLs, so
         # cached tiles are invalidated without purging the CDN.
-        "tiles_url": (f"/tiles/{table}/{{z}}/{{x}}/{{y}}.mvt?v={version}" if table else None),
+        "tiles_url": (
+            f"{settings.api_prefix}/tiles/{table}/{{z}}/{{x}}/{{y}}.mvt?v={version}"
+            if table
+            else None
+        ),
     }
 
 

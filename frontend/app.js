@@ -29,6 +29,12 @@ const RASTER_FALLBACK = {
   }],
 };
 
+// Where the API is. Empty means this same site. A frontend hosted somewhere
+// else sets window.MAPPA_API_ORIGIN before this script, e.g.
+// "https://app.mappealo.org", and everything below follows it.
+const API_ORIGIN = String(window.MAPPA_API_ORIGIN || '').replace(/\/$/, '');
+const API = API_ORIGIN + '/api/v1';
+
 let map = null;
 let usingFallback = false;
 try {
@@ -252,7 +258,7 @@ async function ask() {
   const deadline = setTimeout(() => ctl.abort(), 90000);
 
   try {
-    const r = await fetch('/ask/stream', {
+    const r = await fetch(API + '/ask/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: ctl.signal,
@@ -357,7 +363,7 @@ const paintKey = type => (type === 'fill' ? 'fill-opacity'
 
 async function loadCatalog() {
   try {
-    CATEGORIES = await (await fetch(`/catalog/categories?lang=${LANG}&available_only=true`)).json();
+    CATEGORIES = await (await fetch(`${API}/catalog/categories?lang=${LANG}&available_only=true`)).json();
     await fetchLayers();
   } catch (e) {
     document.getElementById('layerlist').textContent =
@@ -368,7 +374,7 @@ async function loadCatalog() {
 async function fetchLayers() {
   const p = new URLSearchParams({ lang: LANG, limit: '700', available_only: 'true' });
   if (layerQuery) p.set('q', layerQuery);
-  const d = await (await fetch('/catalog/layers?' + p)).json();
+  const d = await (await fetch(API + '/catalog/layers?' + p)).json();
   RESULTS = d.layers || [];
   RESULT_TOTAL = d.total || 0;
   // A layer that is switched on holds a copy of its catalogue row from the
@@ -378,7 +384,7 @@ async function fetchLayers() {
   await Promise.all([...ACTIVE.keys()].map(async id => {
     let l = fresh.get(id);
     if (!l) {
-      try { l = await (await fetch(`/catalog/layers/${id}?lang=${LANG}`)).json(); } catch (e) { return; }
+      try { l = await (await fetch(`${API}/catalog/layers/${id}?lang=${LANG}`)).json(); } catch (e) { return; }
     }
     const rec = ACTIVE.get(id);
     if (l && rec) Object.assign(rec, { name: l.name, description: l.description, category: l.category });
@@ -543,7 +549,7 @@ function addLayer(id) {
   if (!map.getSource(srcId)) {
     map.addSource(srcId, {
       type: 'vector',
-      tiles: [location.origin + l.tiles_url],
+      tiles: [(API_ORIGIN || location.origin) + l.tiles_url],
       minzoom: l.min_zoom != null ? l.min_zoom : 0,
       maxzoom: l.max_zoom != null ? l.max_zoom : 14,
     });
@@ -646,7 +652,7 @@ function raiseLayer(id) {
 // confident that metadata is.
 async function showLayerInfo(id) {
   try {
-    const l = await (await fetch(`/catalog/layers/${id}?lang=${LANG}`)).json();
+    const l = await (await fetch(`${API}/catalog/layers/${id}?lang=${LANG}`)).json();
     const s = l.source || {};
     const box = document.getElementById('layerinfo');
     box.innerHTML = `<div class="li-h"><b>${esc(l.name)}</b>
@@ -749,7 +755,7 @@ loadCatalog();
       if (term.length < 2) return close();
       ptimer = setTimeout(async () => {
         try {
-          const rows = await (await fetch('/places?q=' + encodeURIComponent(term))).json();
+          const rows = await (await fetch(API + '/places?q=' + encodeURIComponent(term))).json();
           if (!rows.length) return close();
           pr.innerHTML = rows.map(r =>
             `<button data-bbox="${r.bbox.join(',')}" data-name="${esc(r.label || r.name)}">
@@ -831,7 +837,7 @@ if (map) map.on('click', async (e) => {
   // useful even on empty ground.
   const { lng, lat } = e.lngLat;
   let info;
-  try { info = await (await fetch(`/locate?lng=${lng}&lat=${lat}`)).json(); }
+  try { info = await (await fetch(`${API}/locate?lng=${lng}&lat=${lat}`)).json(); }
   catch (err) { info = { municipio: null, hazards: [] }; }
 
   if (locMarker) locMarker.remove();

@@ -65,7 +65,7 @@ def test_the_service_reads_the_database_url_in_one_place():
         for match in re.finditer(r"""environ(?:\.get)?\(\s*["']DATABASE_URL["']""", text):
             line = text[: match.start()].count("\n") + 1
             offenders.append(f"{path.relative_to(ROOT)}:{line}")
-    assert offenders == [], f"should import core.DATABASE_URL: {offenders}"
+    assert offenders == [], f"should use core.settings.database_url: {offenders}"
 
 
 def test_the_served_and_baked_zoom_ranges_are_the_same():
@@ -89,7 +89,33 @@ def test_the_relevance_gate_has_one_value():
 
 
 def test_core_holds_only_what_crosses_a_boundary():
-    """A threshold used in one place belongs beside the code it tunes, where it
-    can be read in context. core/ is not a cupboard for every constant."""
-    exported = {n for n in core.__all__}
-    assert len(exported) <= 10, f"core/ is growing into a dumping ground: {sorted(exported)}"
+    """Settings live on one object; fixed facts are a short list. core/ is not
+    a cupboard for every constant - a threshold used in one place belongs beside
+    the code it tunes."""
+    from core import constants
+
+    facts = [n for n in vars(constants) if n.isupper()]
+    assert len(facts) <= 8, f"core/constants.py is growing into a dumping ground: {facts}"
+
+
+def test_settings_reject_a_mistyped_environment():
+    """APP_ENV=prod used to be silently treated as not-production."""
+    import pytest
+    from pydantic import ValidationError
+
+    from core import Settings
+
+    with pytest.raises(ValidationError):
+        Settings.from_env({"APP_ENV": "prod"})
+
+
+def test_staging_picks_its_database_on_the_shared_server():
+    from core import Settings
+
+    s = Settings.from_env(
+        {
+            "DATABASE_URL": "postgresql://u:p@/mappa?host=/cloudsql/x",
+            "DATABASE_NAME": "mappa_staging",
+        }
+    )
+    assert s.database_url == "postgresql://u:p@/mappa_staging?host=/cloudsql/x"

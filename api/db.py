@@ -15,7 +15,7 @@ from __future__ import annotations
 import os
 import threading
 
-from core import DATABASE_URL as DB_URL
+from core import settings
 
 _POOL = None
 POOL_MIN = int(os.environ.get("DB_POOL_MIN", "1"))
@@ -49,7 +49,7 @@ def _get_pool():
             f"-c statement_timeout={STATEMENT_TIMEOUT_MS} "
             f"-c idle_in_transaction_session_timeout={IDLE_TX_TIMEOUT_MS}"
         )
-        _POOL = ThreadedConnectionPool(POOL_MIN, POOL_MAX, DB_URL, options=opts)
+        _POOL = ThreadedConnectionPool(POOL_MIN, POOL_MAX, settings.database_url, options=opts)
     return _POOL
 
 

@@ -28,6 +28,7 @@ from collections import OrderedDict
 from typing import Any
 
 from core import TILE_MAX_ZOOM as MAX_ZOOM
+from core import settings
 
 from . import db
 
@@ -207,9 +208,13 @@ def tilejson(name: str, base_url: str) -> dict[str, Any] | None:
     return {
         "tilejson": "3.0.0",
         "name": name,
-        "tiles": [f"{base_url}/tiles/{name}/{{z}}/{{x}}/{{y}}.mvt"],
+        "tiles": [f"{base_url}{settings.api_prefix}/tiles/{name}/{{z}}/{{x}}/{{y}}.mvt"],
         "minzoom": 0,
         "maxzoom": MAX_ZOOM,
         "bounds": [-67.3, 17.85, -65.2, 18.55],  # Puerto Rico
-        "vector_layers": [{"id": "layer", "fields": {}}],
+        # What a style can refer to: every tile has one source-layer, "layer",
+        # carrying these properties.
+        "vector_layers": [
+            {"id": "layer", "fields": {c: "String" for c in meta.get("tile_properties") or []}}
+        ],
     }

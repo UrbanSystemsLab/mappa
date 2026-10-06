@@ -91,10 +91,14 @@ if [ "$TARGET" = staging ]; then
     --set-env-vars "APP_ENV=staging,DATABASE_NAME=$DB,LLM_PROVIDER=gemini,GCP_PROJECT=$PROJECT,VERTEX_LOCATION=$REGION,RESPONSE_LANG=en" \
     --cpu 2 --memory 4Gi --concurrency 4 --min-instances 0 --max-instances 3 \
     --allow-unauthenticated --quiet
-  # NYU allows public sites only with this tag; without it staging answers 403.
+  # NYU allows a public site only once it carries this tag. On the first deploy
+  # the service did not exist yet, so the tag could not be there and opening it
+  # to everyone failed - staging answered 403. Tag first, then open it.
   gcloud resource-manager tags bindings create --tag-value="$PUBLIC_TAG" --location="$REGION" \
     --parent="//run.googleapis.com/projects/$PROJECT/locations/$REGION/services/$SERVICE" \
-    >/dev/null 2>&1 || true
+    >/dev/null 2>&1 || true   # already tagged on later deploys
+  gcloud run services add-iam-policy-binding "$SERVICE" --region "$REGION" --project "$PROJECT" \
+    --member=allUsers --role=roles/run.invoker --format=none
 else
   # Not rebuilt: the exact image staging was checked on.
   gcloud run deploy "$SERVICE" --image "$IMAGE" "${COMMON[@]}" --quiet
@@ -104,12 +108,12 @@ URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PRO
 
 # --- 4. is it actually working -------------------------------------------------
 say "6/6  Checking $URL"
-for path in /health "/catalog/layers?limit=1" "/places?q=ponce"; do
+for path in /health "/api/v1/catalog/layers?limit=1" "/api/v1/places?q=ponce"; do
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$URL$path")
   printf '  %-28s %s\n' "$path" "$code"
   [ "$code" = 200 ] || fail "$path returned $code"
 done
-answer=$(curl -s --max-time 90 -X POST "$URL/ask" -H 'Content-Type: application/json' \
+answer=$(curl -s --max-time 90 -X POST "$URL/api/v1/ask" -H 'Content-Type: application/json' \
           -d '{"question":"How many schools are in Arecibo?","lang":"en"}' |
          ./venv/bin/python -c 'import json,sys; print(json.load(sys.stdin)["answer_es"][:120])')
 echo "  a question: $answer"

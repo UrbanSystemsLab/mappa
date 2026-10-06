@@ -7,8 +7,8 @@ from typing import Any
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from core import DATABASE_URL as DB_URL
 from core import EMBEDDING_MODEL as EMBEDDING_MODEL_NAME
+from core import settings
 
 # Their inventory IDs. A document they supplied that is not on the sheet gets an
 # LM- slug from its filename, which is an internal key rather than a reference a
@@ -157,7 +157,7 @@ def _corpus_jurisdictions() -> list[str]:
     if _jurisdictions_cache is None:
         import psycopg2
 
-        with psycopg2.connect(DB_URL) as conn, conn.cursor() as cur:
+        with psycopg2.connect(settings.database_url) as conn, conn.cursor() as cur:
             cur.execute(
                 "SELECT DISTINCT jurisdiction FROM documents WHERE jurisdiction IS NOT NULL"
             )
@@ -168,7 +168,7 @@ def _corpus_jurisdictions() -> list[str]:
 def detect_municipio(text: str) -> str | None:
     """Return a municipio jurisdiction mentioned in the text, if the corpus has docs
     for it (accent-insensitive). Island-wide 'Puerto Rico' is not a scope."""
-    if not DB_URL:
+    if not settings.database_url:
         return None
     t = _strip(text)
     for j in _corpus_jurisdictions():
@@ -248,7 +248,7 @@ def _get_index() -> SemanticIndex:
 
 
 def retrieve(query: str, top_k: int = 3, jurisdiction: str | None = None) -> list[dict[str, Any]]:
-    if DB_URL:
+    if settings.database_url:
         return [doc for _, doc in retrieve_cloud(query, top_k=top_k, jurisdiction=jurisdiction)]
     index = _get_index()
     return [doc for _, doc in index.search(query, top_k=top_k)]
@@ -257,7 +257,7 @@ def retrieve(query: str, top_k: int = 3, jurisdiction: str | None = None) -> lis
 def retrieve_with_scores(
     query: str, top_k: int = 3, jurisdiction: str | None = None
 ) -> list[tuple[float, dict[str, Any]]]:
-    if DB_URL:
+    if settings.database_url:
         return retrieve_cloud(query, top_k=top_k, jurisdiction=jurisdiction)
     index = _get_index()
     return index.search(query, top_k=top_k)

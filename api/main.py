@@ -16,11 +16,12 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
-from core import APP_ENV
+from core import settings
 
 from . import limits
 from .routers import ask as ask_router
@@ -67,28 +68,51 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="Mappa — Asistente Geoespacial de Puerto Rico (MVP)",
+    title="Mappa API",
+    description="Planning and hazard assistant for Puerto Rico. "
+    "Everything a frontend needs is under /api/v1; see docs/API.md.",
+    version="1",
     lifespan=lifespan,
+    docs_url=f"{settings.api_prefix}/docs",
+    openapi_url=f"{settings.api_prefix}/openapi.json",
+    redoc_url=None,
 )
 
 # The app is public and has no sign-in, so this is the only thing between a
-# loop pointed at /ask and both the bill and the database the map is served from.
+# loop pointed at the question endpoint and both the bill and the database.
 app.middleware("http")(limits.middleware)
 
-app.include_router(ask_router.router)
-app.include_router(catalog_router.router)
-app.include_router(places_router.router)
-app.include_router(tiles_router.router)
+# A frontend on another origin - a React or Angular app hosted elsewhere -
+# needs the browser's permission to call this API.
+if settings.cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(settings.cors_origins),
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type"],
+    )
 
-app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+api = APIRouter(prefix=settings.api_prefix)
+api.include_router(ask_router.router)
+api.include_router(catalog_router.router)
+api.include_router(places_router.router)
+api.include_router(tiles_router.router)
 
 
-@app.get("/health")
+@api.get("/health", tags=["health"])
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/")
+app.include_router(api)
+# Also at the root, where the hosting platform and uptime checks look.
+app.add_api_route("/health", health, include_in_schema=False)
+
+if settings.serve_frontend and FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+
+
+@app.get("/", include_in_schema=False)
 def index() -> Response:
     """Serve the app shell, stamped with the current asset versions.
 
@@ -98,6 +122,8 @@ def index() -> Response:
     The stamp is now a hash of the file's own contents, so it moves exactly when
     the file does and never when it does not.
     """
+    if not (settings.serve_frontend and FRONTEND_DIR.exists()):
+        return Response(status_code=404)
     html = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
     for asset in ("app.js", "app.css"):
         path = FRONTEND_DIR / asset
@@ -108,14 +134,14 @@ def index() -> Response:
             rf"/static/{re.escape(asset)}(\?v=[^\"\']*)?", f"/static/{asset}?v={digest}", html
         )
     headers = {"Cache-Control": "no-store"}
-    if APP_ENV != "production":
+    if settings.app_env != "production":
         # A test copy says so on every screen, and stays out of search results.
         banner = (
             # Fixed, so it sits over the page rather than pushing its
             # full-height layout down.
             '<div style="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;'
             "background:#b45309;color:#fff;font:600 12px/1.7 system-ui,sans-serif;"
-            f'padding:2px 12px;border-radius:0 0 7px 7px">{APP_ENV.upper()} · test copy, not '
+            f'padding:2px 12px;border-radius:0 0 7px 7px">{settings.app_env.upper()} · test copy, not '
             "the live site · copia de prueba</div>"
         )
         html = html.replace("<body>", "<body>" + banner, 1)

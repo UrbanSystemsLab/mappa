@@ -1,28 +1,23 @@
-"""Places: finding one by name, and asking what is true at a point."""
+"""Places: finding one by name, and what the data says at a clicked point."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Response
 
 from .. import spatial
+from ..schemas import Location, PlaceMatch
 
 router = APIRouter(tags=["places"])
 
 
-@router.get("/places")
-def search(q: str, limit: int = 8) -> JSONResponse:
-    """Municipios and barrios by name.
-
-    Accent- and case-insensitive, because a resident typing "anasco" should
-    find Añasco.
-    """
-    return JSONResponse(
-        spatial.search_places(q, min(limit, 20)), headers={"Cache-Control": "public, max-age=600"}
-    )
+@router.get("/places", response_model=list[PlaceMatch])
+def search(q: str, response: Response, limit: int = 8) -> list:
+    """Municipios, barrios and comunidades by name, accent- and case-insensitive."""
+    response.headers["Cache-Control"] = "public, max-age=600"
+    return spatial.search_places(q, min(limit, 20))
 
 
-@router.get("/locate")
+@router.get("/locate", response_model=Location)
 def locate(lng: float, lat: float) -> dict:
-    """What the loaded layers say about one point - what a map click asks."""
+    """What the click-checked layers say about one point."""
     return spatial.locate(lng, lat)

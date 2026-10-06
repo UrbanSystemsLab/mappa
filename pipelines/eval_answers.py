@@ -63,7 +63,9 @@ Return JSON: {{"relevant": n, "grounded": n, "specific": n, "note": "one short s
 
 def ask(url: str, question: str, lang: str) -> dict:
     body = json.dumps({"question": question, "lang": lang}).encode()
-    req = urllib.request.Request(f"{url}/ask", body, {"Content-Type": "application/json"})
+    # /api/v1/ask since 6 Oct 2026; /ask on builds before it, for comparing runs.
+    path = "/api/v1/ask" if _has_v1(url) else "/ask"
+    req = urllib.request.Request(f"{url}{path}", body, {"Content-Type": "application/json"})
     t0 = time.monotonic()
     try:
         with urllib.request.urlopen(req, timeout=180) as r:
@@ -72,6 +74,14 @@ def ask(url: str, question: str, lang: str) -> dict:
         return {"error": str(exc)[:200], "seconds": round(time.monotonic() - t0, 1)}
     data["seconds"] = round(time.monotonic() - t0, 1)
     return data
+
+
+def _has_v1(url: str) -> bool:
+    try:
+        with urllib.request.urlopen(f"{url}/api/v1/health", timeout=10) as r:
+            return r.status == 200
+    except Exception:
+        return False
 
 
 def grade(question: str, answer: str, sources: list[str]) -> dict:
