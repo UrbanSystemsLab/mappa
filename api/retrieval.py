@@ -54,6 +54,32 @@ def _rows_to_results(rows, min_score: float) -> list[tuple[float, dict[str, Any]
     return out
 
 
+# How many passages one document may contribute to an answer. The six best
+# matches for "¿Puedo construir en una zona inundable en Ponce?" were all from
+# Ponce's mitigation plan - a long document with many similar passages - so the
+# Reglamento Conjunto, the rule that actually governs it, never reached the
+# answer. More candidates are fetched, then each document is capped.
+PER_DOCUMENT = 2
+CANDIDATES_PER_RESULT = 5
+
+
+def _spread(
+    results: list[tuple[float, dict[str, Any]]], top_k: int
+) -> list[tuple[float, dict[str, Any]]]:
+    """The best passages, at most PER_DOCUMENT from any one document, in score order."""
+    taken: dict[str, int] = {}
+    out = []
+    for score, doc in results:
+        key = doc["id"]
+        if taken.get(key, 0) >= PER_DOCUMENT:
+            continue
+        taken[key] = taken.get(key, 0) + 1
+        out.append((score, doc))
+        if len(out) == top_k:
+            break
+    return out
+
+
 def retrieve_cloud(
     query: str, top_k: int = 5, min_score: float = 0.15, jurisdiction: str | None = None
 ) -> list[tuple[float, dict[str, Any]]]:
@@ -94,13 +120,13 @@ def retrieve_cloud(
                 + "WHERE d.jurisdiction ILIKE %s OR d.jurisdiction IS NULL "
                 + "OR d.jurisdiction IN ('Puerto Rico', 'N/A', '') "
                 + tail,
-                (lit, jurisdiction, lit, top_k),
+                (lit, jurisdiction, lit, top_k * CANDIDATES_PER_RESULT),
             )
             rows = cur.fetchall()
         if not rows:  # no scope, or scoped search found nothing -> unscoped
-            cur.execute(base + tail, (lit, lit, top_k))
+            cur.execute(base + tail, (lit, lit, top_k * CANDIDATES_PER_RESULT))
             rows = cur.fetchall()
-    return _rows_to_results(rows, min_score)
+    return _spread(_rows_to_results(rows, min_score), top_k)
 
 
 _jurisdictions_cache: list[str] | None = None

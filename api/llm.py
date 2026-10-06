@@ -49,10 +49,22 @@ _DECLINE_MARKERS = (
 )
 
 
+# A refusal is a sentence or two. Anything longer has gone on to say something,
+# and that something came from the documents.
+DECLINE_MAX_CHARS = 320
+
+
 def _is_decline(text: str) -> bool:
-    """True if the answer is a 'the sources don't cover this' non-answer."""
-    t = text.lower()
-    return any(m in t for m in _DECLINE_MARKERS)
+    """True if the answer is only a 'the sources don't cover this' non-answer.
+
+    It used to be any answer containing such a phrase anywhere. An answer that
+    hedged once and then quoted the Reglamento Conjunto's definition of a flood
+    zone had every source removed - so it showed the Reglamento's words with
+    nothing saying where they came from. Found on staging, 6 Oct 2026, when a
+    flood question in Ponce asked with three layers on the map.
+    """
+    t = text.lower().strip()
+    return len(t) <= DECLINE_MAX_CHARS and any(m in t for m in _DECLINE_MARKERS)
 
 
 from .retrieval import citation_id
@@ -137,9 +149,11 @@ SYSTEM_PROMPTS = {
         "enlaces, URLs ni direcciones web — las fuentes se muestran aparte con su enlace. "
         "Cuando uses una fuente o capa con fecha, menciona su año (por ejemplo, «según la capa FEMA "
         "de 2018»). Cita las fuentes por número, p. ej. [1]. "
-        "Si las FUENTES no contienen la respuesta, di exactamente que no hay información suficiente "
-        "en los documentos disponibles y remite a la Junta de Planificación, la OGPe, el DRNA o el "
-        "municipio — sin inventar una respuesta. No brindas asesoría legal vinculante."
+        "Si las FUENTES no contienen la respuesta en absoluto, di exactamente que no hay información "
+        "suficiente en los documentos disponibles y remite a la Junta de Planificación, la OGPe, el "
+        "DRNA o el municipio — sin inventar una respuesta. Si la responden solo en parte, empieza "
+        "por lo que SÍ dicen y luego indica con claridad qué parte no cubren; no empieces diciendo "
+        "que falta información. No brindas asesoría legal vinculante."
     ),
     "en": (
         "You are Mappa, a planning and hazard assistant for Puerto Rico communities. Answer in English. "
@@ -154,9 +168,11 @@ SYSTEM_PROMPTS = {
         "separately with their link. "
         "When you rely on a dated source or map layer, note its year (e.g., 'per the 2018 FEMA layer'). "
         "Cite sources by number, e.g. [1]. "
-        "If the SOURCES do not contain the answer, say exactly that there isn't enough information in the "
-        "available documents and point to the Junta de Planificación, OGPe, DRNA, or the municipality — "
-        "do not make up an answer. Do not give binding legal advice."
+        "If the SOURCES do not contain the answer at all, say exactly that there isn't enough information "
+        "in the available documents and point to the Junta de Planificación, OGPe, DRNA, or the "
+        "municipality — do not make up an answer. If they answer it only in part, lead with what they DO "
+        "say, then state plainly which part they do not cover; do not open by saying information is "
+        "missing. Do not give binding legal advice."
     ),
 }
 
