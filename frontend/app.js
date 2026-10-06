@@ -6,11 +6,11 @@
 // Falls back to OSM raster if the vector style cannot be reached, so the map
 // always draws something.
 // ---------------------------------------------------------------------------
-// One background map. There was a choice of four, then two, and the question
-// "why do we need this?" had no good answer: this is a map for reading data on,
-// and a grey base lets the layers be the colour on screen and keeps place names
-// legible over them. The raster style below is only a fallback if it fails.
-const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+// One background map, the full-colour street style. There was a choice of four,
+// then two, and nobody needed the choice. A grey base was tried as the only one
+// on 6 Oct and the colour one was preferred; data layers are drawn beneath its
+// place names, so they stay readable. The raster style below is only a fallback.
+const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const RASTER_FALLBACK = {
   version: 8,
   sources: {
