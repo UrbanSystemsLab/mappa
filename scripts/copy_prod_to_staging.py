@@ -44,7 +44,11 @@ def password() -> str:
 
 
 def dsn(db: str) -> str:
-    return f"postgresql://mappa:{password()}@127.0.0.1:5432/{db}"
+    # Keepalives, because one table can take minutes during which the connection
+    # carries nothing - and the link to the server dropped exactly then, at
+    # table 609 of 636 on the first full run.
+    return (f"postgresql://mappa:{password()}@127.0.0.1:5432/{db}"
+            "?keepalives=1&keepalives_idle=30&keepalives_interval=10&keepalives_count=6")
 
 
 def server_address() -> str:
@@ -112,6 +116,9 @@ def structure(section: str) -> None:
 
 
 def main() -> None:
+    # --resume carries on after an interrupted run: staging is not emptied, and
+    # only tables that are still empty are copied.
+    resume = "--resume" in sys.argv
     started = time.monotonic()
     host = server_address()
     live = psycopg2.connect(dsn(LIVE))
@@ -121,6 +128,16 @@ def main() -> None:
     s = staging.cursor()
     s.execute("SET statement_timeout = 0")  # one table can take minutes
 
+    if resume:
+        print("Resuming: keeping staging as it is and copying only empty tables", flush=True)
+    else:
+        reset_and_create(s)
+    link(s, host)
+    copy_tables(live, s)
+    finish(live, s, host, started)
+
+
+def reset_and_create(s) -> None:
     print("1/6  Emptying staging", flush=True)
     s.execute("DROP SCHEMA IF EXISTS prod_src CASCADE")
     s.execute("DROP SCHEMA IF EXISTS copy_tools CASCADE")
@@ -133,7 +150,12 @@ def main() -> None:
     print("2/6  Creating the tables, empty", flush=True)
     structure("pre-data")
 
-    # The temporary link: staging reads the live database as foreign tables.
+
+def link(s, host: str) -> None:
+    """The temporary link: staging reads the live database as foreign tables."""
+    s.execute("DROP SCHEMA IF EXISTS prod_src CASCADE")
+    s.execute("DROP SERVER IF EXISTS prod_src CASCADE")
+    s.execute("DROP SCHEMA IF EXISTS copy_tools CASCADE")
     s.execute("CREATE SCHEMA copy_tools")
     s.execute("CREATE EXTENSION postgres_fdw SCHEMA copy_tools")
     s.execute("CREATE EXTENSION dblink SCHEMA copy_tools")
@@ -149,6 +171,9 @@ def main() -> None:
     s.execute("CREATE SCHEMA prod_src")
     s.execute("IMPORT FOREIGN SCHEMA public FROM SERVER prod_src INTO prod_src")
 
+
+
+def copy_tables(live, s) -> None:
     # What the app needs first, so the useful part of staging is ready soonest:
     # its own tables, then the map layers, then the hidden ones.
     with live.cursor() as c:
@@ -172,6 +197,10 @@ def main() -> None:
     copied: dict[str, int] = {}
     for i, (name, size, _) in enumerate(tables, 1):
         t0 = time.monotonic()
+        s.execute(f'SELECT EXISTS (SELECT 1 FROM public."{name}")')
+        if s.fetchone()[0]:
+            done_bytes += size  # copied by an earlier run
+            continue
         s.execute(f'INSERT INTO public."{name}" SELECT * FROM prod_src."{name}"')
         copied[name] = s.rowcount
         done_bytes += size
@@ -182,6 +211,9 @@ def main() -> None:
                 flush=True,
             )
 
+
+
+def finish(live, s, host: str, started: float) -> None:
     print("4/6  Adding indexes and constraints", flush=True)
     structure("post-data")
 
@@ -215,11 +247,22 @@ def main() -> None:
     b = s.fetchone()
     print(f"      live:    {a[0]} layers, {a[1]} documents, {a[2]:,} chunks, {a[3]:,} places")
     print(f"      staging: {b[0]} layers, {b[1]} documents, {b[2]:,} chunks, {b[3]:,} places")
+    # Every table, against the live one - a resumed run cannot rely on its own
+    # tally of what an earlier run copied.
     mismatched = []
-    for name, n in copied.items():
-        s.execute(f'SELECT count(*) FROM public."{name}"')
-        if s.fetchone()[0] != n:
-            mismatched.append(name)
+    with live.cursor() as c:
+        c.execute("""SELECT relname FROM pg_class t JOIN pg_namespace n ON n.oid = t.relnamespace
+                     WHERE n.nspname = 'public' AND t.relkind = 'r'
+                       AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = t.oid AND d.deptype = 'e')""")
+        names = [r[0] for r in c.fetchall()]
+        for name in names:
+            c.execute(f'SELECT count(*) FROM public."{name}"')
+            n = c.fetchone()[0]
+            s.execute(f'SELECT count(*) FROM public."{name}"')
+            if s.fetchone()[0] != n:
+                mismatched.append(name)
+    for name in mismatched[:10]:
+        print(f"      ! {name} differs")
     ok = a == b and not mismatched
     print(f"      every table's row count matches what was copied: {not mismatched}")
     print(
