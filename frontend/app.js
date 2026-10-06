@@ -6,22 +6,11 @@
 // Falls back to OSM raster if the vector style cannot be reached, so the map
 // always draws something.
 // ---------------------------------------------------------------------------
-// Two background maps. There were four - Streets, Detailed, Muted, OSM - and
-// nobody could say what separated them. Light is the default because this is a
-// map for reading data on: a grey base lets the layers be the colour on screen
-// and keeps place names legible over them. Streets is there for finding your way.
-const BASEMAPS = [
-  { id: 'claro',  es: 'Claro',  en: 'Light',   style: 'https://tiles.openfreemap.org/styles/positron' },
-  { id: 'calles', es: 'Calles', en: 'Streets', style: 'https://tiles.openfreemap.org/styles/liberty' },
-];
-// A new key, so everyone starts on Light rather than a saved choice from the old list.
-let basemapId = (() => {
-  try { return localStorage.getItem('mappa.basemap.v3') || 'claro'; } catch (e) { return 'claro'; }
-})();
-const basemapStyle = id => {
-  const b = BASEMAPS.find(x => x.id === id) || BASEMAPS[0];
-  return b.style || RASTER_FALLBACK;
-};
+// One background map. There was a choice of four, then two, and the question
+// "why do we need this?" had no good answer: this is a map for reading data on,
+// and a grey base lets the layers be the colour on screen and keeps place names
+// legible over them. The raster style below is only a fallback if it fails.
+const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 const RASTER_FALLBACK = {
   version: 8,
   sources: {
@@ -45,7 +34,7 @@ let usingFallback = false;
 try {
   map = new maplibregl.Map({
     container: 'map',
-    style: basemapStyle(basemapId),
+    style: BASEMAP_STYLE,
     center: [-66.25, 18.22],
     zoom: 8.3,
     attributionControl: { compact: true },
@@ -99,7 +88,7 @@ const I18N = {
         sources: 'Fuentes', layersTitle: 'Capas del mapa', emptyT: '¡Aló!',
         emptyB: 'Pregúntale a Mappa sobre uso de terrenos, riesgo de inundación o deslizamiento, permisos y planificación en Puerto Rico. También puedes hacer clic en el mapa para preguntar sobre un lugar. Puedes preguntar en español o en inglés.',
         title: 'Mappa — Asistente Geoespacial de Puerto Rico', ask: 'Preguntar',
-        chatToggle: 'Mostrar/ocultar chat', layerSearch: 'Buscar capas…', basemap: 'Mapa base',
+        chatToggle: 'Mostrar/ocultar chat', layerSearch: 'Buscar capas…',
         loading: 'Cargando capas…', removeFilter: 'Quitar filtro',
         samples: [['Zona inundable', '¿Puedo construir en una zona inundable?'],
                   ['Permisos', '¿Qué regula el Reglamento Conjunto?'],
@@ -110,7 +99,7 @@ const I18N = {
         sources: 'Sources', layersTitle: 'Map layers', emptyT: '¡Aló!',
         emptyB: 'Ask Mappa about land use, flood or landslide risk, permits, and planning in Puerto Rico. You can also click the map to ask about a place. Ask questions in Spanish or English.',
         title: 'Mappa — Geospatial Assistant for Puerto Rico', ask: 'Ask',
-        chatToggle: 'Show/hide chat', layerSearch: 'Search layers…', basemap: 'Basemap',
+        chatToggle: 'Show/hide chat', layerSearch: 'Search layers…',
         loading: 'Loading layers…', removeFilter: 'Remove filter',
         samples: [['Flood zone', 'Can I build in a flood zone?'],
                   ['Permits', 'What does the Reglamento Conjunto regulate?'],
@@ -161,13 +150,6 @@ function applyLang() {
   const go = document.getElementById('go'); if (go) go.title = t('ask');
   const ct = document.getElementById('chattoggle'); if (ct) ct.title = t('chatToggle');
   const lq = document.getElementById('lyrq'); if (lq) lq.placeholder = t('layerSearch');
-  const bm = document.getElementById('basemapsel');
-  if (bm) {
-    bm.title = t('basemap');
-    [...bm.options].forEach(o => {
-      const b = BASEMAPS.find(x => x.id === o.value); if (b) o.textContent = b[LANG];
-    });
-  }
   // The suggested questions were fixed Spanish text in the page.
   const samples = document.querySelectorAll('.samples a');
   t('samples').forEach(([label, question], i) => {
@@ -238,7 +220,6 @@ function render() {
     return;
   }
   out.innerHTML = conversation.map(m => {
-    const layers = (m.suggested_layers || []).map(l => `<span class="tag">${esc(l)}</span>`).join('');
     const cites = (m.citations || []).map(c =>
       `<div class="cite">📄 <span class="ct">${esc(c.title)}</span>${
         c.year ? ` · ${c.year}` : ''}${c.doc_id ? ` · <span class="cid">${esc(c.doc_id)}</span>` : ''}</div>`
@@ -250,7 +231,6 @@ function render() {
         <div class="who">Mappa</div>
         <div class="answer${thinking ? ' typing' : ''}">${thinking ? (LANG === 'es' ? 'Consultando…' : 'Thinking…') : answerHtml(m.answer)}</div>
         ${cites ? `<div class="cites"><div class="cites-h">${t('sources')}</div>${cites}</div>` : ''}
-        ${layers ? `<div class="layers">${layers}</div>` : ''}
       </div></div>`;
   }).join('');
   out.scrollTop = out.scrollHeight;
@@ -757,20 +737,6 @@ loadCatalog();
     document.querySelector('main').classList.toggle('chat-hidden');
     setTimeout(() => { if (map) map.resize(); }, 210);   // let the grid settle, then re-measure
   };
-  const bm = document.getElementById('basemapsel');
-  if (bm) {
-    bm.innerHTML = BASEMAPS.map(b =>
-      `<option value="${b.id}"${b.id === basemapId ? ' selected' : ''}>${b[LANG] || b.en}</option>`).join('');
-    bm.onchange = () => {
-      basemapId = bm.value;
-      try { localStorage.setItem('mappa.basemap.v3', basemapId); } catch (e) { /* private mode */ }
-      if (!map) return;
-      const keep = [...ACTIVE.keys()];
-      map.setStyle(basemapStyle(basemapId));
-      // A style swap drops every layer we added, so put them back once it settles.
-      map.once('styledata', () => { ACTIVE.clear(); keep.forEach(addLayer); });
-    };
-  }
   // --- location search: find a municipio or barrio and fly there ---
   const pq = document.getElementById('placeq');
   const pr = document.getElementById('placeres');

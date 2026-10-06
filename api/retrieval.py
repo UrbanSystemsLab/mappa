@@ -16,6 +16,26 @@ from core import EMBEDDING_MODEL as EMBEDDING_MODEL_NAME
 _THEIR_ID = re.compile(r"^(?:DOC|HMP|WCRP|RV|POT|GIS)-\d{2,4}(?:-\d+)?$", re.I)
 
 
+# Titles that are really file names - "TRA-030_Transit Plan Caguas 2024 (2)",
+# "Barceloneta-Transportacion-Barceloneta-Informe-11-12-2022.docxII" - because
+# that is what was typed into the inventory. Tidied for display only: the code
+# prefix, the file extension and a copy marker are dropped, and hyphens between
+# words become spaces. Nothing is added, and the stored title is unchanged.
+_CODE_PREFIX = re.compile(r"^(?:[A-Z]{2,4}-\d{2,4}(?:\.\d+)?)[_\s-]+(?=\S)")
+_EXTENSION = re.compile(r"\.(?:pdf|docx?|xlsx?)\w*$", re.I)
+_COPY = re.compile(r"\s*\(\d+\)\s*$")
+
+
+def display_title(title: str) -> str:
+    t = (title or "").strip()
+    t = _EXTENSION.sub("", t)
+    t = _COPY.sub("", t)
+    t = _CODE_PREFIX.sub("", t)
+    if t.count("-") >= 3 and " " not in t:
+        t = t.replace("-", " ")  # a file name: words joined by hyphens
+    return t.strip(" -_") or (title or "").strip()
+
+
 def citation_id(doc_id: str) -> str:
     return doc_id if _THEIR_ID.match(doc_id or "") else ""
 
@@ -265,7 +285,12 @@ def compose_answer(query: str, docs: list[dict[str, Any]], layers: list[str]) ->
     answer = intro + "\n\n" + "\n\n".join(bullets)
 
     citations = [
-        {"id": d["id"], "title": d["title"], "year": d["year"], "doc_id": citation_id(d["id"])}
+        {
+            "id": d["id"],
+            "title": display_title(d["title"]),
+            "year": d["year"],
+            "doc_id": citation_id(d["id"]),
+        }
         for d in docs
     ]
     return {

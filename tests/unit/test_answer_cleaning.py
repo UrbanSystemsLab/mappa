@@ -95,3 +95,19 @@ def test_one_long_document_cannot_fill_every_slot():
     got = _spread(plan + rule, top_k=6)
     assert sum(1 for _, d in got if d["id"] == "HMP-ponce") == PER_DOCUMENT
     assert any(d["id"] == "DOC-reglamento" for _, d in got)
+
+
+def test_file_name_titles_are_tidied_without_adding_words():
+    from api.retrieval import display_title
+
+    assert display_title("TRA-030_Transit Plan Caguas 2024 (2)") == "Transit Plan Caguas 2024"
+    assert (
+        display_title("Barceloneta-Transportacion-Informe-2022.docxII")
+        == "Barceloneta Transportacion Informe 2022"
+    )
+    # A real title, and a title that is only a code, are left exactly as they are.
+    assert (
+        display_title("Ley 416-2004 \u2013 Ley sobre Política Pública")
+        == "Ley 416-2004 \u2013 Ley sobre Política Pública"
+    )
+    assert display_title("POT-065.1") == "POT-065.1"

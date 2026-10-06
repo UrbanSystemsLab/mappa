@@ -67,7 +67,7 @@ def _is_decline(text: str) -> bool:
     return len(t) <= DECLINE_MAX_CHARS and any(m in t for m in _DECLINE_MARKERS)
 
 
-from .retrieval import citation_id
+from .retrieval import citation_id, display_title
 
 # The model cites the map-facts block the way it cites a document. It appears
 # alone - "[MAP FACTS]" - and also mixed into a citation list - "[1, MAP FACTS]" -
@@ -442,7 +442,9 @@ def _assemble(answer: str, docs, layers, lang: str) -> dict[str, Any]:
         citations = []
         seen_docs: set[str] = set()
         for d in docs:
-            key = (d.get("title") or "") + str(d.get("year") or "")
+            # By the title as shown: their Drive holds some files twice ("Transit
+            # Plan Caguas 2024" and "...(2)"), which read as one document.
+            key = display_title(d.get("title") or "").lower() + str(d.get("year") or "")
             if key in seen_docs:
                 continue
             seen_docs.add(key)
@@ -454,7 +456,7 @@ def _assemble(answer: str, docs, layers, lang: str) -> dict[str, Any]:
             citations.append(
                 {
                     "id": d["id"],
-                    "title": d["title"],
+                    "title": display_title(d["title"]),
                     "year": d.get("year"),
                     "doc_id": citation_id(d["id"]),
                 }

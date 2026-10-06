@@ -45,7 +45,11 @@ BOOKKEEPING = re.compile(
     # Parcel-data and editing bookkeeping: record IDs, file paths, survey book
     # and page, coordinates repeated as columns, the initials of whoever edited.
     r"ll_.*|path|census_.*|qoz.*|geoid.*|alt_parc.*|parcelnu_\d|oldpid|book|page|"
-    r"scity_orig|address_so|xcoord|ycoord|updatedby.*|recrdarean|.*gisacre|.*gissqft)$",
+    r"scity_orig|address_so|xcoord|ycoord|updatedby.*|recrdarean|.*gisacre|.*gissqft|"
+    # Mapping-software internals: the PREPA network carries G/Technology's own
+    # record keys and symbol rotations (g3e_id, g3e_fid, gmrotation), which mean
+    # nothing to anyone reading the map.
+    r"g3e_.*|gm.*rotation|.*rotation|symbol.*|ltt_.*|enabled|shape_.*|st_.*|ruleid|override)$",
     re.I,
 )
 # A place name sorts features by where they are, not by what they are.
