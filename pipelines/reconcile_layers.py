@@ -131,15 +131,15 @@ def main() -> None:
         )
         duplicates.append((gis_id or rid, name, twin[0]))
 
-    # An alias is only useful if its table is still registered.
-    from api.spatial_ops import LAYERS
-
+    # A role is only useful if its layer is still live.
     broken = []
-    for concept, spec in LAYERS.items():
-        if spec["table"] in registered:
-            continue
-        twin = by_key.get(key(spec["table"]))
-        broken.append((concept, spec["table"], twin))
+    cur.execute(
+        """SELECT r.role, g.table_name FROM layer_roles r
+           JOIN layer_registry g ON g.id = r.layer_id
+           WHERE g.status NOT IN ('published', 'loaded') OR g.table_name IS NULL"""
+    )
+    for concept, table in cur.fetchall():
+        broken.append((concept, table or "", by_key.get(key(table or ""))))
 
     print(f"[reconcile] {len(superseded)} tables superseded by a newer copy")
     for t, twin in superseded[:6]:

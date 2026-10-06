@@ -282,13 +282,6 @@ def _sources_block(docs: list[dict[str, Any]]) -> str:
     return "\n\n".join(lines)
 
 
-_HAZARD_LABELS = {
-    "flood_2009": "FEMA flood zone (FIRM 2009)",
-    "flood_0_2pct_2018": "FEMA 0.2%-annual flood zone (2018)",
-    "landslide": "Landslide-susceptible area",
-}
-
-
 def _spatial_block(spatial: dict[str, Any], lang: str) -> str:
     """Format the clicked point's map facts as grounded context for the model."""
     yes = "Sí" if lang == "es" else "Yes"
@@ -309,8 +302,16 @@ def _spatial_block(spatial: dict[str, Any], lang: str) -> str:
             else "- At the single spot the user clicked (NOT the whole municipality; "
             "never generalise this to the municipality):"
         )
-    for key, val in hazards.items():
-        lines.append(f"  - {_HAZARD_LABELS.get(key, key)}: {yes if val else no}")
+    # Each entry names the layer it checked, from the registry. An older page
+    # sends a plain {key: true/false} instead; that is still understood.
+    items = (
+        [{"name_es": k, "name_en": k, "inside": v} for k, v in hazards.items()]
+        if isinstance(hazards, dict)
+        else hazards
+    )
+    for h in items:
+        name = h.get("name_es") if lang == "es" else h.get("name_en")
+        lines.append(f"  - {name or h.get('key')}: {yes if h.get('inside') else no}")
     for label, count in (spatial.get("facilities") or {}).items():
         lines.append(f"- {label}: {count}")
     for line in spatial.get("analysis") or []:

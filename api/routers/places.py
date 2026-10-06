@@ -26,9 +26,3 @@ def search(q: str, limit: int = 8) -> JSONResponse:
 def locate(lng: float, lat: float) -> dict:
     """What the loaded layers say about one point - what a map click asks."""
     return spatial.locate(lng, lat)
-
-
-@router.get("/layers")
-def legacy_layers() -> JSONResponse:
-    """The original ten-layer list. Superseded by /catalog/layers."""
-    return JSONResponse(spatial.list_layers(), headers={"Cache-Control": "public, max-age=3600"})

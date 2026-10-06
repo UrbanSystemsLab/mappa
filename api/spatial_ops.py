@@ -18,6 +18,7 @@ layer_registry before they reach SQL, so nothing user-typed is interpolated.
 from __future__ import annotations
 
 import re
+import time
 import unicodedata
 from typing import Any
 
@@ -28,173 +29,61 @@ from .places import Place
 # with several layers (flooding has two FEMA vintages) names the one to use by
 # default and keeps the other reachable, because saying which map a number came
 # from matters more than the number.
-LAYERS: dict[str, dict[str, Any]] = {
-    "schools": {
-        "table": "layer_dotacional_educacion_escuelas_2021",
-        "label_es": "escuelas públicas (2021)",
-        "label_en": "public schools (2021)",
-        "name_col": "escuela",
-        "muni_col": "municipio",
-        "words": ["escuela", "escuelas", "school", "schools", "colegio", "plantel"],
-    },
-    "hospitals": {
-        "table": "layer_hospitales",
-        "label_es": "hospitales y CDTs",
-        "label_en": "hospitals and CDTs",
-        "name_col": "nombre",
-        "muni_col": "muni",
-        "words": ["hospital", "hospitals", "cdt", "salud", "health", "clinica", "clínica"],
-    },
-    "shelters": {
-        "table": "layer_refugios_2023",
-        "label_es": "refugios de emergencia (2023)",
-        "label_en": "emergency shelters (2023)",
-        "name_col": "instalacio",
-        "muni_col": "municipio",
-        "words": ["refugio", "refugios", "shelter", "shelters", "evacuacion", "evacuación"],
-    },
-    "flood": {
-        "table": "layer_g23_riesgo_inundacion_fema_firms_2009",
-        "label_es": "zonas inundables FEMA (2009)",
-        "label_en": "FEMA flood zones (2009)",
-        "words": [
-            "inundacion",
-            "inundación",
-            "inundable",
-            "inundables",
-            "flood",
-            "flooding",
-            "flood zone",
-            "zona inundable",
-        ],
-    },
-    "flood_02": {
-        "table": "layer_g23_riesgo_inundacion_floodzone_0_2pct_seamless_2018",
-        "label_es": "inundación 0.2% anual FEMA (2018)",
-        "label_en": "0.2% annual chance flood, FEMA (2018)",
-        "words": ["0.2", "0,2", "500 year", "500-year"],
-    },
-    "landslide": {
-        "table": "layer_landsl_monroe_plus_slop50pct",
-        "label_es": "susceptibilidad a deslizamientos",
-        "label_en": "landslide susceptibility",
-        "words": ["deslizamiento", "deslizamientos", "landslide", "landslides", "derrumbe"],
-    },
-    "tsunami": {
-        "table": "layer_zonas_desalojo_all_project",
-        "label_es": "zonas de desalojo por tsunami (2003)",
-        "label_en": "tsunami evacuation zones (2003)",
-        "words": ["tsunami", "maremoto"],
-    },
-    "rivers": {
-        "table": "layer_mapa_base_crim_ogp_hidrografia_2006",
-        "label_es": "hidrografía (ríos y quebradas, 2006)",
-        "label_en": "hydrography (rivers and streams, 2006)",
-        "words": [
-            "rio",
-            "río",
-            "rios",
-            "ríos",
-            "river",
-            "rivers",
-            "quebrada",
-            "quebradas",
-            "stream",
-            "streams",
-            "cuerpo de agua",
-        ],
-    },
-    "wetlands": {
-        "table": "layer_g23_humedales_prvi_wetlands_fws_2010",
-        "label_es": "humedales (FWS, 2010)",
-        "label_en": "wetlands (FWS, 2010)",
-        "words": ["humedal", "humedales", "wetland", "wetlands", "mangle", "manglar"],
-    },
-    "protected": {
-        "table": "layer_pacat_2018_areas_protegidas_terrestres",
-        "label_es": "áreas protegidas terrestres (PACAT 2018)",
-        "label_en": "terrestrial protected areas (PACAT 2018)",
-        "words": [
-            "area protegida",
-            "área protegida",
-            "areas protegidas",
-            "áreas protegidas",
-            "protected",
-            "reserva",
-            "reservas",
-            "reserve",
-            "area natural",
-            "área natural",
-            "areas naturales",
-            "áreas naturales",
-            "natural area",
-        ],
-    },
-    "agricultural_valleys": {
-        "table": "layer_g13_conserv_valles_agricolas_regla_5_2014",
-        "label_es": "valles agrícolas (Regla 5, 2014)",
-        "label_en": "agricultural valleys (Rule 5, 2014)",
-        "words": [
-            "valle agricola",
-            "valle agrícola",
-            "valles agricolas",
-            "valles agrícolas",
-            "agricultural valley",
-            "reserva agricola",
-            "reserva agrícola",
-            "agricultural reserve",
-        ],
-    },
-    "agricultural_corridor": {
-        "table": "layer_corredor_agricola_de_project_exportfeatures",
-        "label_es": "corredor agrícola",
-        "label_en": "agricultural corridor",
-        "words": [
-            "corredor agricola",
-            "corredor agrícola",
-            "agricultural corridor",
-            "terreno agricola",
-            "terreno agrícola",
-            "agricultural land",
-            "suelo agricola",
-            "suelo agrícola",
-        ],
-    },
-    "roads": {
-        "table": "layer_carreteras_estatales_segmentadas_agosto_2021",
-        "label_es": "carreteras estatales (2021)",
-        "label_en": "state roads (2021)",
-        "words": ["carretera", "carreteras", "road", "roads", "highway", "vial"],
-    },
-    "coastal_zone": {
-        "table": "layer_g27_conserv_zona_costanera_2010",
-        "label_es": "zona costanera (2010)",
-        "label_en": "coastal zone (2010)",
-        "words": ["costanera", "costa", "coastal", "coastline", "litoral"],
-    },
-    "land_use_plan": {
-        "table": "layer_plan_uso_terrenos_2015",
-        "label_es": "Plan de Uso de Terrenos (2015)",
-        "label_en": "Land Use Plan (2015)",
-        "words": [
-            "plan de uso de terrenos",
-            "land use plan",
-            "put",
-            "clasificacion de suelo",
-            "clasificación de suelo",
-            "zonificacion",
-            "zonificación",
-            "zoning",
-            "uso de suelo",
-            "uso del suelo",
-            "land use",
-        ],
-    },
-}
+# Which layer does which job - 'flood' is the layer flood questions are answered
+# from, 'schools' the one schools are counted in. This was a hand-written list of
+# fifteen tables here, with a second in spatial.py and a third in retrieval.py,
+# so changing a layer meant changing code. It is now the layer_roles table, filled
+# from data/layer_roles.csv by pipelines/apply_layer_roles.
+#
+# Read once and kept for a few minutes: it changes when someone edits the file,
+# not between one question and the next.
+ROLE_CACHE_SECONDS = 300
+_roles: dict[str, dict[str, Any]] | None = None
+_roles_read_at = 0.0
 
-# Layers a question can count features of. A polygon layer like flooding is
-# something to be inside of, not something to count.
-COUNTABLE = {"schools", "hospitals", "shelters"}
+
+def roles() -> dict[str, dict[str, Any]]:
+    """Every role, with the live layer that fills it. A role whose layer is not
+    loaded is left out, so nothing queries a table that is not there."""
+    global _roles, _roles_read_at
+    if _roles is not None and time.monotonic() - _roles_read_at < ROLE_CACHE_SECONDS:
+        return _roles
+    try:
+        with db.connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """SELECT r.role, g.id, g.table_name, r.words, r.countable, r.checked_on_click,
+                          r.name_col, r.muni_col, g.name_es, coalesce(g.name_en, g.name_es)
+                   FROM layer_roles r JOIN layer_registry g ON g.id = r.layer_id
+                   WHERE g.status IN ('published', 'loaded') AND g.table_name IS NOT NULL"""
+            )
+            rows = cur.fetchall()
+    except Exception:
+        # A database without the table yet - an older copy - answers by meaning
+        # alone rather than failing every question.
+        rows = []
+    _roles = {
+        role: {
+            "id": lid,
+            "table": table,
+            "words": list(words or []),
+            "countable": bool(countable),
+            "checked_on_click": bool(on_click),
+            "name_col": name_col,
+            "muni_col": muni_col,
+            "label_es": name_es,
+            "label_en": name_en,
+        }
+        for role, lid, table, words, countable, on_click, name_col, muni_col, name_es, name_en in rows
+    }
+    _roles_read_at = time.monotonic()
+    return _roles
+
+
+def reset_roles() -> None:
+    """Forget the cached roles - for tests, and after the roles file is applied."""
+    global _roles
+    _roles = None
 
 
 def _strip(text: str) -> str:
@@ -207,7 +96,7 @@ def detect_layers(question: str) -> list[str]:
     wins over a bare 'zona'."""
     text = _strip(question)
     found = []
-    for key, spec in LAYERS.items():
+    for key, spec in roles().items():
         if any(_strip(w) in text for w in spec["words"]):
             found.append(key)
     return found
@@ -234,35 +123,22 @@ def _layer_position(question: str, key: str) -> int:
     """Where a concept is first named, or -1. Used to bind a distance to the layer
     it modifies, which in both languages is the one that follows it."""
     text = _strip(question)
-    hits = [text.find(_strip(w)) for w in LAYERS[key]["words"] if _strip(w) in text]
+    hits = [text.find(_strip(w)) for w in roles()[key]["words"] if _strip(w) in text]
     return min(hits) if hits else -1
 
 
 def _table(key: str) -> str:
-    """Resolve a concept to its table, confirming it is published first.
-
-    The alias table is fixed in code, and this checks the layer is actually
-    loaded, so a concept whose data never arrived returns nothing instead of
-    producing a query against a table that does not exist.
-    """
-    spec = LAYERS.get(key)
+    """The table that fills a role. Roles only list loaded layers, so a role
+    whose data never arrived is simply absent."""
+    spec = roles().get(key)
     if not spec:
         raise KeyError(key)
-    with db.connection() as conn:
-        cur = conn.cursor()
-        # 'loaded' counts here: the assistant can answer from a layer that the
-        # map does not offer as a toggle.
-        cur.execute(
-            "SELECT 1 FROM layer_registry WHERE table_name=%s AND status IN ('published','loaded')",
-            (spec["table"],),
-        )
-        if cur.fetchone() is None:
-            raise KeyError(f"{key} not loaded")
     return spec["table"]
 
 
 def label(key: str, lang: str = "es") -> str:
-    spec = LAYERS[key]
+    """The layer's name from the registry - La Maraña's, not one written here."""
+    spec = roles()[key]
     return spec["label_es"] if lang == "es" else spec["label_en"]
 
 
@@ -293,7 +169,7 @@ def _region_code(region: Place | str | None) -> str | None:
 
 def count_features(layer: str, region: Place | str | None = None) -> dict[str, Any] | None:
     """How many features of a layer, island-wide or inside one municipio."""
-    if layer not in COUNTABLE:
+    if not roles().get(layer, {}).get("countable"):
         return None
     table = _table(layer)
     clause, params = _region_clause(region)
@@ -313,7 +189,7 @@ def count_intersecting(
     ST_Intersects against the hazard polygons, so the number is the overlay, not
     a figure copied out of a report.
     """
-    if layer not in COUNTABLE:
+    if not roles().get(layer, {}).get("countable"):
         return None
     table, haz = _table(layer), _table(hazard)
     clause, params = _region_clause(region)
@@ -347,7 +223,7 @@ def count_within_distance(
     than degrees. The candidate set is cut down by the region first and by a
     bounding-box overlap second, so the expensive check runs on few rows.
     """
-    if layer not in COUNTABLE:
+    if not roles().get(layer, {}).get("countable"):
         return None
     table, target = _table(layer), _table(other)
     clause, params = _region_clause(region)
@@ -417,71 +293,6 @@ def coverage_share(layer: str, region: Place | str) -> dict[str, Any] | None:
     }
 
 
-def nearest(layer: str, lng: float, lat: float, k: int = 3) -> dict[str, Any] | None:
-    """The k nearest features to a point, with real distances in metres."""
-    spec = LAYERS.get(layer)
-    if not spec or not spec.get("name_col"):
-        return None
-    table = _table(layer)
-    name_col, muni_col = spec["name_col"], spec.get("muni_col")
-    extra = f', f."{muni_col}"' if muni_col else ", NULL"
-    with db.connection() as conn:
-        cur = conn.cursor()
-        cur.execute("SET LOCAL statement_timeout='30s'")
-        cur.execute(
-            f'SELECT f."{name_col}"{extra}, '
-            f"  ST_Distance(f.geom::geography, ST_SetSRID(ST_MakePoint(%s,%s),4326)::geography) "
-            f'FROM "{table}" f WHERE f.geom IS NOT NULL '
-            f"ORDER BY f.geom <-> ST_SetSRID(ST_MakePoint(%s,%s),4326) LIMIT %s",
-            (lng, lat, lng, lat, k),
-        )
-        rows = cur.fetchall()
-    return {
-        "op": "nearest",
-        "layer": layer,
-        "results": [{"name": r[0], "municipio": r[1], "metres": round(float(r[2]))} for r in rows],
-    }
-
-
-def point_profile(lng: float, lat: float) -> dict[str, Any]:
-    """Everything the loaded layers say about one point - what a map click asks."""
-    hazards = [
-        "flood",
-        "flood_02",
-        "landslide",
-        "tsunami",
-        "wetlands",
-        "protected",
-        "agricultural_valleys",
-        "coastal_zone",
-    ]
-    out: dict[str, Any] = {"op": "point", "lng": lng, "lat": lat, "in": [], "not_in": []}
-    point = "ST_SetSRID(ST_MakePoint(%s,%s),4326)"
-    with db.connection() as conn:
-        cur = conn.cursor()
-        cur.execute("SET LOCAL statement_timeout='45s'")
-        cur.execute(
-            f"SELECT name FROM reference_units WHERE unit_type='municipio' "
-            f"AND ST_Intersects(geom, {point}) LIMIT 1",
-            (lng, lat),
-        )
-        row = cur.fetchone()
-        out["municipio"] = row[0] if row else None
-        for key in hazards:
-            try:
-                table = _table(key)
-            except KeyError:
-                continue
-            cur.execute(
-                f'SELECT EXISTS(SELECT 1 FROM "{table}" WHERE ST_Intersects(geom, {point}))',
-                (lng, lat),
-            )
-            (out["in"] if cur.fetchone()[0] else out["not_in"]).append(key)
-    return out
-
-
-# Phrases that make a question quantitative. These are the ones that used to be
-# answered with a number lifted out of retrieved prose.
 _COUNT_WORDS = ["cuantos", "cuantas", "how many", "number of", "cuántos", "cuántas"]
 _SHARE_WORDS = [
     "que porcentaje",
@@ -737,12 +548,12 @@ def suggested_layer_ids(question: str) -> list[str]:
     keys = detect_layers(question)
     if not keys:
         return []
-    tables = [LAYERS[k]["table"] for k in keys]
+    ids = [roles()[k]["id"] for k in keys]
     with db.connection() as conn:
         cur = conn.cursor()
+        # Only what the map can draw.
         cur.execute(
-            "SELECT id FROM layer_registry WHERE status='published' AND table_name = ANY(%s)",
-            (tables,),
+            "SELECT id FROM layer_registry WHERE status='published' AND id = ANY(%s)", (ids,)
         )
         return [r[0] for r in cur.fetchall()]
 
@@ -750,10 +561,10 @@ def suggested_layer_ids(question: str) -> list[str]:
 # ─────────────────────────────────────────────────────────────────────────────
 # Finding layers by meaning rather than by dictionary
 #
-# LAYERS above lists fifteen concepts by hand. There are 601 layers with data.
-# The dictionary stays, because for the concepts that matter most - schools,
-# flood zones, hospitals - we want to name the exact layer rather than whichever
-# one scores highest today. Everything else is found by meaning.
+# Roles name about fifteen layers. There are 603 with data. The roles stay,
+# because for the concepts that matter most - schools, flood zones, hospitals -
+# we want the exact layer rather than whichever one scores highest today.
+# Everything else is found by meaning.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Below this, the nearest layer is not actually about what was asked. Boundary
@@ -850,11 +661,8 @@ def resolve(
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
     for key in detect_layers(question):
-        spec = LAYERS[key]
-        try:
-            table = _table(key)
-        except KeyError:
-            continue
+        spec = roles()[key]
+        table = spec["table"]
         out.append(
             {
                 "id": key,
@@ -864,7 +672,7 @@ def resolve(
                 "features": 0,
                 "score": 1.0,
                 "concept": key,
-                "countable": key in COUNTABLE,
+                "countable": spec["countable"],
             }
         )
         seen.add(table)

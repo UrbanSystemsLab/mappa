@@ -126,28 +126,6 @@ def detect_municipio(text: str) -> str | None:
     return None
 
 
-LAYER_KEYWORDS: dict[str, list[str]] = {
-    "inundacion": ["inundacion", "inundable", "flood", "firm", "fema", "rio", "marejada"],
-    "deslizamiento": ["deslizamiento", "ladera", "derrumbe", "landslide", "pendiente"],
-    "zonificacion": [
-        "zonificacion",
-        "zona",
-        "distrito",
-        "calificacion",
-        "uso",
-        "permiso",
-        "construccion",
-    ],
-    "costa": ["costa", "costanera", "playa", "zmt", "maritimo", "manglar"],
-    "humedal": ["humedal", "pantano", "cienaga", "wetland"],
-    "uso_de_terrenos": ["uso de terreno", "uso de suelo", "land use", "clasificacion"],
-    "educacion": ["escuela", "escuelas", "school", "schools", "educacion", "education", "colegio"],
-    "salud": ["hospital", "hospitals", "salud", "health", "cdt", "clinica"],
-    "refugios": ["refugio", "refugios", "shelter", "shelters", "evacuation"],
-    "vias": ["carretera", "carreteras", "road", "roads", "highway", "vial"],
-}
-
-
 def _strip(text: str) -> str:
     text = unicodedata.normalize("NFKD", text.lower())
     return "".join(c for c in text if not unicodedata.combining(c))
@@ -230,11 +208,6 @@ def retrieve_with_scores(
         return retrieve_cloud(query, top_k=top_k, jurisdiction=jurisdiction)
     index = _get_index()
     return index.search(query, top_k=top_k)
-
-
-def infer_layers(query: str) -> list[str]:
-    q = _strip(query)
-    return [layer for layer, words in LAYER_KEYWORDS.items() if any(w in q for w in words)]
 
 
 def compose_answer(query: str, docs: list[dict[str, Any]], layers: list[str]) -> dict[str, Any]:

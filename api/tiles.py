@@ -81,16 +81,6 @@ _EXTENT = 4096
 # Buffer in tile units, so shapes crossing a tile edge render without seams.
 _BUFFER = 64
 
-# Property columns to carry into the tile, per layer. Kept small on purpose —
-# every property is repeated per feature per tile, so this is the main size lever.
-_TILE_PROPS = {
-    "layer_hospitales": ("nombre", "muni"),
-    "layer_refugios_2023": ("instalacio", "municipio"),
-    "layer_dotacional_educacion_escuelas_2021": ("escuela", "municipio"),
-    "layer_g03_legales_municipios_2015": ("municipio", None),
-}
-
-
 _LAYER_META: dict[str, dict[str, Any]] = {}
 
 

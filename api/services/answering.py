@@ -25,9 +25,9 @@ from typing import Any
 
 from core import MIN_RELEVANCE
 
-from .. import llm, places, spatial, spatial_ops
+from .. import llm, places, spatial_ops
 from ..places import Place
-from ..retrieval import compose_answer, infer_layers, retrieve_with_scores
+from ..retrieval import compose_answer, retrieve_with_scores
 
 
 @dataclass(slots=True)
@@ -98,7 +98,7 @@ def map_answer(ask: Ask, place: Place | None) -> MapAnswer:
     about a sixth of a second while the text is still being written. The box now
     comes from the place itself, so asking about a barrio zooms to the barrio.
     """
-    layers = spatial_ops.suggested_layer_ids(ask.question) or infer_layers(ask.question)
+    layers = spatial_ops.suggested_layer_ids(ask.question)
     return MapAnswer(
         municipality=place.label if place else None,
         focus=places.bbox(place),
@@ -123,9 +123,6 @@ def gather(ask: Ask, place: Place | None) -> Evidence:
     documents = [doc for _, doc in scored]
 
     context: dict[str, Any] = dict(ask.spatial or {})
-    facilities = spatial.facility_counts(ask.question, place)
-    if facilities:
-        context["facilities"] = facilities
 
     analysis = spatial_ops.analyze(ask.question, place, [t.question for t in ask.history])
     if analysis:
@@ -138,7 +135,7 @@ def gather(ask: Ask, place: Place | None) -> Evidence:
 
     # Layers on screen and a clicked point are context too: "what am I looking
     # at?" is a real question and should not be turned away by the gate below.
-    has_context = bool(ask.spatial or facilities or ask.active_layers or analysis)
+    has_context = bool(ask.spatial or ask.active_layers or analysis)
     relevant = has_context or bool(scored and scored[0][0] >= MIN_RELEVANCE)
     return Evidence(documents=documents, context=context, relevant=relevant)
 

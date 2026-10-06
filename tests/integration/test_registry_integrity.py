@@ -62,13 +62,22 @@ def test_every_alias_resolves(cur):
     same layers under different names, so questions about rivers quietly picked a
     sparser layer instead.
     """
-    unresolved = []
-    for concept, spec in S.LAYERS.items():
-        cur.execute("SELECT status FROM layer_registry WHERE table_name = %s", (spec["table"],))
-        row = cur.fetchone()
-        if not row or row[0] not in ("published", "loaded"):
-            unresolved.append((concept, spec["table"], row[0] if row else "no row"))
-    assert not unresolved, f"aliases that no longer resolve: {unresolved}"
+    cur.execute(
+        """SELECT r.role, g.table_name, g.status FROM layer_roles r
+           JOIN layer_registry g ON g.id = r.layer_id
+           WHERE g.status NOT IN ('published', 'loaded')"""
+    )
+    unresolved = cur.fetchall()
+    assert not unresolved, f"roles that no longer resolve: {unresolved}"
+
+    # And the file the roles come from is fully applied: every row in it is a
+    # live role, so editing the file and forgetting to apply it is caught.
+    import csv
+    from pathlib import Path
+
+    rows = list(csv.DictReader((Path(__file__).parents[2] / "data/layer_roles.csv").open()))
+    S.reset_roles()
+    assert sorted(S.roles()) == sorted(r["role"] for r in rows)
 
 
 def test_published_layers_can_serve_tiles(cur):

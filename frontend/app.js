@@ -866,13 +866,15 @@ if (map) map.on('click', async (e) => {
   const { lng, lat } = e.lngLat;
   let info;
   try { info = await (await fetch(`/locate?lng=${lng}&lat=${lat}`)).json(); }
-  catch (err) { info = { municipio: null, hazards: {} }; }
+  catch (err) { info = { municipio: null, hazards: [] }; }
 
   if (locMarker) locMarker.remove();
   locMarker = new maplibregl.Marker({ color: '#09814A' }).setLngLat([lng, lat]).addTo(map);
 
   const muni = info.municipio;
-  const h = info.hazards || {};
+  // What the server checked at this spot, each named as its layer is - the
+  // list of layers comes from the layer roles, not from this page.
+  const checks = Array.isArray(info.hazards) ? info.hazards : [];
   const es = LANG === 'es';
   const yn = b => b ? `<b class="yes">${es ? 'Sí' : 'Yes'}</b>` : `<span class="no">No</span>`;
   pending = muni ? { municipio: muni, spatial: info } : null;
@@ -880,9 +882,8 @@ if (map) map.on('click', async (e) => {
   const place = `<div class="fp-card fp-place">
       <div class="fp-h">📍 ${esc(muni || (es ? 'Fuera de Puerto Rico' : 'Outside Puerto Rico'))}</div>
       <table class="fp">
-        <tr><th>${es ? 'Inundación 2009' : 'Flood 2009'}</th><td>${yn(h.flood_2009)}</td></tr>
-        <tr><th>${es ? 'Inundación 2018' : 'Flood 2018'}</th><td>${yn(h.flood_0_2pct_2018)}</td></tr>
-        <tr><th>${es ? 'Deslizamiento' : 'Landslide'}</th><td>${yn(h.landslide)}</td></tr>
+        ${checks.map(c => `<tr><th>${esc((es ? c.name_es : c.name_en) || c.key)}</th><td>${
+          yn(c.inside)}</td></tr>`).join('')}
       </table>
       <button class="askbtn" onclick="askHere()"${muni ? '' : ' disabled'}>${
         es ? 'Preguntar sobre este lugar' : 'Ask about this place'}</button>

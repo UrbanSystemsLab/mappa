@@ -90,12 +90,12 @@ def test_ordinary_words_do_not_become_places(cur):
 def test_a_barrio_scopes_a_real_count(cur):
     """A barrio has to work end to end, not just resolve: Santurce's schools are
     some of San Juan's, and both numbers have to be real."""
-    from api import spatial
+    from api import spatial_ops
 
     places.reset_cache()
     barrio = places.resolve("escuelas en Santurce")
     municipio = places.municipio("San Juan")
-    inner = spatial.facility_counts("how many schools", barrio)
-    outer = spatial.facility_counts("how many schools", municipio)
-    assert inner and outer
-    assert 0 < next(iter(inner.values())) < next(iter(outer.values()))
+    schools = spatial_ops.roles()["schools"]["table"]
+    inner = spatial_ops.count_in_table(schools, barrio)
+    outer = spatial_ops.count_in_table(schools, municipio)
+    assert 0 < inner < outer
