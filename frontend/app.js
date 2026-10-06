@@ -6,15 +6,18 @@
 // Falls back to OSM raster if the vector style cannot be reached, so the map
 // always draws something.
 // ---------------------------------------------------------------------------
-// Ordered richest-first. Positron is a deliberately grey, minimal style — useful
-// when a dense data layer needs to dominate, and far too flat as a default.
+// Two background maps. There were four - Streets, Detailed, Muted, OSM - and
+// nobody could say what separated them. Light is the default because this is a
+// map for reading data on: a grey base lets the layers be the colour on screen
+// and keeps place names legible over them. Streets is there for finding your way.
 const BASEMAPS = [
-  { id: 'calles', es: 'Calles',  en: 'Streets',  style: 'https://tiles.openfreemap.org/styles/liberty' },
-  { id: 'relieve',es: 'Detalle', en: 'Detailed', style: 'https://tiles.openfreemap.org/styles/bright' },
-  { id: 'claro',  es: 'Tenue',   en: 'Muted',    style: 'https://tiles.openfreemap.org/styles/positron' },
-  { id: 'osm',    es: 'OSM',     en: 'OSM',      style: null },   // raster fallback
+  { id: 'claro',  es: 'Claro',  en: 'Light',   style: 'https://tiles.openfreemap.org/styles/positron' },
+  { id: 'calles', es: 'Calles', en: 'Streets', style: 'https://tiles.openfreemap.org/styles/liberty' },
 ];
-let basemapId = localStorage.getItem('mappealo.basemap.v2') || 'calles';
+// A new key, so everyone starts on Light rather than a saved choice from the old list.
+let basemapId = (() => {
+  try { return localStorage.getItem('mappa.basemap.v3') || 'claro'; } catch (e) { return 'claro'; }
+})();
 const basemapStyle = id => {
   const b = BASEMAPS.find(x => x.id === id) || BASEMAPS[0];
   return b.style || RASTER_FALLBACK;
@@ -423,7 +426,7 @@ function statusChip(st) {
 
 function layerRow(l, isActive) {
   const yr = l.source && l.source.year ? ` · ${l.source.year}` : '';
-  const sw = `<span class="sw" style="background:${(l.style && l.style.color) || '#09814A'}"></span>`;
+  const sw = `<span class="sw" style="background:${isActive ? colourOf(l) : '#c3cbd3'}"></span>`;
   const info = `<button class="ic info" data-act="info" data-id="${l.id}" title="${
     LANG === 'es' ? 'Sobre esta capa' : 'About this layer'}">i</button>`;
   if (isActive) {
@@ -495,11 +498,16 @@ function renderLegend() {
   if (!active.length) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   const block = l => `<div class="lg-r"><span class="lg-k" style="background:${
-    (l.style && l.style.color) || '#09814A'}"></span><span>${esc(l.name)}</span></div>`;
+    colourOf(l)}"></span><span>${esc(l.name)}</span></div>`;
   el.innerHTML = `<div class="lg-h">${LANG === 'es' ? 'Leyenda' : 'Legend'}</div>` +
     active.map(block).join('') +
-    `<div class="lg-src">${LANG === 'es' ? 'Fuente' : 'Source'}: ${
-      esc(active[0].source && active[0].source.inventory || '')}</div>`;
+    // Every source on screen, once - it named only the first layer's source,
+    // whatever else was turned on.
+    (() => {
+      const srcs = [...new Set(active.map(l => l.source && l.source.inventory).filter(Boolean))];
+      return srcs.length ? `<div class="lg-src">${LANG === 'es' ? 'Fuente' : 'Source'}: ${
+        srcs.map(esc).join(' · ')}</div>` : '';
+    })();
 }
 
 // --- one delegated handler for the whole panel ---
@@ -525,6 +533,26 @@ document.getElementById('lyrq').addEventListener('input', (e) => {
 });
 
 // --- map wiring: vector tiles, not whole-layer GeoJSON ---
+// Every layer you turn on gets its own colour from this list, the first one not
+// already on the map. Layers used to keep the colour stored with them, and most
+// share the same green or blue - so with two or three on, there was no telling
+// which shape belonged to which layer.
+const LAYER_COLOURS = ['#d62728', '#1f77b4', '#2ca02c', '#ff7f0e', '#9467bd',
+                       '#8c564b', '#e377c2', '#17becf', '#bcbd22', '#7f7f7f'];
+function nextColour() {
+  const used = new Set([...ACTIVE.values()].map(r => r.colour));
+  return LAYER_COLOURS.find(c => !used.has(c)) || LAYER_COLOURS[ACTIVE.size % LAYER_COLOURS.length];
+}
+const colourOf = l => (ACTIVE.get(l.id) && ACTIVE.get(l.id).colour) || (l.style && l.style.color) || '#09814A';
+
+// Data layers are drawn beneath the background map's place names. They were
+// drawn on top of everything, so a filled layer covered every label under it.
+function labelAnchor() {
+  const layers = (map && map.getStyle() && map.getStyle().layers) || [];
+  const first = layers.find(x => x.type === 'symbol');
+  return first ? first.id : undefined;
+}
+
 function addLayer(id) {
   if (!map) return;
   if (ACTIVE.has(id)) return;
@@ -540,22 +568,25 @@ function addLayer(id) {
       maxzoom: l.max_zoom != null ? l.max_zoom : 14,
     });
   }
-  // One colour per layer. Colouring by category was tried on 3 Oct and made
-  // the map harder to read, so it is off; the categories stay recorded.
-  const color = (l.style && l.style.color) || '#09814A';
+  // One colour per layer, distinct from the others on screen. Colouring by
+  // category was tried on 3 Oct and made the map harder to read.
+  const color = nextColour();
   const g = (l.geometry_type || '').toLowerCase();
   const common = { source: srcId, 'source-layer': 'layer' };
   if (g.includes('polygon')) {
     const fillOp = l.style && l.style.fillOpacity != null ? l.style.fillOpacity : 0.35;
+    const under = labelAnchor();
     if (fillOp > 0) map.addLayer({ id: base, type: 'fill', ...common,
-      paint: { 'fill-color': color, 'fill-opacity': fillOp } });
+      paint: { 'fill-color': color, 'fill-opacity': fillOp } }, under);
     map.addLayer({ id: base + '_ln', type: 'line', ...common,
       paint: { 'line-color': color,
-               'line-width': (l.style && l.style.lineWidth) || 0.8 } });
+               'line-width': (l.style && l.style.lineWidth) || 0.8 } }, under);
   } else if (g.includes('line')) {
     map.addLayer({ id: base, type: 'line', ...common,
-      paint: { 'line-color': color, 'line-width': 1.4 } });
+      paint: { 'line-color': color, 'line-width': 1.4 } }, labelAnchor());
   } else {
+    // Points stay above the labels: a hospital is small, and hiding it under a
+    // town name would lose it.
     map.addLayer({ id: base, type: 'circle', ...common,
       paint: { 'circle-radius': 5, 'circle-color': color,
                'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
@@ -567,7 +598,7 @@ function addLayer(id) {
     map.on('mouseenter', lid, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', lid, () => { map.getCanvas().style.cursor = ''; });
   });
-  ACTIVE.set(id, { ...l });
+  ACTIVE.set(id, { ...l, colour: color });
   restyle();
   renderLayerPanel();
 }
@@ -614,8 +645,10 @@ function restyle() {
       map.setPaintProperty(lnId, 'line-width', l.id === topPoly ? 0.7 : 1.3);
       map.setPaintProperty(lnId, 'line-opacity', l.id === topPoly ? 0.55 : 0.95);
     }
-    // Re-assert draw order.
-    [fillId, lnId].forEach(x => { if (map.getLayer(x)) map.moveLayer(x); });
+    // Re-assert draw order - still beneath the place names, except points.
+    const isPoint = map.getLayer(fillId) && map.getLayer(fillId).type === 'circle';
+    const under = isPoint ? undefined : labelAnchor();
+    [fillId, lnId].forEach(x => { if (map.getLayer(x)) map.moveLayer(x, under); });
   });
 }
 
@@ -679,7 +712,7 @@ function featureCard(rec, props) {
     .slice(0, 6)
     .map(k => `<tr><th>${esc(fieldLabel(rec, k))}</th><td>${esc(String(valueLabel(rec, props[k])))}</td></tr>`)
     .join('');
-  const sw = `<span class="fp-sw" style="background:${(rec && rec.style && rec.style.color) || '#09814A'}"></span>`;
+  const sw = `<span class="fp-sw" style="background:${rec ? colourOf(rec) : '#09814A'}"></span>`;
   const yr = rec && rec.source && rec.source.year ? ` · ${rec.source.year}` : '';
   return `<div class="fp-card">
       <div class="fp-h">${sw}${esc(rec ? rec.name : 'Capa')}${yr}</div>
@@ -730,7 +763,7 @@ loadCatalog();
       `<option value="${b.id}"${b.id === basemapId ? ' selected' : ''}>${b[LANG] || b.en}</option>`).join('');
     bm.onchange = () => {
       basemapId = bm.value;
-      try { localStorage.setItem('mappealo.basemap.v2', basemapId); } catch (e) { /* private mode */ }
+      try { localStorage.setItem('mappa.basemap.v3', basemapId); } catch (e) { /* private mode */ }
       if (!map) return;
       const keep = [...ACTIVE.keys()];
       map.setStyle(basemapStyle(basemapId));
