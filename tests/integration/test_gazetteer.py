@@ -6,7 +6,7 @@ a municipality to fall back on, that the names people actually ask about are
 present, and that the ordinary-word flag was computed rather than left null.
 """
 
-from api import places
+from api.repositories import places
 
 
 def test_every_place_type_is_present(cur):
@@ -52,50 +52,32 @@ def test_parents_are_real_municipalities(cur):
     assert cur.fetchall() == []
 
 
-def test_ordinary_words_were_measured(cur):
-    """A null flag means the pipeline never ran the measurement, and every
-    ordinary word would resolve as a place."""
-    cur.execute("SELECT count(*) FROM reference_units WHERE common_word IS NULL")
-    assert cur.fetchone()[0] == 0
-
-    cur.execute(
-        "SELECT count(*) FROM reference_units WHERE common_word AND unit_type <> 'municipio'"
-    )
-    assert cur.fetchone()[0] > 0, "Playa, Centro and Costa are all barrio names"
-
-    cur.execute(
-        "SELECT count(*) FROM reference_units WHERE common_word AND unit_type = 'municipio'"
-    )
-    assert cur.fetchone()[0] == 0, "the 78 municipalities are authoritative names"
+def test_a_place_is_found_by_its_name(cur):
+    """The model passes the name it read in the question; accents are optional."""
+    assert [p.label for p in places.lookup("Santurce")] == ["Santurce, San Juan"]
+    assert places.lookup("anasco")[0].name == "Añasco"
+    assert places.lookup("Mariana", "Humacao")[0].label == "Mariana, Humacao"
 
 
-def test_the_places_people_ask_about_resolve(cur):
-    """Named cases, against the live gazetteer rather than the stand-in."""
-    places.reset_cache()
-    assert places.resolve("¿cuántas escuelas hay en Santurce?").label == "Santurce, San Juan"
-    assert places.resolve("How many schools are in Arecibo?").label == "Arecibo"
-    assert places.resolve("deslizamientos en Mariana, Humacao").label == "Mariana, Humacao"
+def test_a_shared_name_returns_every_place_until_narrowed(cur):
+    """74 municipios have a Barrio Pueblo. The model is told there are several
+    and asked to say which, rather than one being picked for it."""
+    assert len(places.lookup("Barrio Pueblo")) > 50
+    assert len(places.lookup("Buena Vista", "Bayamón")) == 1
 
 
-def test_ordinary_words_do_not_become_places(cur):
-    """The failure this is all guarding: a question about the coast answered with
-    a precise count for a barrio in Isabela."""
-    places.reset_cache()
-    assert places.resolve("¿cuántos humedales hay cerca de la costa?") is None
-    assert places.resolve("how many wells are there?") is None
-    # Not in the gazetteer, and must not resolve to barrio Caño in Guánica.
-    assert places.resolve("¿qué pasa en Caño Martín Peña?") is None
+def test_a_municipio_comes_before_a_barrio_of_the_same_name(cur):
+    """There is a municipio Cataño and a barrio Cataño in Humacao."""
+    found = places.lookup("Cataño")
+    assert found[0].unit_type == "municipio"
 
 
 def test_a_barrio_scopes_a_real_count(cur):
-    """A barrio has to work end to end, not just resolve: Santurce's schools are
-    some of San Juan's, and both numbers have to be real."""
-    from api import spatial_ops
+    """Santurce's schools are some of San Juan's, and both numbers are real."""
+    from api.repositories import spatial
+    from api.repositories.layers import roles
 
-    places.reset_cache()
-    barrio = places.resolve("escuelas en Santurce")
-    municipio = places.municipio("San Juan")
-    schools = spatial_ops.roles()["schools"]["table"]
-    inner = spatial_ops.count_in_table(schools, barrio)
-    outer = spatial_ops.count_in_table(schools, municipio)
+    schools = roles()["schools"].layer
+    inner = spatial.count(schools, places.lookup("Santurce")[0])
+    outer = spatial.count(schools, places.lookup("San Juan", "San Juan")[0])
     assert 0 < inner < outer

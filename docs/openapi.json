@@ -12,7 +12,7 @@
           "ask"
         ],
         "summary": "Ask",
-        "description": "A complete answer. Same service as /ask/stream, so they cannot diverge.",
+        "description": "The finished answer in one response.",
         "operationId": "ask_api_v1_ask_post",
         "requestBody": {
           "content": {
@@ -54,7 +54,7 @@
           "ask"
         ],
         "summary": "Ask Stream",
-        "description": "The same answer, sent as it is written.\n\nThe map's half goes first, in a `meta` event, so the map moves while the text\nis still being written. An answer that takes two seconds is fine; two seconds\nof a blank panel reading 'Thinking...' is what people experience as broken.",
+        "description": "The answer as it is written, as server-sent events.",
         "operationId": "ask_stream_api_v1_ask_stream_post",
         "requestBody": {
           "content": {
@@ -68,11 +68,9 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "meta, delta..., done",
             "content": {
-              "application/json": {
-                "schema": {}
-              }
+              "text/event-stream": {}
             }
           },
           "422": {
@@ -618,9 +616,9 @@
       },
       "AskResponse": {
         "properties": {
-          "answer_es": {
+          "answer": {
             "type": "string",
-            "title": "Answer Es"
+            "title": "Answer"
           },
           "citations": {
             "items": {
@@ -676,7 +674,7 @@
         },
         "type": "object",
         "required": [
-          "answer_es",
+          "answer",
           "citations",
           "suggested_layers",
           "disclaimer"

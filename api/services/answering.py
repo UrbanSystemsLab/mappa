@@ -1,20 +1,12 @@
-"""Everything that happens between a question and an answer.
+"""One question, from arrival to finished answer.
 
-This existed twice: once in the /ask handler and again in /ask/stream, copied
-rather than shared. The two drifted - the streaming path sent the map's answer
-first while the plain one did not, each had its own copy of the place detection,
-and a fix to one did not reach the other. Both routes now call this.
+    1. the assistant reads the question and calls the tools it needs
+    2. as soon as it starts answering, the map is told where to go and what to show
+    3. the answer streams as it is written
+    4. the finished answer is cleaned, and its sources are the passages it cited
 
-The order matters and is the product's behaviour rather than an implementation
-detail:
-
-  1. the place, because everything else is scoped by it
-  2. what the map should show, which is cheap and can be sent immediately
-  3. the documents, and the figures computed against their layers
-  4. the answer, written only from those two
-
-Nothing here knows about HTTP. That is what makes it testable without a server,
-and what stops the two routes diverging again.
+Both routes - the streaming one and the plain one - use this, so they cannot
+answer differently. Nothing here knows about HTTP.
 """
 
 from __future__ import annotations
@@ -23,11 +15,17 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
-from core import MIN_RELEVANCE
+from .. import assistant
+from ..repositories import places
+from ..repositories.places import Place
+from ..tools import Session
 
-from .. import llm, places, spatial_ops
-from ..places import Place
-from ..retrieval import compose_answer, retrieve_with_scores
+MAX_SOURCES = 5
+
+UNAVAILABLE = {
+    "en": "The assistant could not answer just now. Please try again in a moment.",
+    "es": "El asistente no pudo responder en este momento. Inténtalo de nuevo en un momento.",
+}
 
 
 @dataclass(slots=True)
@@ -38,142 +36,76 @@ class Turn:
 
 @dataclass(slots=True)
 class Ask:
-    """A question, and everything the caller knows that might bear on it."""
-
     question: str
     lang: str = "en"
     history: list[Turn] = field(default_factory=list)
-    location: str | None = None
-    spatial: dict[str, Any] | None = None
+    location: str | None = None  # a place picked in the search box
+    spatial: dict[str, Any] | None = None  # what /locate said about a clicked point
     active_layers: list[dict[str, Any]] = field(default_factory=list)
 
 
-@dataclass(slots=True)
-class MapAnswer:
-    """What the map can show before a single word has been written."""
-
-    municipality: str | None
-    focus: list[float] | None
-    layers: list[str]
-    place: Place | None = None
-
-
-@dataclass(slots=True)
-class Evidence:
-    """What the answer is allowed to be written from."""
-
-    documents: list[dict[str, Any]]
-    context: dict[str, Any]
-    relevant: bool
-
-
-def place_in_scope(ask: Ask) -> Place | None:
-    """Which place the question is about, including when it does not say.
-
-    A follow-up rarely repeats the name - "and the flood risk there?", "how many
-    schools in that municipality?". Reading only the current question left those
-    turns with no region, so nothing could be counted and the map did not move.
-    A place named now still wins, so changing subject works.
-
-    This used to read only the 78 municipalities. It now reads all 1,693 named
-    places, so "¿cuántas escuelas hay en Santurce?" scopes to the barrio rather
-    than silently answering for the whole of San Juan.
-    """
-    named = places.resolve(ask.question)
-    if named:
-        return named
-    for turn in reversed(ask.history):
-        earlier = places.resolve(turn.question)
-        if earlier:
-            return earlier
-    # The place the user picked in the search box, which arrives as the box
-    # showed it - "Santurce, San Juan".
-    return places.from_selection(ask.location)
-
-
-def map_answer(ask: Ask, place: Place | None) -> MapAnswer:
-    """The map's half, which is a place match and a bounding box.
-
-    Cheap enough to send before anything else, which is why the map moves in
-    about a sixth of a second while the text is still being written. The box now
-    comes from the place itself, so asking about a barrio zooms to the barrio.
-    """
-    layers = spatial_ops.suggested_layer_ids(ask.question)
-    return MapAnswer(
-        municipality=place.label if place else None,
-        focus=places.bbox(place),
-        layers=layers,
-        place=place,
+def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
+    """("meta" | "delta" | "done", payload) events, in that order."""
+    session = Session(lang=ask.lang)
+    session.place = places.from_selection(ask.location)
+    context = assistant.Context(
+        clicked=ask.spatial,
+        active_layers=[str(x.get("name")) for x in ask.active_layers if x.get("name")],
+        history=[(t.question, t.answer) for t in ask.history],
     )
+    sent_meta, written = False, []
+    try:
+        for piece in assistant.answer(ask.question, session, context):
+            if not sent_meta:
+                yield "meta", _map(session)
+                sent_meta = True
+            written.append(piece)
+            yield "delta", {"text": piece}
+    except assistant.AssistantUnavailable:
+        written = [UNAVAILABLE[ask.lang]]
+        yield "delta", {"text": written[0]}
+    if not sent_meta:
+        yield "meta", _map(session)
+    yield "done", _finish("".join(written), session)
 
 
-def gather(ask: Ask, place: Place | None) -> Evidence:
-    """The documents and the computed figures, and nothing else.
+def answer(ask: Ask) -> dict[str, Any]:
+    """The whole answer at once - the streaming events, gathered."""
+    out: dict[str, Any] = {}
+    for kind, payload in stream(ask):
+        if kind != "delta":
+            out.update(payload)
+    return out
 
-    When the question asks for a number the layers cannot produce, that absence
-    is recorded. Without it the model had retrieved prose and no figure, and
-    filled the gap - which is how a table headed "10 pies" became "10 schools".
+
+def _map(session: Session) -> dict[str, Any]:
+    """Where the map should go and what it should show."""
+    place: Place | None = session.place
+    return {
+        "municipio": place.label if place else None,
+        "focus": places.bbox(place),
+        "suggested_layers": [layer.id for layer in session.layers_used if layer.on_map][:3],
+    }
+
+
+def _finish(text: str, session: Session) -> dict[str, Any]:
+    """The cleaned answer, its sources and the steps behind it.
+
+    A source is a document whose passage the answer cited by number - and only
+    that. Documents that were searched but not cited are not listed: an answer
+    that says the documents do not cover a question has no sources.
     """
-    query = ask.question
-    if ask.history:
-        query = f"{ask.history[-1].question} {ask.question}"
-    # Documents are filed by municipality, so a question about a barrio reads the
-    # plans of the municipality it sits in.
-    scored = retrieve_with_scores(query, top_k=6, jurisdiction=place.municipio if place else None)
-    documents = [doc for _, doc in scored]
-
-    context: dict[str, Any] = dict(ask.spatial or {})
-
-    analysis = spatial_ops.analyze(ask.question, place, [t.question for t in ask.history])
-    if analysis:
-        context["analysis"] = spatial_ops.describe(analysis, ask.lang)
-    elif spatial_ops.wants_number(ask.question):
-        context["no_figure"] = True
-
-    if ask.active_layers:
-        context["active_layers"] = ask.active_layers
-
-    # Layers on screen and a clicked point are context too: "what am I looking
-    # at?" is a real question and should not be turned away by the gate below.
-    has_context = bool(ask.spatial or ask.active_layers or analysis)
-    relevant = has_context or bool(scored and scored[0][0] >= MIN_RELEVANCE)
-    return Evidence(documents=documents, context=context, relevant=relevant)
-
-
-def write(ask: Ask, evidence: Evidence, layers: list[str]) -> dict[str, Any]:
-    """The finished answer, with its citations."""
-    if (evidence.documents or evidence.context) and llm.is_available():
-        try:
-            return llm.narrate(
-                ask.question,
-                evidence.documents,
-                layers,
-                history=[(t.question, t.answer) for t in ask.history],
-                spatial=evidence.context or None,
-                lang=ask.lang,
-            )
-        except Exception:
-            # Any transport or parse failure falls back to the templated
-            # composer, so the panel always resolves to something.
-            pass
-    return compose_answer(ask.question, evidence.documents, layers)
-
-
-def stream(ask: Ask, evidence: Evidence, layers: list[str]) -> Iterator[str]:
-    """The answer as it is written, provider permitting."""
-    messages = llm.build_messages(
-        ask.question,
-        evidence.documents,
-        layers,
-        [(t.question, t.answer) for t in ask.history],
-        evidence.context or None,
-        ask.lang,
-    )
-    yield from llm.stream_answer(messages)
-
-
-def finish(text: str, evidence: Evidence, layers: list[str], lang: str) -> dict[str, Any]:
-    """Citations for a streamed answer, by the same rules as a
-    written one - so an answer cannot be grounded differently depending on which
-    route served it."""
-    return llm.finish(text, evidence.documents, layers, lang)
+    numbers = assistant.cited_numbers(text)
+    passages = [session.passages[n - 1] for n in numbers if 0 < n <= len(session.passages)]
+    citations, seen = [], set()
+    for p in passages:
+        key = (p.title.lower(), p.year)
+        if key in seen:
+            continue
+        seen.add(key)
+        citations.append({"id": p.doc_id, "title": p.title, "year": p.year, "doc_id": p.reference})
+    return {
+        "answer": assistant.clean(text),
+        "citations": citations[:MAX_SOURCES],
+        "steps": session.steps,
+    }

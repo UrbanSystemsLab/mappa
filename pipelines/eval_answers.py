@@ -109,7 +109,7 @@ def run(url: str, label: str, workers: int) -> None:
 
     def one(row: dict) -> dict:
         got = ask(url, row["question"], "en")
-        answer = got.get("answer_es", "")
+        answer = got.get("answer") or got.get("answer_es", "")
         sources = [c.get("title", "") for c in got.get("citations", [])]
         rec = {
             "id": row["id"],
@@ -124,7 +124,7 @@ def run(url: str, label: str, workers: int) -> None:
             "layers": got.get("suggested_layers", []),
             "seconds": got.get("seconds"),
             "error": got.get("error"),
-            "tools": got.get("tools", []),
+            "steps": got.get("steps", []),
         }
         rec["answered"] = bool(answer) and not answer.lower().startswith(
             ("there isn't enough", "there is not enough", "i couldn't find", "no hay información")

@@ -47,7 +47,7 @@ class Citation(BaseModel):
 
 
 class AskResponse(BaseModel):
-    answer_es: str
+    answer: str
     citations: list[Citation]
     suggested_layers: list[str]
     disclaimer: str

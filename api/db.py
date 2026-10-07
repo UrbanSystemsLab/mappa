@@ -15,6 +15,8 @@ from __future__ import annotations
 import os
 import threading
 
+import psycopg2
+
 from core import settings
 
 _POOL = None
@@ -90,8 +92,15 @@ class connection:
         # The first query on one raises InterfaceError, which surfaced as a
         # request that returned nothing at all. Check before handing it out, and
         # throw away anything that does not answer.
-        for _ in range(POOL_MAX + 1):
-            conn = self._pool.getconn()
+        for attempt in range(POOL_MAX + 1):
+            try:
+                conn = self._pool.getconn()
+            except psycopg2.OperationalError:
+                # Opening a new connection can fail on a dropped network
+                # moment; one more try, then the error stands.
+                if attempt:
+                    raise
+                continue
             if _alive(conn):
                 self._conn = conn
                 return conn

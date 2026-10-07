@@ -6,7 +6,7 @@ reported it - it was found by someone asking why a question had stopped working.
 These are the checks that would have caught it within a minute.
 """
 
-from api import spatial_ops as S
+from api.repositories.layers import roles
 
 
 def test_no_orphan_layer_tables(cur):
@@ -81,8 +81,8 @@ def test_every_alias_resolves(cur):
     from pathlib import Path
 
     rows = list(csv.DictReader((Path(__file__).parents[2] / "data/layer_roles.csv").open()))
-    S.reset_roles()
-    assert sorted(S.roles()) == sorted(r["role"] for r in rows)
+    roles.clear()
+    assert sorted(roles()) == sorted(r["role"] for r in rows)
 
 
 def test_published_layers_can_serve_tiles(cur):

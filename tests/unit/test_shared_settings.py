@@ -82,9 +82,9 @@ def test_the_served_and_baked_zoom_ranges_are_the_same():
 def test_the_relevance_gate_has_one_value():
     """It was declared twice, 0.45 in the route and 0.25 in the service, and only
     the 0.25 was ever read - so the route documented a gate that did not exist."""
-    from api.services import answering
+    from api.repositories import documents
 
-    assert answering.MIN_RELEVANCE == core.MIN_RELEVANCE
+    assert documents.MIN_RELEVANCE == core.MIN_RELEVANCE
     assert _literal_assignments(r"MIN_RELEVANCE", r".*") == []
 
 

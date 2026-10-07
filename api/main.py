@@ -33,31 +33,23 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 def warm() -> None:
-    """Load the embedding model and the gazetteer before taking traffic.
-
-    Both were loaded lazily, on the first question a new container received. That
-    made the first question after every deploy take forty-five seconds to show
-    anything, which reads as broken - and it is the question most likely to be
-    asked by whoever we just told to go and look.
-
-    Doing it here costs the same seconds, but spends them while Cloud Run is
-    still starting the container rather than while someone is waiting.
-
-    A failure is logged and swallowed: a container that cannot warm up can still
-    serve the map and the catalogue, and refusing to start would take those down
-    too.
-    """
-    from . import places, retrieval
+    """Load the embedding model, the gazetteer and the layer roles before taking
+    traffic, so the first question after a deploy is not the slow one. A failure
+    is logged, not raised: the map and the catalogue still work without them."""
+    from .embeddings import encoder
+    from .repositories.layers import roles
+    from .repositories.places import _all as gazetteer
 
     for step, load in (
-        ("embedding model", retrieval._get_query_model),
-        ("gazetteer", places._load),
+        ("embedding model", encoder),
+        ("gazetteer", gazetteer),
+        ("layer roles", roles),
     ):
         start = time.monotonic()
         try:
             load()
             print(f"[warm] {step} ready in {time.monotonic() - start:.1f}s", flush=True)
-        except Exception as exc:  # startup must not fail on this
+        except Exception as exc:
             print(f"[warm] {step} failed after {time.monotonic() - start:.1f}s: {exc}", flush=True)
 
 

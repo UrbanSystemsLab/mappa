@@ -79,6 +79,8 @@ DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.profile_layers --commit
 
 say "4/6  Integration tests against $DB"
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pytest tests/integration -q
+# Known questions through the model itself: the figure and the tool behind it.
+DATABASE_URL="$DB_URL" ./venv/bin/python -m pytest tests/e2e -q
 
 # --- 3. the site ---------------------------------------------------------------
 say "5/6  Deploying $SHA to $SERVICE"
@@ -115,7 +117,7 @@ for path in /health "/api/v1/catalog/layers?limit=1" "/api/v1/places?q=ponce"; d
 done
 answer=$(curl -s --max-time 90 -X POST "$URL/api/v1/ask" -H 'Content-Type: application/json' \
           -d '{"question":"How many schools are in Arecibo?","lang":"en"}' |
-         ./venv/bin/python -c 'import json,sys; print(json.load(sys.stdin)["answer_es"][:120])')
+         ./venv/bin/python -c 'import json,sys; print(json.load(sys.stdin)["answer"][:120])')
 echo "  a question: $answer"
 
 say "Released $SHA to $TARGET: $URL"
