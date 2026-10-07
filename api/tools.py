@@ -13,14 +13,19 @@ steps that produced the answer.
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
+
+import psycopg2
 
 from .repositories import documents, layers, places, spatial
 from .repositories.documents import Passage
 from .repositories.layers import Layer
 from .repositories.places import Place
+
+log = logging.getLogger("mappa.tools")
 
 PASSAGE_CHARS = 1200  # enough of a passage to answer from, without flooding the model
 
@@ -36,11 +41,12 @@ class Session:
     steps: list[dict[str, Any]] = field(default_factory=list)
     results: list[str] = field(default_factory=list)  # every tool result, as text
     measured: bool = False  # a map tool computed something
+    found_layers: bool = False  # find_layers returned at least one layer
 
     @property
     def has_evidence(self) -> bool:
-        """Documents were searched with results, or the map was measured."""
-        return bool(self.passages) or self.measured
+        """Something was found: passages, layers, or a measurement."""
+        return bool(self.passages) or self.measured or self.found_layers
 
     def known_numbers(self) -> set[str]:
         """Every number any tool returned, in the form the answer would write it."""
@@ -316,8 +322,14 @@ def call(session: Session, name: str, args: dict[str, Any]) -> dict:
         result, summary = {"error": str(exc)}, f"error: {exc}"
     except TypeError as exc:  # wrong or missing arguments
         result, summary = {"error": f"bad arguments: {exc}"}, "bad arguments"
+    except psycopg2.errors.QueryCanceled:
+        log.warning("%s timed out: %s", name, args)
+        result = {"error": "This took too long to compute. Say it could not be measured."}
+        summary = "took too long"
     session.steps.append({"tool": name, "arguments": args, "summary": summary})
     session.results.append(json.dumps(result, ensure_ascii=False))
     if name in MEASURING and "error" not in result:
         session.measured = True
+    if name == "find_layers" and result.get("layers"):
+        session.found_layers = True
     return result

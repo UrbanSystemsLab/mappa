@@ -345,6 +345,11 @@ def _parts(chunk) -> list:
 _LINK = re.compile(r"\[([^\]]+)\]\((?:https?://|www\.)[^)]+\)")
 _URL = re.compile(r"\(?\b(?:https?://|www\.)\S+\)?")
 _CITE = re.compile(r"\s*\[\s*(\d+(?:\s*[,;\u2013-]\s*\d+)*)\s*\]")
+# Identifiers the tools use, which mean nothing to a reader. A bracketed aside
+# holding one goes whole: "(gis-123, suelosagricolas1)".
+_IDS = r"(?:gis-\d+|(?:municipio|barrio|comunidad)-\d+|layer_id|place_id)"
+_ID_ASIDE = re.compile(rf"\s*\((?=[^()]*\b{_IDS}\b)[^()]*\)")
+_ID = re.compile(rf"\s*`?\b{_IDS}\b`?:?")
 
 
 def cited_numbers(text: str) -> list[int]:
@@ -363,5 +368,8 @@ def clean(text: str) -> str:
     text = _LINK.sub(r"\1", text)
     text = _URL.sub("", text)
     text = _CITE.sub("", text)
+    text = _ID_ASIDE.sub("", text)
+    text = _ID.sub("", text)
+    text = re.sub(r"\s+([,.;:])", r"\1", text)
     text = re.sub(r"(?m)^\s*[*\-]\s+", "• ", text)
     return re.sub(r"[ \t]{2,}", " ", text).strip()

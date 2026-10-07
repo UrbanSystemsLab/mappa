@@ -70,3 +70,23 @@ def test_a_shared_name_asks_which():
     s = tools.Session()
     assert tools.call(s, "find_place", {"name": "Nowhere"})["note"] == "No place by that name."
     assert s.place is None
+
+
+def test_a_measurement_that_takes_too_long_is_told_to_the_model(monkeypatch):
+    import psycopg2
+
+    def slow(layer, place=None):
+        raise psycopg2.errors.QueryCanceled("canceling statement due to statement timeout")
+
+    monkeypatch.setattr(tools.spatial, "count", slow)
+    s = tools.Session()
+    out = tools.call(s, "count_features", {"layer_id": "schools"})
+    assert "too long" in out["error"]
+    assert not s.measured and s.steps[-1]["summary"] == "took too long"
+
+
+def test_layers_found_count_as_something_found(monkeypatch):
+    monkeypatch.setattr(tools.layers, "search", lambda topic, limit=8: [(SCHOOLS, 0.8)])
+    s = tools.Session()
+    tools.call(s, "find_layers", {"topic": "schools"})
+    assert s.has_evidence

@@ -64,6 +64,16 @@ class TestCleaning:
         out = assistant.clean("See [the plan](https://example.org/plan.pdf) or www.jp.pr.gov.")
         assert "http" not in out and "www" not in out and "the plan" in out
 
+    def test_layer_and_place_ids_never_reach_the_reader(self):
+        out = assistant.clean(
+            "• **Agricultural Lands (gis-123, suelosagricolas1):** soils. "
+            'Use "Health Centers 2000" (`gis-318`) or the routes layer (layer_id: `gis-617`). '
+            "Rainfall (gis-185, gis-186) is available. Roads gis-595, PR-52 and PR-2."
+        )
+        assert "gis-" not in out and "layer_id" not in out and "suelosagricolas1" not in out
+        assert "**Agricultural Lands:**" in out and "PR-52" in out
+        assert "Rainfall is available." in out
+
     def test_bullets_are_plain(self):
         assert assistant.clean("- one\n* two") == "• one\n• two"
 
