@@ -161,8 +161,7 @@ function applyLang() {
   t('samples').forEach(([label, question], i) => {
     if (samples[i]) { samples[i].textContent = label; samples[i].dataset.q = question; }
   });
-  // An open map popup or layer info box was written in the old language and
-  // stayed that way. Closed rather than left half-translated.
+  // An open popup or layer info box is in the previous language; close it.
   if (openPopup) openPopup.remove();
   const info = document.getElementById('layerinfo'); if (info) info.style.display = 'none';
   // The disclaimer came back with the last answer, in that answer's language.
@@ -377,9 +376,8 @@ async function fetchLayers() {
   const d = await (await fetch(API + '/catalog/layers?' + p)).json();
   RESULTS = d.layers || [];
   RESULT_TOTAL = d.total || 0;
-  // A layer that is switched on holds a copy of its catalogue row from the
-  // moment it was turned on, so its name stayed in the old language in the
-  // panel and the legend. Refresh the copy, keeping its opacity and order.
+  // Layers already on the map hold their catalogue row in the previous
+  // language. Refresh it, keeping opacity and order.
   const fresh = new Map(RESULTS.map(l => [l.id, l]));
   await Promise.all([...ACTIVE.keys()].map(async id => {
     let l = fresh.get(id);
@@ -398,8 +396,7 @@ async function fetchLayers() {
 
 // A rating exists only where La Maraña's team gave one, in their reconstructed
 // metadata, using their own four words: Confirmed, Inferred, Reconstructed,
-// Unknown. Translated literally and nothing more - this used to call Unknown
-// "undocumented", which is our phrasing, not theirs.
+// Unknown. Translated literally and nothing more.
 function statusChip(st) {
   const L = {
     confirmed:     { es: 'confirmado', en: 'confirmed', c: 'ok' },
@@ -520,9 +517,7 @@ document.getElementById('lyrq').addEventListener('input', (e) => {
 
 // --- map wiring: vector tiles, not whole-layer GeoJSON ---
 // Every layer you turn on gets its own colour from this list, the first one not
-// already on the map. Layers used to keep the colour stored with them, and most
-// share the same green or blue - so with two or three on, there was no telling
-// which shape belonged to which layer.
+// already on the map, so layers shown together never share a colour.
 const LAYER_COLOURS = ['#d62728', '#1f77b4', '#2ca02c', '#ff7f0e', '#9467bd',
                        '#8c564b', '#e377c2', '#17becf', '#bcbd22', '#7f7f7f'];
 function nextColour() {
@@ -814,9 +809,8 @@ function showPopup(lngLat, html) {
 }
 
 if (map) map.on('click', async (e) => {
-  // Everything the user actually clicked, across every active layer. Previously
-  // each layer had its own handler and they overwrote each other's popup, so the
-  // same layer appeared no matter where you clicked.
+  // One handler for every active layer: one popup listing everything under
+  // the click.
   const ids = [];
   ACTIVE.forEach((rec, id) => { [LYR(id), LYR(id) + '_ln'].forEach(x => {
     if (map.getLayer(x)) ids.push(x); }); });

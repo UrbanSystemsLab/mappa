@@ -223,9 +223,8 @@ def decide(cur, table: str, features: int) -> tuple[list[str], dict | None]:
             break
 
     # What a click shows: the colouring column first, then the most telling of
-    # the rest. Decided afresh on every run. It used to keep whatever the
-    # registry already listed, which after one run meant its own earlier
-    # choices - so a column it had wrongly picked could never be dropped again.
+    # the rest. Decided afresh on every run from the data, never from what the
+    # registry already lists.
     shown: list[str] = [by["by"]] if by else []
     # Words before numbers, and descriptive text before short codes: the soil
     # layer's name ("Humatas clay, 20 to 40 percent slopes") ahead of its map

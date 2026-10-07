@@ -221,9 +221,8 @@ def main() -> None:
 def reconcile(cur) -> None:
     """Mark 'loaded' only what is really in the corpus.
 
-    Staging used to write 'loaded' before the embedding run, so a document that
-    failed halfway still read as loaded. The registry is a provenance record and
-    has to match the corpus, so the state comes from the documents table.
+    The registry is a provenance record and has to match the corpus, so the
+    state comes from the documents table, after embedding.
     """
     cur.execute(
         """

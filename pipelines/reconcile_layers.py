@@ -1,23 +1,13 @@
 """Reconcile the registry against the tables that actually exist.
 
-Loading their second GeoPackage re-matched registry rows onto the new file's
-copies of layers it already had. That is right - the new copies are the same data
-and sometimes richer - but it left the old tables with no registry row, so the
-map quietly went from 107 layers to 81 and the alias table pointed at a layer the
-catalog no longer knew about.
-
-It also finds the third kind, which is not drift but duplication: a catalogue
-row describing a layer that is already live under a different GIS ID. Agroturismo
-2021 is on the sheet three times. Those rows have no data behind them and never
-will, because the data is already here - so they were being counted as "layers
-with no data" and quoted to La Maraña as a gap. They are marked duplicate rather
-than deleted; their row still records that their inventory listed it twice.
-
-This finds both kinds of drift:
+A layer can be loaded more than once (their GeoPackages overlap), and their
+inventory can list the same layer under more than one GIS ID. This finds:
 
   * a table with no registry row - either superseded by a newer copy, or a layer
     that would otherwise be lost
-  * an alias pointing at a table that is no longer registered
+  * an alias pointing at a table that is not registered
+  * a catalogue row for a layer already live under a different GIS ID - marked
+    duplicate rather than deleted, so it is not counted as a layer with no data
 
 A superseded table is reported, never dropped. Reclaiming the space is a separate
 decision, and the duplicates are harmless where they are.

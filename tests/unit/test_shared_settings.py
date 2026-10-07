@@ -99,7 +99,7 @@ def test_core_holds_only_what_crosses_a_boundary():
 
 
 def test_settings_reject_a_mistyped_environment():
-    """APP_ENV=prod used to be silently treated as not-production."""
+    """A typo such as APP_ENV=prod is an error, not silently non-production."""
     import pytest
     from pydantic import ValidationError
 

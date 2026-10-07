@@ -1,9 +1,6 @@
 """The application, assembled.
 
-This file used to hold the HTTP layer, the orchestration between a question and
-an answer, the SQL behind both, and the wire contract. It was 388 lines and the
-place every change landed. It now does one thing: decide what the service is
-made of and in what order it starts.
+This file decides what the service is made of and in what order it starts.
 
 Nothing here answers a question, queries the database, or defines a shape. If
 something in this file starts doing any of those, it belongs in a router, a
@@ -108,11 +105,8 @@ if settings.serve_frontend and FRONTEND_DIR.exists():
 def index() -> Response:
     """Serve the app shell, stamped with the current asset versions.
 
-    The version in ?v= used to be a number edited by hand, so an app.js change
-    shipped behind a token that had not moved reached every browser that already
-    had the old file - the app looked unchanged no matter what was deployed.
-    The stamp is now a hash of the file's own contents, so it moves exactly when
-    the file does and never when it does not.
+    The ?v= stamp is a hash of each file's contents, so browsers fetch a file
+    again exactly when it changes.
     """
     if not (settings.serve_frontend and FRONTEND_DIR.exists()):
         return Response(status_code=404)

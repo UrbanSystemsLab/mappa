@@ -11,10 +11,8 @@ each layer's data lands it flips to 'published'.
 
 Nothing here invents metadata. A field their sheet leaves blank stays blank.
 
-No trust rating is set. This used to count how many fields a row filled in and
-call the result 'confirmed' or 'inferred' - their words, used for something they
-never said. A rating is recorded only where their team wrote one, by
-import_reconstructed_metadata.
+No trust rating is set here. A rating is recorded only where their team wrote
+one, by import_reconstructed_metadata.
 
 Run:
     python -m pipelines.rebuild_layer_registry            # dry run

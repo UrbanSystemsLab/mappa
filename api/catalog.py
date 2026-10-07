@@ -129,8 +129,8 @@ def _row_to_layer(r: tuple, lang: str) -> dict[str, Any]:
         "value_labels": val_labels or {},
         "dataset_version": version,
         "status": status,
-        # On La Maraña's Data Quality Prioritization Matrix (28 Jul 2026), and
-        # what they wrote beside it. Recorded, not currently shown.
+        # From La Maraña's Data Quality Prioritization Matrix, with their notes.
+        # Stored; not shown in the app.
         "featured": bool(featured),
         "featured_note": featured_note,
         "reliability": reliability,

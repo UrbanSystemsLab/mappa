@@ -1,9 +1,8 @@
 """What the map shows for each layer is decided from the layer's own data.
 
-Every layer used to be one flat colour, and 72 of the 82 on the map showed
-nothing when clicked. pipelines/profile_layers now decides both. These hold the
-rules it was built on - above all, that nothing about a private person is ever
-shown, because the 78 cadastral maps carry owners' names and mailing addresses.
+pipelines/profile_layers decides what a click shows. These hold the rules it
+is built on - above all, that nothing about a private person is ever shown,
+because the 78 cadastral maps carry owners' names and mailing addresses.
 """
 
 import re

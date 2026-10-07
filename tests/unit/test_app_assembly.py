@@ -1,9 +1,7 @@
 """main.py assembles the application and does nothing else.
 
-It was 388 lines and the place every change landed: the HTTP layer, the
-orchestration between a question and an answer, the SQL behind both, and the
-wire contract. Splitting it is only worth something if it stays split, and
-nothing but a test makes that true.
+HTTP handling lives in routers, the question-to-answer flow in services, SQL
+in repositories and the wire contract in schemas. These keep it that way.
 """
 
 from __future__ import annotations
