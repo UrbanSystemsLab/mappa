@@ -139,9 +139,7 @@ def _config(lang: str):
     return types.GenerateContentConfig(
         system_instruction=INSTRUCTIONS[lang] + "\n\n" + _standard_layers(lang),
         temperature=0.2,
-        thinking_config=None
-        if settings.llm_thinking_budget is None
-        else types.ThinkingConfig(thinking_budget=settings.llm_thinking_budget),
+        thinking_config=types.ThinkingConfig(thinking_budget=settings.llm_thinking_budget),
         tools=[
             types.Tool(
                 function_declarations=[
