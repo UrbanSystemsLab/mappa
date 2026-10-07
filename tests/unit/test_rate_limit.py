@@ -86,7 +86,8 @@ class TestWhoIsCounted:
 def test_only_the_expensive_routes_are_limited():
     """Tiles and the catalogue are cached and cheap. Limiting them would break
     the map for a classroom on one connection."""
-    assert "/ask".startswith(limits.LIMITED_PATHS)
+    assert "/api/v1/ask".startswith(limits.LIMITED_PATHS)
+    assert "/api/v1/ask/stream".startswith(limits.LIMITED_PATHS)
     assert not "/tiles/layer/8/70/110.mvt".startswith(limits.LIMITED_PATHS)
     assert not "/catalog/layers".startswith(limits.LIMITED_PATHS)
     assert not "/health".startswith(limits.LIMITED_PATHS)

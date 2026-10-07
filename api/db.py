@@ -1,62 +1,42 @@
-"""Shared Postgres connection pool.
+"""The database connection pool, shared by everything in the process.
 
-One pool per process, used by every module that talks to the database. This is
-deliberate: Cloud SQL (db-custom-1-3840) allows max_connections=100, and Cloud Run
-runs many instances at once, so the real ceiling is (instances x pool size). A
-second pool in another module would silently double that budget.
+A small pool per container, waited on rather than failed when busy. Every
+connection is opened with a statement timeout, so no query can run on after its
+request is gone.
 
-Keep the per-instance pool small and let Cloud Run scale out horizontally. A large
-pool per instance exhausts Postgres under load and takes the whole service down,
-not just the endpoint that opened the connections.
+    with db.connection() as conn:
+        cur = conn.cursor()
+        ...
 """
 
 from __future__ import annotations
 
-import os
 import threading
 
 import psycopg2
+from psycopg2.pool import ThreadedConnectionPool
 
 from core import settings
 
-_POOL = None
-POOL_MIN = int(os.environ.get("DB_POOL_MIN", "1"))
-POOL_MAX = int(os.environ.get("DB_POOL_MAX", "4"))
+from .cache import cached
 
-# Hard ceiling on every pooled connection, applied at connect time rather than per
-# query. Postgres keeps executing a statement even after its client goes away, so a
-# server restart during a slow query leaves it running server-side, holding CPU on a
-# small instance. Setting this on the connection means no request path can outlive
-# it, whatever a caller forgets to set.
-STATEMENT_TIMEOUT_MS = int(os.environ.get("DB_STATEMENT_TIMEOUT_MS", "20000"))
-# Also reap connections whose client has vanished mid-transaction.
-IDLE_TX_TIMEOUT_MS = int(os.environ.get("DB_IDLE_TX_TIMEOUT_MS", "30000"))
-# How long a request waits for a free connection before giving up.
-CHECKOUT_TIMEOUT_S = float(os.environ.get("DB_CHECKOUT_TIMEOUT_S", "15"))
-
-# psycopg2's pool does not wait: when every connection is out, the next request
-# fails on the spot with "connection pool exhausted". Turning on a map layer sends
-# a burst of tile requests, and a question asked in that moment was simply
-# rejected - found by clicking through the app in a browser on 3 Oct. This makes
-# a request wait its turn instead, for a bounded time.
-_SLOTS = threading.BoundedSemaphore(POOL_MAX)
+# How many requests may hold a connection at once. psycopg2's pool fails at once
+# when empty; this makes a request wait its turn, for a bounded time.
+_slots = threading.BoundedSemaphore(settings.db_pool_max)
 
 
-def _get_pool():
-    global _POOL
-    if _POOL is None:
-        from psycopg2.pool import ThreadedConnectionPool
-
-        opts = (
-            f"-c statement_timeout={STATEMENT_TIMEOUT_MS} "
-            f"-c idle_in_transaction_session_timeout={IDLE_TX_TIMEOUT_MS}"
-        )
-        _POOL = ThreadedConnectionPool(POOL_MIN, POOL_MAX, settings.database_url, options=opts)
-    return _POOL
+@cached()
+def _pool() -> ThreadedConnectionPool:
+    options = (
+        f"-c statement_timeout={settings.db_statement_timeout_ms} "
+        f"-c idle_in_transaction_session_timeout={settings.db_statement_timeout_ms + 10_000}"
+    )
+    return ThreadedConnectionPool(1, settings.db_pool_max, settings.database_url, options=options)
 
 
 def _alive(conn) -> bool:
-    """Whether a connection can still answer. Cheap enough to run per checkout."""
+    """Whether a pooled connection still answers. The proxy and the server both
+    drop idle connections, and the pool would hand them out anyway."""
     if conn.closed:
         return False
     try:
@@ -68,43 +48,33 @@ def _alive(conn) -> bool:
 
 
 class connection:
-    """Context manager yielding a pooled connection, returned to the pool on exit.
-
-    with db.connection() as conn:
-        cur = conn.cursor()
-    """
+    """A pooled connection for the length of a `with` block: committed on success,
+    rolled back on error, and always returned."""
 
     def __enter__(self):
-        if not _SLOTS.acquire(timeout=CHECKOUT_TIMEOUT_S):
+        if not _slots.acquire(timeout=settings.db_checkout_timeout_s):
             raise RuntimeError(
-                f"no database connection free after {CHECKOUT_TIMEOUT_S:.0f}s - the service is overloaded"
+                f"no database connection free after {settings.db_checkout_timeout_s:.0f}s"
             )
         try:
-            return self._checkout()
+            self._conn = self._checkout()
+            return self._conn
         except BaseException:
-            _SLOTS.release()
+            _slots.release()
             raise
 
     def _checkout(self):
-        self._pool = _get_pool()
-        # A pooled connection can be dead on arrival: the Cloud SQL proxy and the
-        # server both drop idle connections, and the pool hands them back anyway.
-        # The first query on one raises InterfaceError, which surfaced as a
-        # request that returned nothing at all. Check before handing it out, and
-        # throw away anything that does not answer.
-        for attempt in range(POOL_MAX + 1):
+        pool = _pool()
+        for attempt in range(settings.db_pool_max + 1):
             try:
-                conn = self._pool.getconn()
+                conn = pool.getconn()
             except psycopg2.OperationalError:
-                # Opening a new connection can fail on a dropped network
-                # moment; one more try, then the error stands.
-                if attempt:
+                if attempt:  # one retry for a dropped network moment
                     raise
                 continue
             if _alive(conn):
-                self._conn = conn
                 return conn
-            self._pool.putconn(conn, close=True)
+            pool.putconn(conn, close=True)
         raise RuntimeError("no usable database connection in the pool")
 
     def __exit__(self, exc_type, exc, tb):
@@ -115,10 +85,8 @@ class connection:
             else:
                 self._conn.commit()
         except Exception:
-            # The connection died mid-request. Closing it on return stops the pool
-            # from handing the same dead one to the next caller.
-            broken = True
+            broken = True  # closed on return, so it is never handed out again
         finally:
-            self._pool.putconn(self._conn, close=broken)
-            _SLOTS.release()
+            _pool().putconn(self._conn, close=broken)
+            _slots.release()
         return False

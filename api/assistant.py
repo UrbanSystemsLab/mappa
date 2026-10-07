@@ -14,12 +14,13 @@ number.
 from __future__ import annotations
 
 import logging
-import os
 import re
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
+
+from core import settings
 
 from .cache import cached
 from .tools import TOOLS, Session, call
@@ -28,9 +29,7 @@ log = logging.getLogger("mappa.assistant")
 
 # flash, not flash-lite: flash-lite sometimes returns an empty reply after a tool
 # result. flash is a few seconds slower and costs about $0.002 a question.
-MODEL = os.environ.get("LLM_MODEL", "gemini-2.5-flash")
-PROJECT = os.environ.get("GCP_PROJECT", "mappa-lamarana-aecc")
-LOCATION = os.environ.get("VERTEX_LOCATION", "us-central1")
+MODEL = settings.llm_model
 MAX_ROUNDS = 6  # tool rounds before the model must answer with what it has
 
 INSTRUCTIONS = {
@@ -103,7 +102,9 @@ class Context:
 def _client():
     from google import genai
 
-    return genai.Client(vertexai=True, project=PROJECT, location=LOCATION)
+    return genai.Client(
+        vertexai=True, project=settings.gcp_project, location=settings.vertex_location
+    )
 
 
 def _standard_layers(lang: str) -> str:

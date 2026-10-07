@@ -9,6 +9,10 @@ copy differ only in what is set here.
     APP_ENV          production | staging | local
     CORS_ORIGINS     other websites allowed to call the API, comma-separated
     SERVE_FRONTEND   false when the web page is hosted separately
+    DB_POOL_MAX      database connections per process (default 4)
+    RATE_LIMIT_PER_MINUTE / RATE_LIMIT_PER_HOUR   questions per address (15 / 150)
+    LLM_MODEL, GCP_PROJECT, VERTEX_LOCATION        the answering model on Vertex AI
+    TILE_TIMEOUT_MS, TILE_TIMEOUT_LOWZOOM_MS, TILE_CACHE_ENTRIES, TILE_CONCURRENCY
 """
 
 from __future__ import annotations
@@ -29,6 +33,20 @@ class Settings(BaseModel):
     api_prefix: str = "/api/v1"
     cors_origins: tuple[str, ...] = ()
     serve_frontend: bool = True
+    # Each container holds this many connections; the server allows 100 in all,
+    # so containers x pool must stay well under that.
+    db_pool_max: int = 4
+    db_statement_timeout_ms: int = 20_000
+    db_checkout_timeout_s: float = 15.0
+    rate_limit_per_minute: int = 15
+    rate_limit_per_hour: int = 150
+    llm_model: str = "gemini-2.5-flash"
+    gcp_project: str = "mappa-lamarana-aecc"
+    vertex_location: str = "us-central1"
+    tile_timeout_ms: int = 8_000
+    tile_timeout_lowzoom_ms: int = 45_000
+    tile_cache_entries: int = 600
+    tile_concurrency: int = 3
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] = os.environ) -> Settings:
@@ -45,6 +63,18 @@ class Settings(BaseModel):
                 o.strip() for o in env.get("CORS_ORIGINS", "").split(",") if o.strip()
             ),
             serve_frontend=env.get("SERVE_FRONTEND", "true").lower() != "false",
+            db_pool_max=int(env.get("DB_POOL_MAX", "4")),
+            db_statement_timeout_ms=int(env.get("DB_STATEMENT_TIMEOUT_MS", "20000")),
+            db_checkout_timeout_s=float(env.get("DB_CHECKOUT_TIMEOUT_S", "15")),
+            rate_limit_per_minute=int(env.get("RATE_LIMIT_PER_MINUTE", "15")),
+            rate_limit_per_hour=int(env.get("RATE_LIMIT_PER_HOUR", "150")),
+            llm_model=env.get("LLM_MODEL", "gemini-2.5-flash"),
+            gcp_project=env.get("GCP_PROJECT", "mappa-lamarana-aecc"),
+            vertex_location=env.get("VERTEX_LOCATION", "us-central1"),
+            tile_timeout_ms=int(env.get("TILE_TIMEOUT_MS", "8000")),
+            tile_timeout_lowzoom_ms=int(env.get("TILE_TIMEOUT_LOWZOOM_MS", "45000")),
+            tile_cache_entries=int(env.get("TILE_CACHE_ENTRIES", "600")),
+            tile_concurrency=int(env.get("TILE_CONCURRENCY", "3")),
         )
 
 

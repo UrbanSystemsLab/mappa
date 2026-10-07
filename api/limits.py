@@ -1,44 +1,32 @@
-"""A rate limit on the expensive routes.
+"""A rate limit on the question routes.
 
-The app is on a public domain with no sign-in, which is deliberate - a resident
-should be able to ask a question without an account. It also means anyone can
-point a loop at `/ask`, and every question there costs a model call and several
-spatial queries against the same database the map is served from. Nothing stood
-between that and the bill, or between that and the map going slow for everyone
-else.
+The app is public with no sign-in, so this is what stands between a script and
+both the model bill and the database the map is served from. Two windows, because
+two things are protected: the cost adds up over an hour, the database cares about
+the next few seconds. A request has to clear both.
 
-Two things are being protected, and they need different limits. The **cost** is
-the model, which is per question and adds up over an hour. The **service** is the
-database, which cares about a burst in the next few seconds. So there is a
-per-minute limit and a per-hour one, and a request has to clear both.
-
-**This counts per container, not across the service.** Cloud Run runs several,
-and a client's requests are spread over them, so the real limit is this one
-multiplied by however many are up. That is a weaker guarantee than it looks -
-it stops a loop from one laptop, which is the realistic case, and it does not
-stop a distributed flood. Doing better means somewhere shared to keep the count,
-which is a database round trip on every question and another thing for La Maraña
-to run. Worth revisiting if it is ever actually attacked; not worth it now.
+The count is per container. Cloud Run runs several, so the real allowance is this
+times however many are up: it stops a loop from one machine, not a distributed
+flood. Doing better needs a shared counter - a database round trip per question.
 """
 
 from __future__ import annotations
 
-import os
 import time
 from collections import deque
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-# Generous for a person, immediately in the way of a script. A reader following
-# up on an answer asks a question every twenty or thirty seconds.
-PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "15"))
-PER_HOUR = int(os.environ.get("RATE_LIMIT_PER_HOUR", "150"))
+from core import settings
 
-# Only the routes that cost money or hold the database. Tiles and the catalogue
-# are cached and cheap, and limiting them would break the map for a classroom on
-# one connection.
-LIMITED_PATHS = ("/ask", "/api/v1/ask")
+# Generous for a person, immediately in the way of a script.
+PER_MINUTE = settings.rate_limit_per_minute
+PER_HOUR = settings.rate_limit_per_hour
+
+# Only the routes that cost money. Tiles and the catalogue are cached and cheap,
+# and limiting them would break the map for a classroom on one connection.
+LIMITED_PATHS = (f"{settings.api_prefix}/ask",)
 
 # A bound on what this can hold, so the limiter cannot itself become the leak.
 MAX_CLIENTS = 20_000

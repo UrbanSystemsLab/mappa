@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import logging
 import math
-import os
 import re
 import threading
 from collections import OrderedDict
@@ -39,25 +38,25 @@ _SAFE_COL = re.compile(r"^[a-z_][a-z0-9_]*$", re.I)
 
 # Short on purpose: a slow tile should give up quickly and return empty rather than
 # hold a pooled connection while the map waits on it.
-TILE_TIMEOUT_MS = int(os.environ.get("TILE_TIMEOUT_MS", "8000"))
+TILE_TIMEOUT_MS = settings.tile_timeout_ms
 # Zoomed-out tiles cover far more ground and legitimately take longer to build.
 # There are only a handful of them per layer and they are cached below, so giving
 # them room is cheap — and a timeout here means a blank half of the island.
-TILE_TIMEOUT_LOWZOOM_MS = int(os.environ.get("TILE_TIMEOUT_LOWZOOM_MS", "45000"))
+TILE_TIMEOUT_LOWZOOM_MS = settings.tile_timeout_lowzoom_ms
 
 # Small in-process cache. Tiles are immutable for a layer version, and the few
 # low-zoom tiles are both the most expensive to build and the most requested, so
 # caching them turns a repeated multi-second query into a dictionary lookup. A CDN
 # does this properly in front; this keeps a single instance sane without one.
 _CACHE: OrderedDict[str, bytes] = OrderedDict()
-_CACHE_MAX = int(os.environ.get("TILE_CACHE_ENTRIES", "600"))
+_CACHE_MAX = settings.tile_cache_entries
 _CACHE_LOCK = threading.Lock()
 
 # A single map view requests many tiles at once. Without a gate they all try to
 # borrow a connection at the same moment and drain the pool, which then fails
 # unrelated requests including /ask. Cap in-flight tile queries below the pool size
 # so there is always a connection left for everything else.
-_TILE_GATE = threading.Semaphore(int(os.environ.get("TILE_CONCURRENCY", "3")))
+_TILE_GATE = threading.Semaphore(settings.tile_concurrency)
 
 
 def tile_bounds_4326(z: int, x: int, y: int) -> tuple[float, float, float, float]:
@@ -92,10 +91,8 @@ def layer_meta(name: str) -> dict[str, Any] | None:
         return _LAYER_META[name]
     with db.connection() as conn:
         cur = conn.cursor()
-        # layer_registry is the record of what exists. This used to read
-        # spatial_layers, which only ever held the ten layers loaded by hand, so
-        # every layer added since was catalogued, published and undrawable - the
-        # tile service returned 404 for a layer the panel offered as available.
+        # layer_registry is the list of every layer, so any catalogued layer can
+        # be drawn.
         cur.execute(
             """SELECT table_name, geometry_type, feature_count,
                       coalesce(tile_properties, '{}'), simplified
@@ -152,18 +149,14 @@ def tile(name: str, z: int, x: int, y: int) -> bytes | None:
     # per-row reprojection is needed.
     area_filter = ""
     tile_area = max((e - w) * (n - s), 1e-12)
-    # Case-insensitive: the ten hand-loaded layers record "MultiPolygon" while
-    # everything from their GeoPackage records "MULTIPOLYGON", so this filter
-    # silently did nothing for 97 of the 107 layers - which is how one landcover
-    # tile came to be 7 MB.
+    # Case-insensitive: geometry types are stored as both "MultiPolygon" and
+    # "MULTIPOLYGON".
     if "polygon" in (meta["geometry_type"] or "").lower() and z < 11:
         # A tile is drawn at 256 px a side, so a feature smaller than tile_area
-        # / 256² covers less than one pixel and cannot be seen. The old divisor
-        # of 4,000,000 kept features 1/64th of a pixel across - invisible, but
-        # still paid for in bytes on every tile.
+        # / 256² covers less than one pixel and cannot be seen.
         area_filter = f" AND ST_Area(l.geom) > {tile_area / 65_536.0:.12g}"
 
-    # `name` is whitelisted via spatial_layers above; bounds are bound parameters.
+    # `name` is checked against layer_registry above; bounds are bound parameters.
     sql = f"""
         SELECT ST_AsMVT(t, 'layer', {_EXTENT}, 'geom') FROM (
             SELECT
