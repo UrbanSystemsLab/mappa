@@ -41,6 +41,9 @@ class Settings(BaseModel):
     rate_limit_per_minute: int = 15
     rate_limit_per_hour: int = 150
     llm_model: str = "gemini-2.5-flash"
+    # Tokens the model may spend reasoning before each reply; None is the
+    # model's own default, 0 turns it off.
+    llm_thinking_budget: int | None = None
     gcp_project: str = "mappa-lamarana-aecc"
     vertex_location: str = "us-central1"
     tile_timeout_ms: int = 8_000
@@ -69,6 +72,9 @@ class Settings(BaseModel):
             rate_limit_per_minute=int(env.get("RATE_LIMIT_PER_MINUTE", "15")),
             rate_limit_per_hour=int(env.get("RATE_LIMIT_PER_HOUR", "150")),
             llm_model=env.get("LLM_MODEL", "gemini-2.5-flash"),
+            llm_thinking_budget=(
+                int(env["LLM_THINKING_BUDGET"]) if env.get("LLM_THINKING_BUDGET") else None
+            ),
             gcp_project=env.get("GCP_PROJECT", "mappa-lamarana-aecc"),
             vertex_location=env.get("VERTEX_LOCATION", "us-central1"),
             tile_timeout_ms=int(env.get("TILE_TIMEOUT_MS", "8000")),

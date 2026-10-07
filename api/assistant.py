@@ -68,6 +68,14 @@ Nunca muestres valores de layer_id ni place_id al lector. Sin enlaces. Es orient
 }
 
 
+NOTHING_FOUND = {
+    "en": "I could not find this in La Maraña's documents or map layers. The Junta de "
+    "Planificación, OGPe, DRNA or the municipio may be able to help.",
+    "es": "No encontré esto en los documentos ni en las capas de La Maraña. La Junta de "
+    "Planificación, la OGPe, el DRNA o el municipio pueden ayudar.",
+}
+
+
 class AssistantUnavailable(Exception):
     """The model could not be reached or failed."""
 
@@ -131,6 +139,9 @@ def _config(lang: str):
     return types.GenerateContentConfig(
         system_instruction=INSTRUCTIONS[lang] + "\n\n" + _standard_layers(lang),
         temperature=0.2,
+        thinking_config=None
+        if settings.llm_thinking_budget is None
+        else types.ThinkingConfig(thinking_budget=settings.llm_thinking_budget),
         tools=[
             types.Tool(
                 function_declarations=[
@@ -178,6 +189,12 @@ def answer(question: str, session: Session, context: Context) -> Iterator[str]:
     sent_back = retried = False
     for round_ in range(MAX_ROUNDS + 2):
         last = round_ >= MAX_ROUNDS
+        if last and not session.has_evidence:
+            # Every round was spent and nothing was found. Whatever the model
+            # wrote now would come from its own knowledge.
+            log.info("no evidence after %d rounds", round_)
+            yield NOTHING_FOUND[session.lang]
+            return
         calls, text, finish = [], "", None
         started = time.monotonic()
         try:

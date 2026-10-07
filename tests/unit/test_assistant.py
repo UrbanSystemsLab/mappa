@@ -79,3 +79,37 @@ class TestClickContext:
             }
         ).note("en")
         assert "exact point" in note and "not the whole municipio" in note
+
+
+def test_nothing_found_after_every_round_is_said_plainly(monkeypatch):
+    """A model that only ever looks for layers, and finds nothing to measure,
+    must not then answer from its own knowledge."""
+    from types import SimpleNamespace
+
+    from api import assistant
+    from api.tools import Session
+
+    call = SimpleNamespace(name="find_layers", args={"topic": "schools"})
+    chunk = SimpleNamespace(
+        candidates=[
+            SimpleNamespace(
+                finish_reason=None,
+                content=SimpleNamespace(parts=[SimpleNamespace(function_call=call, text=None)]),
+            )
+        ]
+    )
+    asked = []
+
+    class Models:
+        def generate_content_stream(self, **kw):
+            asked.append(kw)
+            return [chunk]
+
+    monkeypatch.setattr(assistant, "_client", lambda: SimpleNamespace(models=Models()))
+    monkeypatch.setattr(assistant, "_standard_layers", lambda lang: "")
+    monkeypatch.setattr(assistant, "call", lambda session, name, args: {"layers": []})
+    out = "".join(
+        assistant.answer("three nearest schools?", Session(lang="en"), assistant.Context())
+    )
+    assert out == assistant.NOTHING_FOUND["en"]
+    assert len(asked) == assistant.MAX_ROUNDS
