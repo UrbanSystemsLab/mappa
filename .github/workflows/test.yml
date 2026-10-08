@@ -44,12 +44,13 @@ jobs:
     name: Database builds from scratch
     runs-on: ubuntu-latest
     # The data tests need the real data and run against staging, in
-    # scripts/release.sh. They used to run here against an empty database,
-    # which meant this job could never pass and its failure meant nothing.
-    # What an empty database can check is that the schema is reproducible.
+    # scripts/release.sh. An empty database can check that the schema builds
+    # from the migrations alone, and rolls back.
     services:
       postgres:
-        image: postgis/postgis:16-3.4
+        # pgvector's image runs current Debian, so PostGIS installs from the
+        # PostgreSQL apt repository; the postgis image's Debian is no longer served.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_PASSWORD: test
           POSTGRES_DB: mappa_test
@@ -64,11 +65,10 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: pip install -r requirements-api.txt
-      - name: pgvector
+      - name: PostGIS
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
-          docker exec $(docker ps -q --filter ancestor=postgis/postgis:16-3.4) \
-            sh -c "apt-get update -qq && apt-get install -y -qq postgresql-16-pgvector"
+          docker exec $(docker ps -q --filter ancestor=pgvector/pgvector:pg16) \
+            sh -c "apt-get update -qq && apt-get install -y -qq postgresql-16-postgis-3"
       - name: Every migration applies to an empty database, and rolls back
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/mappa_test

@@ -579,7 +579,6 @@
           "spatial": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -601,7 +600,6 @@
           },
           "active_layers": {
             "items": {
-              "additionalProperties": true,
               "type": "object"
             },
             "type": "array",
@@ -920,21 +918,18 @@
             "title": "Sublabel Column"
           },
           "style": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Style",
             "description": "Display hints; at least `color`.",
             "default": {}
           },
           "property_labels": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Property Labels",
             "description": "Readable names for property keys, per language.",
             "default": {}
           },
           "value_labels": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Value Labels",
             "default": {}
@@ -1266,7 +1261,6 @@
             "description": "find_place, search_documents, count_features..."
           },
           "arguments": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Arguments"
           },
@@ -1319,7 +1313,6 @@
           },
           "vector_layers": {
             "items": {
-              "additionalProperties": true,
               "type": "object"
             },
             "type": "array",
