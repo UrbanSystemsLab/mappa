@@ -1,6 +1,6 @@
 """Ingest documents into Mappa's database.
 
-Reads source documents (JSON corpus for now, PDF/DOCX later),
+Reads the documents staged by ingest_lamarana_docs,
 chunks the text, computes embeddings, and inserts rows into
 `documents` and `document_chunks`.
 
@@ -18,20 +18,18 @@ import argparse
 import json
 import os
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 import numpy as np
 import psycopg2
 from psycopg2.extras import execute_batch
 from sentence_transformers import SentenceTransformer
 
-ROOT = Path(__file__).resolve().parent.parent
-DOCUMENTS_JSON = ROOT / "data" / "documents.json"
+from core import EMBED_DIM  # noqa: F401
+from core import EMBEDDING_MODEL as DEFAULT_MODEL
 
-DEFAULT_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-EMBED_DIM = 384
 CHUNK_TOKENS_TARGET = 400
 CHUNK_OVERLAP_TOKENS = 60
 
@@ -45,6 +43,22 @@ class Chunk:
 
 
 def load_source_documents(path: Path) -> list[dict]:
+    """Load a corpus from either a single JSON array file or a directory of
+    per-document JSON files (the default output of pipelines/parse_documents.py).
+    A `corpus.json` array inside the directory, if present, is used directly.
+    """
+    if path.is_dir():
+        combined = path / "corpus.json"
+        if combined.exists():
+            with combined.open(encoding="utf-8") as f:
+                return json.load(f)
+        docs: list[dict] = []
+        for doc_path in sorted(path.glob("*.json")):
+            with doc_path.open(encoding="utf-8") as f:
+                data = json.load(f)
+            # each file may be a single document (dict) or an array of documents
+            docs.extend(data) if isinstance(data, list) else docs.append(data)
+        return docs
     with path.open(encoding="utf-8") as f:
         return json.load(f)
 
@@ -59,7 +73,9 @@ def _rough_tokens(text: str) -> int:
     return max(1, len(text) // 4)
 
 
-def chunk_text(text: str, target: int = CHUNK_TOKENS_TARGET, overlap: int = CHUNK_OVERLAP_TOKENS) -> list[str]:
+def chunk_text(
+    text: str, target: int = CHUNK_TOKENS_TARGET, overlap: int = CHUNK_OVERLAP_TOKENS
+) -> list[str]:
     """Split text into ~target-token chunks with sentence-aware boundaries and small overlap."""
     sentences = _split_sentences(text)
     chunks: list[str] = []
@@ -154,7 +170,9 @@ def upsert_documents(conn, documents: list[dict]) -> dict[str, int]:
     return id_map
 
 
-def replace_chunks(conn, id_map: dict[str, int], chunks: list[Chunk], embeddings: np.ndarray) -> int:
+def replace_chunks(
+    conn, id_map: dict[str, int], chunks: list[Chunk], embeddings: np.ndarray
+) -> int:
     """Replace chunks for the given documents in one transaction."""
     if not chunks:
         return 0
@@ -189,8 +207,17 @@ def _vector_literal(vec: np.ndarray) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest documents into Mappa database.")
-    parser.add_argument("--source", type=Path, default=DOCUMENTS_JSON, help="Path to documents.json")
-    parser.add_argument("--commit", action="store_true", help="Actually write to the database (requires DATABASE_URL).")
+    parser.add_argument(
+        "--source",
+        type=Path,
+        required=True,
+        help="Staged documents JSON, from ingest_lamarana_docs",
+    )
+    parser.add_argument(
+        "--commit",
+        action="store_true",
+        help="Actually write to the database (requires DATABASE_URL).",
+    )
     parser.add_argument("--model", default=os.environ.get("EMBED_MODEL", DEFAULT_MODEL))
     args = parser.parse_args()
 

@@ -1,0 +1,604 @@
+id,table_name,name_es,name_en,source
+aeropuertoshelipuertosfaa2021,layer_aeropuertos_helipuertos_faa_2021,aeropuertos helipuertos faa 2021,Airports heliports FAA 2021,machine translation of La Maraña's name
+barrios,layer_barrios_2015_geoid_corrected_16_nov17,Barrios,Barrios,machine translation of La Maraña's name
+bosqueestatalmontechoca2012,layer_bosque_estatal_monte_choca_2012,bosque estatal monte choca 2012,State forest Monte Choca 2012,machine translation of La Maraña's name
+canalriegoisabela,layer_canal_riego_isabela,canal riego isabela,Irrigation canal Isabela,machine translation of La Maraña's name
+gis-595,layer_carreteras_2006,carreteras 2006,Roads 2006,machine translation of La Maraña's name
+state_roads_2021,layer_carreteras_estatales_segmentadas_agosto_2021,Carreteras estatales 2021,State roads 2021,machine translation of La Maraña's name
+gis-311,layer_cdt_2009,CDT 2009,CDT 2009,machine translation of La Maraña's name
+gis-219,layer_centro_de_transmision_2014,centro de transmision 2014,Transmission center 2014,machine translation of La Maraña's name
+gis-226,layer_convertidores_2014,Convertidores 2014,Converters 2014,machine translation of La Maraña's name
+corredoragricoladeprojectexportfeatures,layer_corredor_agricola_de_project_exportfeatures,corredor agricola de Project ExportFeatures,Agricultural corridor,machine translation of La Maraña's name
+gis-104,layer_dotacional_dependencias_dept_recursos_naturales_2010,g33 dotacional dependencias dept recursos naturales 2010,Dotational dependencies Department of Natural Resources 2010,machine translation of La Maraña's name
+schools_2021,layer_dotacional_educacion_escuelas_2021,Escuelas públicas 2021,Public schools 2021,machine translation of La Maraña's name
+gis-323,layer_edificios_publicos_2010,edificios publicos 2010,Public buildings 2010,machine translation of La Maraña's name
+electricswitches2014,layer_electric_switches_2014,electric Switches 2014,Electric Switches 2014,machine translation of La Maraña's name
+gis-232,layer_fusibles_2014,Fusibles 2014,Fuses 2014,machine translation of La Maraña's name
+fwsapprovedprvi,layer_fwsapproved_prvi,FwsApproved PRVI,FwsApproved PRVI,machine translation of La Maraña's name
+fwsinterestprvi,layer_fwsinterest_prvi,FwsInterest PRVI,FwsInterest PRVI,machine translation of La Maraña's name
+gis-046,layer_g01_conserv_critical_wildlife_areas,g01 conserv critical wildlife areas,Critical wildlife areas,machine translation of La Maraña's name
+g01conservgapstewproject,layer_g01_conserv_gap_stew_project,g01 conserv gap stew Project,Gap stew,machine translation of La Maraña's name
+g01conservlineaveproject,layer_g01_conserv_linea_ve_project,g01 conserv linea ve Project,Linea ve,machine translation of La Maraña's name
+gis-049,layer_g01_conserv_reserva_tres_palmas,g01 conserv reserva tres palmas,Reserva tres palmas,machine translation of La Maraña's name
+gis-050,layer_g01_conserv_sist_cavernas_rio_camuy_2010,g01 conserv sist cavernas rio camuy 2010,Caverns system Rio Camuy 2010,machine translation of La Maraña's name
+g01conservyunquefederal,layer_g01_conserv_yunque_federal,g01 conserv yunque federal,Yunque federal,machine translation of La Maraña's name
+g03electoralesdistrepresentativos2012,layer_g03_electorales_dist_representativos_2012,g03 electorales dist representativos 2012,Electoral districts representative 2012,machine translation of La Maraña's name
+g03electoralesdistsenatoriales2012,layer_g03_electorales_dist_senatoriales_2012,g03 electorales dist senatoriales 2012,Electoral districts senatorial 2012,machine translation of La Maraña's name
+g03electoralesprecintos2004,layer_g03_electorales_precintos_2004,g03 electorales precintos 2004,Electoral precincts 2004,machine translation of La Maraña's name
+g03electoralesunidadeselectorales2004,layer_g03_electorales_unidades_electorales_2004,g03 electorales unidades electorales 2004,Electoral units 2004,machine translation of La Maraña's name
+gis-082,layer_g03_legales_limites_lines_2015,g03 legales limites lines 2015,Legal limits lines 2015,machine translation of La Maraña's name
+municipios,layer_g03_legales_municipios_2015,Municipios,Municipalities,machine translation of La Maraña's name
+g07g13fincasautoridaddetierras2010,layer_g07_g13_fincas_autoridad_de_tierras_2010,g07 g13 fincas autoridad de tierras 2010,Farms Land Authority 2010,machine translation of La Maraña's name
+gis-086,layer_g07_turismo_agroturismo_2021_exportfeatures,g07 turismo agroturismo 2021,Tourism agrotourism 2021,machine translation of La Maraña's name
+gis-087,layer_g07_turismo_hospederias_endosadas_2021,g07 turismo hospederias endosadas 2021,Tourism endorsed hotels 2021,machine translation of La Maraña's name
+gis-074,layer_g09_contornos_usgs_topographic_contours_depresiones,g09 contornos usgs topographic contours depresiones,Topographic contours depressions,machine translation of La Maraña's name
+gis-055,layer_g11_conserv_bosque_modelo_casa_pueblo_parcla_biodiversida,g11 conserv bosque modelo casa pueblo parcla biodiversidad 2010,Model forest Casa Pueblo biodiversity parcel 2010,machine translation of La Maraña's name
+g11proteccionepafacilityregistrysystem2011,layer_g11_proteccion_epa_facility_registry_system_2011,g11 proteccion epa facility registry system 2011,EPA facility registry system 2011,machine translation of La Maraña's name
+g11proteccionfincaproject,layer_g11_proteccion_finca_project,g11 proteccion finca Project,Finca,machine translation of La Maraña's name
+g13conservvallesagricolasregla52014,layer_g13_conserv_valles_agricolas_regla_5_2014,g13 conserv valles agricolas regla 5 2014,Agricultural valleys rule 5 2014,machine translation of La Maraña's name
+g15geologiaacuiferos250krenken,layer_g15_geologia_acuiferos_250k_renken,g15 geologia acuiferos 250k renken,Geology aquifers 250k renken,machine translation of La Maraña's name
+gis-061,layer_g15_geologia_carso_limite,g15 geologia carso limite,Geology karst limit,machine translation of La Maraña's name
+g15geologiageology20k24jul2108,layer_g15_geologia_geology_20k24jul2108,g15 geologia geology 20k24jul2108,Geology geology 20k24jul2108,machine translation of La Maraña's name
+g15geologiageology20klines,layer_g15_geologia_geology_20k_lines,g15 geologia geology 20k lines,Geology 20k lines,machine translation of La Maraña's name
+g15riesgogeolareasdesalojotsunami20032014,layer_g15_riesgo_geol_areas_desalojo_tsunami_2003_2014,g15 riesgo geol areas desalojo tsunami 2003 2014,Geology risk tsunami evacuation areas 2003 2014,machine translation of La Maraña's name
+g23batimetrialagos2002,layer_g23_batimetria_lagos_2002,g23 batimetria lagos 2002,Bathymetry lakes 2002,machine translation of La Maraña's name
+gis-065,layer_g23_humedales_prvi_wetlands_fws_2010,g23 humedales prvi wetlands fws 2010,Wetlands PRVI wetlands FWS 2010,machine translation of La Maraña's name
+g23mapabasecrimogphidrografiaareas2006,layer_g23_mapa_base_crim_ogp_hidrografia_areas_2006,g23 mapa base crim ogp hidrografia areas 2006,Base map CRIM OGP hydrography areas 2006,machine translation of La Maraña's name
+fema_flood_2009,layer_g23_riesgo_inundacion_fema_firms_2009,Zonas inundables FEMA 2009,FEMA flood zones 2009,machine translation of La Maraña's name
+fema_flood_02pct_2018,layer_g23_riesgo_inundacion_floodzone_0_2pct_seamless_2018,Inundación 0.2% anual FEMA 2018,0.2% annual flood FEMA 2018,machine translation of La Maraña's name
+g23riesgoinundasbfe2009,layer_g23_riesgo_inunda_s_bfe_2009,g23 riesgo inunda s bfe 2009,Risk inundation BFE 2009,machine translation of La Maraña's name
+gis-068,layer_g27_conserv_zona_costanera_2010,g27 conserv zona costanera 2010,Coastal zone conservation 2010,machine translation of La Maraña's name
+gis-084,layer_g31_asentamientos_delim_comunidades_especiales_2006,g31 asentamientos delim comunidades especiales 2006,Settlements delimitation comunidades especiales (special communities) 2006,machine translation of La Maraña's name
+hospitals,layer_hospitales,Hospitales y CDTs,Hospitals and CDTs,machine translation of La Maraña's name
+gis-112,layer_landcover_2006,LANDCOVER 2006,LANDCOVER 2006,machine translation of La Maraña's name
+landslide,layer_landsl_monroe_plus_slop50pct,Susceptibilidad a deslizamientos,Landslide susceptibility,machine translation of La Maraña's name
+gis-295,layer_mapa_base_crim_ogp_hidrografia_tipo_areas_2006,mapa base crim ogp hidrografia tipo areas 2006,Base map CRIM OGP hydrography type areas 2006,machine translation of La Maraña's name
+gis-207,layer_pacat_2018_areas_protegidas_marinas,PACAT 2018 Areas Protegidas Marinas,PACAT 2018 Marine Protected Areas,machine translation of La Maraña's name
+gis-208,layer_pacat_2018_areas_protegidas_terrestres,PACAT 2018 Areas Protegidas Terrestres,PACAT 2018 Terrestrial Protected Areas,machine translation of La Maraña's name
+gis-209,layer_pacat_2018_zonas_amortiguamientos,PACAT 2018 Zonas Amortiguamientos,PACAT 2018 Buffer Zones,machine translation of La Maraña's name
+gis-341,layer_permisos_permisos_arpe_1999_2010,permisos permisos arpe 1999 2010,Permits ARPE permits 1999 2010,machine translation of La Maraña's name
+gis-103,layer_planes_areas_planif_especial_calif_restring_carso_2014,g29 planes areas planif especial calif restring carso 2014,Planning areas special plan Calif restricted CARSO 2014,machine translation of La Maraña's name
+land_use_2015,layer_plan_uso_terrenos_2015,Plan de Uso de Terrenos 2015,Land Use Plan 2015,machine translation of La Maraña's name
+pozo,layer_pozo,Pozo,Well,machine translation of La Maraña's name
+gis-063,layer_pr_geology_100k,PR Geology 100K,PR Geology 100K,machine translation of La Maraña's name
+gis-073,layer_proteccion_tanques_almac_soterrados_2011,g11 proteccion tanques almac soterrados 2011,Protection buried storage tanks 2011,machine translation of La Maraña's name
+prusvicountiesproject,layer_pr_usvi_counties_project,PR USVI counties Project,PR USVI counties,machine translation of La Maraña's name
+gis-612,layer_puertos_2010,puertos 2010,Ports 2010,machine translation of La Maraña's name
+gis-555,layer_recreacion_areas_para_banistas_2012,recreacion areas para banistas 2012,Recreation bathing areas 2012,machine translation of La Maraña's name
+gis-109,layer_recreacion_bosque_estatal_monte_choca_areas_acampar_2012,g31 recreacion bosque estatal monte choca areas acampar 2012,Recreation state forest Monte Choca camping areas 2012,machine translation of La Maraña's name
+shelters_2023,layer_refugios_2023,Refugios de emergencia 2023,Emergency shelters 2023,machine translation of La Maraña's name
+residenciales2009,layer_residenciales_2009,residenciales 2009,Residential 2009,machine translation of La Maraña's name
+soilmumunicipios,layer_soil_mu_municipios,soil mu municipios,Soil mu municipalities,machine translation of La Maraña's name
+gis-643,layer_soil_mu_pr,soil mu pr,Soil mu PR,machine translation of La Maraña's name
+soilmuprnoattrproject,layer_soil_mu_pr_no_attr_project,soil mu pr no attr Project,Soil mu PR no attr,machine translation of La Maraña's name
+subestaciones2014,layer_subestaciones_2014,Subestaciones 2014,Substations 2014,machine translation of La Maraña's name
+switchestransmision2014,layer_switches_transmision_2014,Switches Transmision 2014,Switches Transmission 2014,machine translation of La Maraña's name
+transformadores2014,layer_transformadores_2014,Transformadores 2014,Transformers 2014,machine translation of La Maraña's name
+gis-626,layer_tren_urbano_estaciones_2000,Tren urbano estaciones 2000,Urban train stations 2000,machine translation of La Maraña's name
+turismobalnearios,layer_turismo_balnearios,turismo balnearios,Tourism seaside resorts,machine translation of La Maraña's name
+urbanizacionesindustriales,layer_urbanizaciones_industriales,urbanizaciones industriales,Industrial developments,machine translation of La Maraña's name
+usgstopographicconproject,layer_usgs_topographic_con_project,USGS Topographic Con Project,USGS Topographic,machine translation of La Maraña's name
+gis-655,layer_uso_suelos_1977,uso suelos 1977,Land use 1977,machine translation of La Maraña's name
+gis-656,layer_uso_suelos_pr_1987,Uso Suelos PR 1987,Land Use PR 1987,machine translation of La Maraña's name
+gis-215,layer_zona_amortiguamiento_carso,Zona Amortiguamiento Carso,Carso Buffer Zone,machine translation of La Maraña's name
+gis-127,layer_accesorios_de_conexion_1,Accesorios de conexion 1,Connection Accessories 1,machine translation of La Maraña's name
+gis-128,layer_accesorios_de_conexion_2,Accesorios de conexion 2,Connection Accessories 2,machine translation of La Maraña's name
+gis-129,layer_acometidas_sanitarias,Acometidas sanitarias,Sanitary Service Lines,machine translation of La Maraña's name
+gis-590,layer_act_carreteras_arnold_2015,Act carreteras arnold 2015,Roads Arnold 2015,machine translation of La Maraña's name
+gis-591,layer_act_carreteras_estatales_jul_2017,Act carreteras estatales jul 2017,State Roads Jul 2017,machine translation of La Maraña's name
+gis-592,layer_act_carreteras_nhs_unbuilt_jul_2017,act carreteras nhs unbuilt jul 2017,NHS Unbuilt Roads Jul 2017,machine translation of La Maraña's name
+gis-593,layer_acuaexpreso,ACUAEXPRESO,ACUAEXPRESO,machine translation of La Maraña's name
+gis-287,layer_acuiferos_general,Acuiferos general,General Aquifers,machine translation of La Maraña's name
+gis-113,layer_administracion_de_terrenos,Administracion de terrenos,Land Administration,machine translation of La Maraña's name
+administraciondeterrenos1,layer_administracion_de_terrenos_1,Administracion de terrenos 1,Land Administration 1,machine translation of La Maraña's name
+gis-628,layer_administracion_terrenos,Administracion Terrenos,Land Administration,machine translation of La Maraña's name
+gis-095,layer_aerea_aero_puertos_heli_puertos_faa_2021,g35 aerea aeropuertos helipuertos faa 2021,Airports Heliports FAA 2021,machine translation of La Maraña's name
+gis-303,layer_aero_puertos_ap2003,Aero Puertos AP2003,Airports AP2003,machine translation of La Maraña's name
+gis-361,layer_agregado_senales_de_telefonia_celular,Agregado Senales de Telefonia Celular,Aggregate Cellular Telephone Signals,machine translation of La Maraña's name
+agroturismo2021,layer_agroturismo_2021,Agroturismo 2021,Agroturismo 2021,machine translation of La Maraña's name
+agroturismo20211,layer_agroturismo_2021_1,Agroturismo 2021 1,Agroturismo 2021 1,machine translation of La Maraña's name
+gis-189,layer_ambiental_canon_san_cristobal,Ambiental canon san cristobal,San Cristobal Canyon Environmental,machine translation of La Maraña's name
+gis-190,layer_ambiental_cienaga_cucharillas,Ambiental cienaga cucharillas,Cucharillas Marsh Environmental,machine translation of La Maraña's name
+gis-304,layer_antenas_prtc,antenas prtc,PRTC Antennas,machine translation of La Maraña's name
+gis-305,layer_antenna_am,antenna am,AM Antenna,machine translation of La Maraña's name
+gis-306,layer_antenna_cellular,antenna cellular,Cellular Antenna,machine translation of La Maraña's name
+gis-307,layer_antenna_estructura_registrada,Antenna Estructura Registrada,Registered Structure Antenna,machine translation of La Maraña's name
+gis-308,layer_antenna_fm,antenna fm,FM Antenna,machine translation of La Maraña's name
+areasaprobadasporelserviciodepescayvidasilvestrefwsenpuertor,layer_areas_aprobadas_por_el_servicio_de_pesca_y_vida_silvestre,Areas aprobadas por el Servicio de Pesca y Vida Silvestre FWS en Puerto Rico e Islas Virgenes,Areas approved by the Fish and Wildlife Service FWS in Puerto Rico and Virgin Islands,machine translation of La Maraña's name
+gis-192,layer_areas_bosque_estatal_monte_choca_lago_eliodoro_blanco,Areas bosque estatal monte choca lago eliodoro blanco,State Forest Areas Monte Choca Eliodoro Blanco Lake,machine translation of La Maraña's name
+gis-193,layer_areas_conserv_laguna_guanica,Areas conserv laguna guanica,Guanica Lagoon Conservation Areas,machine translation of La Maraña's name
+areasdeinteresdelserviciodepescayvidasilvestrefwsenpuertoric,layer_areas_de_interes_del_servicio_de_pesca_y_vida_silvestre_f,Areas de interes del Servicio de Pesca y Vida Silvestre FWS en Puerto Rico e Islas Virgenes,Areas of interest of the Fish and Wildlife Service FWS in Puerto Rico and Virgin Islands,machine translation of La Maraña's name
+gis-557,layer_areas_de_inundacion_por_tsunami_de_puerto_rico,Areas de inundacion por tsunami de Puerto Rico,Puerto Rico Tsunami Flood Areas,machine translation of La Maraña's name
+gis-558,layer_areas_desalojo_tsunami_2003_2014,Areas desalojo tsunami 2003 2014,Tsunami Evacuation Areas 2003 2014,machine translation of La Maraña's name
+gis-155,layer_areas_de_tabulacion_codigos_postales_2010,Areas de Tabulacion Codigos Postales 2010,Postal Code Tabulation Areas 2010,machine translation of La Maraña's name
+gis-156,layer_areas_estadisticas_basadas_en_nucleos_2010,Areas Estadisticas Basadas en Nucleos 2010,Core-Based Statistical Areas 2010,machine translation of La Maraña's name
+gis-157,layer_areas_estadisticas_combinadas_2010,Areas Estadisticas Combinadas 2010,Combined Statistical Areas 2010,machine translation of La Maraña's name
+gis-288,layer_areas_hidrograficas_2006,Areas hidrograficas 2006,Hydrographic Areas 2006,machine translation of La Maraña's name
+gis-629,layer_areas_naturales_protegidas,areas naturales protegidas,Protected Areas,machine translation of La Maraña's name
+gis-630,layer_areas_planificacion_especial,areas planificacion especial,Special Planning Areas,machine translation of La Maraña's name
+gis-196,layer_areas_protegidas_base_militar2009,Areas protegidas base militar2009,Protected Areas Military Base 2009,machine translation of La Maraña's name
+gis-197,layer_areas_protegidas_pr_diciembre2016_clcc_pacat,Areas Protegidas PR Diciembre2016 CLCC PACAT,Protected Areas PR December 2016 CLCC PACAT,machine translation of La Maraña's name
+gis-256,layer_areas_sensibilidad_costa_esi_rsi,Áreas sensibilidad costa ESI RSI,Coastal Sensitivity Areas ESI RSI,machine translation of La Maraña's name
+gis-158,layer_areas_urbanas_2010,Areas Urbanas 2010,Urban Areas 2010,machine translation of La Maraña's name
+gis-159,layer_areas_urbanas_censo_2010,Areas Urbanas Censo 2010,Urban Areas Census 2010,machine translation of La Maraña's name
+gis-389,layer_asentamientos_delimitacion_comunidades_especiales_2006,Asentamientos delimitacion comunidades especiales 2006,Settlements delimitation special communities 2006,machine translation of La Maraña's name
+gis-309,layer_asfalteras,Asfalteras,Asphalt Plants,machine translation of La Maraña's name
+gis-257,layer_aves,Aves,Birds,machine translation of La Maraña's name
+gis-258,layer_barreras_costeras,Barreras costeras,Coastal Barriers,machine translation of La Maraña's name
+gis-390,layer_barrios_2015_corrected_16_nov17,Barrios 2015 corrected 16 nov17,Barrios 2015 corrected 16 Nov 17,machine translation of La Maraña's name
+gis-299,layer_batimetria_de_lagos_2002,Batimetria de lagos 2002,Lake Bathymetry 2002,machine translation of La Maraña's name
+gis-259,layer_bentica,Bentica,Bentica,machine translation of La Maraña's name
+gis-085,layer_bienes_raices_propiedades_admin_terrenos_2014,g29 bienes raices propiedades admin terrenos 2014,Real Estate Land Administration 2014,machine translation of La Maraña's name
+gis-160,layer_bloques_censales_2010,Bloques Censales 2010,Census Blocks 2010,machine translation of La Maraña's name
+gis-161,layer_bloques_de_tabulacion_censal_2010_1,Bloques de Tabulacion Censal 2010 1,Census Tabulation Blocks 2010 1,machine translation of La Maraña's name
+gis-162,layer_bloques_de_tabulacion_censal_2010_2,Bloques de Tabulacion Censal 2010 2,Census Tabulation Blocks 2010 2,machine translation of La Maraña's name
+gis-260,layer_bosques_reservas,Bosques Reservas,Forest Reserves,machine translation of La Maraña's name
+gis-130,layer_canal_de_riego_de_isabela,Canal de riego de Isabela,Isabela Irrigation Canal,machine translation of La Maraña's name
+gis-310,layer_canteras,Canteras,Quarries,machine translation of La Maraña's name
+gis-597,layer_carreteras_hpms_2015,Carreteras Hpms 2015,Roads Hpms 2015,machine translation of La Maraña's name
+gis-598,layer_carreteras_nhs_julio_2017,Carreteras NHS Julio 2017,NHS Roads July 2017,machine translation of La Maraña's name
+gis-163,layer_carreteras_primarias_y_secundarias_2010,Carreteras Primarias y Secundarias 2010,Primary and Secondary Roads 2010,machine translation of La Maraña's name
+gis-599,layer_carreteras_segmentadas_2015,Carreteras Segmentadas 2015,Segmented Roads 2015,machine translation of La Maraña's name
+gis-600,layer_carreteras_segmentadas_agosto_2016,Carreteras Segmentadas Agosto 2016,Segmented Roads August 2016,machine translation of La Maraña's name
+gis-164,layer_carreteras_tiger_2012,Carreteras TIGER 2012,TIGER Roads 2012,machine translation of La Maraña's name
+gis-312,layer_cdt_2011,CDT 2011,CDT 2011,machine translation of La Maraña's name
+gis-313,layer_cementerios,cementerios,Cemeteries,machine translation of La Maraña's name
+gis-165,layer_censo_2020,Censo 2020,Census 2020,machine translation of La Maraña's name
+gis-314,layer_centro_educativos_2007,centro educativos 2007,Educational Centers 2007,machine translation of La Maraña's name
+gis-220,layer_centros_de_transmision_2014,Centros de transmision 2014,Transmission Centers 2014,machine translation of La Maraña's name
+gis-315,layer_centros_educativos_2000,centros educativos 2000,Educational Centers 2000,machine translation of La Maraña's name
+gis-317,layer_centros_religiosos_2000,centros religiosos 2000,Religious Centers 2000,machine translation of La Maraña's name
+gis-318,layer_centros_salud_2000,centros salud 2000,Health Centers 2000,machine translation of La Maraña's name
+gis-221,layer_ciclo_combinado_2014,Ciclo combinado 2014,Combined Cycle 2014,machine translation of La Maraña's name
+gis-633,layer_cobertura_del_terreno_2006,Cobertura del terreno 2006,Land Cover 2006,machine translation of La Maraña's name
+gis-631,layer_cobertura_del_terreno2006_b,Cobertura del terreno2006 b,Land Cover2006 b,machine translation of La Maraña's name
+gis-632,layer_cobertura_del_terreno_77,Cobertura del terreno 77,Land Cover 77,machine translation of La Maraña's name
+gis-166,layer_codigos_postales_pr,Codigos Postales PR,Postal Codes PR,machine translation of La Maraña's name
+gis-222,layer_cogeneradores_2014,Cogeneradores 2014,Cogeneration Units 2014,machine translation of La Maraña's name
+gis-362,layer_comunidades_especiales_area,Comunidades especiales area,Special Communities Area,machine translation of La Maraña's name
+gis-225,layer_conductores_primarios_13kv_2014,Conductores primarios 13Kv 2014,Primary Conductors 13Kv 2014,machine translation of La Maraña's name
+gis-223,layer_conductores_primarios_4kv_2014,Conductores primarios 4Kv 2014,Primary Conductors 4Kv 2014,machine translation of La Maraña's name
+gis-224,layer_conductores_primarios_8kv_2014,Conductores primarios 8Kv 2014,Primary Conductors 8Kv 2014,machine translation of La Maraña's name
+gis-115,layer_conservacion_de_valles_agricolas,Conservacion de valles agricolas,Conservation of agricultural valleys,machine translation of La Maraña's name
+conservaciondevallesagricolas1,layer_conservacion_de_valles_agricolas_1,Conservacion de valles agricolas 1,Conservation of agricultural valleys 1,machine translation of La Maraña's name
+gis-289,layer_conservacion_zona_costanera_2010,conservacion zona costanera 2010,Coastal zone conservation 2010,machine translation of La Maraña's name
+gis-198,layer_conserv_areas_prioridad_conservacion_2008,Conserv areas prioridad conservacion 2008,Conservation areas conservation priority 2008,machine translation of La Maraña's name
+gis-201,layer_conservation_priority_areas,Conservation Priority Areas,Conservation Priority Areas,machine translation of La Maraña's name
+gis-199,layer_conserv_bosque_estatal_monte_choca,Conserv bosque estatal monte choca,Conservation state forest Monte Choca,machine translation of La Maraña's name
+gis-056,layer_conserv_bosques_auxiliares_2010,g11 conserv bosques auxiliares 2010,Conservation auxiliary forests 2010,machine translation of La Maraña's name
+gis-202,layer_conservcion_gap_stew_project,Conservcion gap stew Project,Conservation gap stew,machine translation of La Maraña's name
+gis-131,layer_contadores,Contadores,Counters,machine translation of La Maraña's name
+gis-203,layer_corredor_biologico,corredor biologico,Biological corridor,machine translation of La Maraña's name
+gis-116,layer_corredores_agricolas,Corredores agricolas,Agricultural corridors,machine translation of La Maraña's name
+corredoresagricolas1,layer_corredores_agricolas_1,Corredores agricolas 1,Agricultural corridors 1,machine translation of La Maraña's name
+gis-227,layer_crim_aee_lineas_transmision_1998,CRIM AEE Lineas transmision 1998,CRIM AEE Transmission lines 1998,machine translation of La Maraña's name
+gis-228,layer_crim_aee_torres_transmision_1998,CRIM AEE Torres transmision 1998,CRIM AEE Transmission towers 1998,machine translation of La Maraña's name
+gis-363,layer_crim_cementerios_1998,CRIM CEMENTERIOS 1998,CRIM CEMETERIES 1998,machine translation of La Maraña's name
+gis-364,layer_crim_estructuras_1998,CRIM ESTRUCTURAS 1998,CRIM STRUCTURES 1998,machine translation of La Maraña's name
+gis-300,layer_crim_hidrografia_lineal_1998,CRIM HIDROGRAFIA LINEAL 1998,CRIM LINEAR HYDROGRAPHY 1998,machine translation of La Maraña's name
+gis-290,layer_crim_hidrografia_poligonos1998,CRIM HIDROGRAFIA POLIGONOS1998,CRIM HYDROGRAPHY POLYGONS 1998,machine translation of La Maraña's name
+gis-365,layer_crim_parcelas_2005,CRIM PARCELAS 2005,CRIM PARCELS 2005,machine translation of La Maraña's name
+gis-366,layer_crim_parcelas_2017,CRIM PARCELAS 2017,CRIM PARCELS 2017,machine translation of La Maraña's name
+gis-367,layer_crim_parcelas_2018,CRIM PARCELAS 2018,CRIM PARCELS 2018,machine translation of La Maraña's name
+gis-601,layer_crim_puentes_1998,CRIM PUENTES 1998,CRIM BRIDGES 1998,machine translation of La Maraña's name
+gis-320,layer_crim_razgos_culturales_1998,CRIM RAZGOS CULTURALES 1998,CRIM CULTURAL FEATURES 1998,machine translation of La Maraña's name
+gis-602,layer_crim_roads_center_1998,CRIM ROADS CENTER 1998,CRIM ROADS CENTER 1998,machine translation of La Maraña's name
+gis-603,layer_crim_roads_edge_1998,CRIM ROADS EDGE 1998,CRIM ROADS EDGE 1998,machine translation of La Maraña's name
+gis-382,layer_crim_tuberias_visibles_1998,CRIM TUBERIAS VISIBLES 1998,CRIM VISIBLE PIPES 1998,machine translation of La Maraña's name
+gis-383,layer_crim_verjas_1998,CRIM VERJAS 1998,CRIM VERJAS 1998,machine translation of La Maraña's name
+gis-204,layer_critical_wildlife_areas,Critical wildlife areas,Critical wildlife areas,machine translation of La Maraña's name
+gis-271,layer_cursos_de_agua,Cursos de agua,Water courses,machine translation of La Maraña's name
+gis-588,layer_curvas_de_nivel_usgs_depresiones,Curvas de Nivel USGS Depresiones,USGS Contour lines Depressions,machine translation of La Maraña's name
+gis-321,layer_de_escuelas_publicas_activas_oct_2017,DE ESCUELAS PUBLICAS ACTIVAS OCT 2017,ACTIVE PUBLIC SCHOOLS OCT 2017,machine translation of La Maraña's name
+gis-229,layer_derivaciones_de_cable_2014,Derivaciones de cable 2014,Cable derivations 2014,machine translation of La Maraña's name
+gis-132,layer_descargas,Descargas,Discharges,machine translation of La Maraña's name
+gis-559,layer_deslizamiento,Deslizamiento,Landslide,machine translation of La Maraña's name
+gis-560,layer_deslizamientos_1979,Deslizamientos 1979,Landslides 1979,machine translation of La Maraña's name
+gis-561,layer_deslizamientos_monroe_pendiente_mayor_50pct,Deslizamientos Monroe Pendiente Mayor 50pct,Landslides Monroe Slope Greater than 50pct,machine translation of La Maraña's name
+gis-562,layer_dffirms_fllod_areas_2009,DFFIRMS FLLOD AREAS 2009,DFFIRMS FLOOD AREAS 2009,machine translation of La Maraña's name
+gis-563,layer_dfirms_elevaciones_de_inundacion_2009,DFIRMS Elevaciones de inundacion 2009,DFIRMS Flood elevations 2009,machine translation of La Maraña's name
+gis-167,layer_distrito_congresional_111_2010,Distrito Congresional 111 2010,Congressional District 111 2010,machine translation of La Maraña's name
+gis-168,layer_distritos_escolares_unificados_2010,Distritos Escolares Unificados 2010,Unified School Districts 2010,machine translation of La Maraña's name
+gis-169,layer_distritos_representativos_2010,Distritos Representativos 2010,Representative Districts 2010,machine translation of La Maraña's name
+gis-170,layer_distritos_senatoriales_2010,Distritos Senatoriales 2010,Senatorial Districts 2010,machine translation of La Maraña's name
+gis-322,layer_dotaciones_seguridad_refugios_2009,DOTACIONES SEGURIDAD REFUGIOS 2009,Allocations Safety Shelters 2009,machine translation of La Maraña's name
+gis-391,layer_dtop_regions,DTOP REGIONS,DOTOP REGIONS,machine translation of La Maraña's name
+electoralesdistrepresentativos2012,layer_electorales_dist_representativos_2012,electorales dist representativos 2012,Electoral Representative Districts 2012,machine translation of La Maraña's name
+electoralesdistsenatoriales2012,layer_electorales_dist_senatoriales_2012,electorales dist senatoriales 2012,Electoral Senatorial Districts 2012,machine translation of La Maraña's name
+electoralesprecintos2004,layer_electorales_precintos_2004,electorales precintos 2004,Electoral Precincts 2004,machine translation of La Maraña's name
+electoralesunidadeselectorales2004,layer_electorales_unidades_electorales_2004,electorales unidades electorales 2004,Electoral Electoral Units 2004,machine translation of La Maraña's name
+gis-589,layer_elevaciones,elevaciones,Elevations,machine translation of La Maraña's name
+gis-325,layer_escuelas_total_2007,Escuelas Total 2007,Schools Total 2007,machine translation of La Maraña's name
+gis-133,layer_estaciones_de_bombeo_1,Estaciones de bombeo 1,Pumping Stations 1,machine translation of La Maraña's name
+gis-134,layer_estaciones_de_bombeo_2014,Estaciones de bombeo 2014,Pumping Stations 2014,machine translation of La Maraña's name
+gis-135,layer_estaciones_de_bombeo_2014_1,Estaciones de bombeo 2014 1,Pumping Stations 2014 1,machine translation of La Maraña's name
+gis-171,layer_estimados_poblacionales_2010_2015,Estimados Poblacionales 2010 2015,Population Estimates 2010 2015,machine translation of La Maraña's name
+gis-230,layer_estructuras_de_distribucion_2014,Estructuras de distribucion 2014,Distribution Structures 2014,machine translation of La Maraña's name
+gis-136,layer_estructuras_de_red,Estructuras de red,Network Structures,machine translation of La Maraña's name
+gis-231,layer_estructuras_transmision_2014,Estructuras transmision 2014,Transmission Structures 2014,machine translation of La Maraña's name
+gis-117,layer_fincas_bajo_proteccion,Fincas bajo proteccion,Lands Under Protection,machine translation of La Maraña's name
+fincasbajoproteccion1,layer_fincas_bajo_proteccion_1,Fincas bajo proteccion 1,Lands Under Protection 1,machine translation of La Maraña's name
+gis-118,layer_fincas_de_la_autoridad_de_tierras_2010,Fincas de la Autoridad de Tierras 2010,Lands Authority Lands 2010,machine translation of La Maraña's name
+fincasdelaautoridaddetierras20101,layer_fincas_de_la_autoridad_de_tierras_2010_1,Fincas de la Autoridad de Tierras 2010 1,Lands Authority Lands 2010 1,machine translation of La Maraña's name
+gis-119,layer_forestal_y_agroforestal_pendientes_de_20_a_50_pct,Forestal y agroforestal pendientes de 20 a 50 Pct,Forest and Agroforestry Slopes from 20 to 50 Pct,machine translation of La Maraña's name
+forestalyagroforestalpendientesde20a50pct1,layer_forestal_y_agroforestal_pendientes_de_20_a_50_pct_1,Forestal y agroforestal pendientes de 20 a 50 Pct 1,Forest and Agroforestry Slopes from 20 to 50 Pct 1,machine translation of La Maraña's name
+turismoagroturismo2021,layer_g07_turismo_agroturismo_2021,g07 turismo agroturismo 2021,Tourism Agrotourism 2021,machine translation of La Maraña's name
+gis-233,layer_generadores_diesel_2014,Generadores diesel 2014,Diesel Generators 2014,machine translation of La Maraña's name
+gis-272,layer_geologia,geologia,Geology,machine translation of La Maraña's name
+gis-274,layer_geologia_100k,Geologia 100K,Geology 100K,machine translation of La Maraña's name
+gis-273,layer_geologia_20k24jul2108,Geologia 20k24jul2108,Geology 20k 24jul2108,machine translation of La Maraña's name
+gis-286,layer_geologia_20k_lines,Geologia 20k lines,Geology 20k lines,machine translation of La Maraña's name
+gis-275,layer_geologia_acuifeross_250k_renken,Geologia Acuifeross 250k renken,Geology Aquifers 250k renken,machine translation of La Maraña's name
+gis-276,layer_geologia_del_carso,Geologia del carso,Geology of the Karst,machine translation of La Maraña's name
+gis-277,layer_geologia_general,geologia general,General Geology,machine translation of La Maraña's name
+gis-564,layer_geologia_general_nad83,GEOLOGIA GENERAL NAD83,GENERAL GEOLOGY NAD83,machine translation of La Maraña's name
+gis-278,layer_geologia_plataforma_insular,geologia plataforma insular,Geology Insular Shelf,machine translation of La Maraña's name
+gis-326,layer_gomeras_de_puerto_rico,Gomeras de Puerto Rico,Gomeras of Puerto Rico,machine translation of La Maraña's name
+gis-172,layer_grupos_de_bloques_censales_2010,Grupos de Bloques Censales 2010,Census Block Groups 2010,machine translation of La Maraña's name
+gis-261,layer_habitat,Habitat,Habitat,machine translation of La Maraña's name
+gis-327,layer_heli_puertos_ap2003,Heli Puertos AP2003,Heliports AP2003,machine translation of La Maraña's name
+gis-137,layer_hidrantes,Hidrantes,Hydrants,machine translation of La Maraña's name
+gis-301,layer_hidrografia_lineal_2006,hidrografia lineal 2006,Linear Hydrography 2006,machine translation of La Maraña's name
+gis-218,layer_hospederias_endosadas_2021,Hospederias endosadas 2021,Endorsed Inns 2021,machine translation of La Maraña's name
+gis-329,layer_hospitales2011,Hospitales2011,Hospitals 2011,machine translation of La Maraña's name
+huellasdeedificiosprusvi2018,layer_huellas_de_edificios_pr_usvi_2018,huellas de edificios pr usvi 2018,Building Footprints PR USVI 2018,machine translation of La Maraña's name
+gis-291,layer_humedales,humedales,Wetlands,machine translation of La Maraña's name
+gis-292,layer_humedales_prvi_fws_2010,Humedales prvi FWS 2010,Wetlands PR FWS 2010,machine translation of La Maraña's name
+gis-565,layer_huracanes_paths_1886_1995,Huracanes Paths 1886 1995,Hurricane Paths 1886 1995,machine translation of La Maraña's name
+gis-634,layer_indice_historico_de_uso_de_suelo_pr,Indice Historico de Uso de Suelo PR,Historical Land Use Index PR,machine translation of La Maraña's name
+gis-331,layer_infraestructura_aep_2007,infraestructura aep 2007,AEE Infrastructure 2007,machine translation of La Maraña's name
+gis-173,layer_instalaciones_militares_2010,Instalaciones Militares 2010,Military Installations 2010,machine translation of La Maraña's name
+gis-332,layer_instalaciones_y_activos_de_la_autoridad_de_desperdicios_s,Instalaciones y activos de la Autoridad de Desperdicios Solidos,Solid Waste Authority Facilities and Assets,machine translation of La Maraña's name
+gis-234,layer_interruptores_2014,Interruptores 2014,Switches 2014,machine translation of La Maraña's name
+gis-235,layer_interruptores_transmision_2014,Interruptores transmision 2014,Transmission Switches 2014,machine translation of La Maraña's name
+gis-566,layer_inundacion_fema_firms_2009,Inundacion FEMA firms 2009,Flood FEMA FIRMS 2009,machine translation of La Maraña's name
+gis-567,layer_inundacion_flood_zone_0_2pct_seamless_2018,Inundacion Flood Zone 0 2PCT Seamless 2018,Flood Flood Zone 0 2PCT Seamless 2018,machine translation of La Maraña's name
+gis-568,layer_inundacion_s_bfe_2009,Inundacion s bfe 2009,Flood SBFE 2009,machine translation of La Maraña's name
+gis-604,layer_inventario_nacional_de_puentes,Inventario Nacional de Puentes,National Bridge Inventory,machine translation of La Maraña's name
+gis-262,layer_invertebrados_areas,Invertebrados areas,Invertebrates Areas,machine translation of La Maraña's name
+gis-267,layer_invertebrados_elementos_lineales,Invertebrados elementos lineales,Invertebrates Linear Features,machine translation of La Maraña's name
+gis-581,layer_irradiancia_solar_media_diaria_por_municipio_y_mes,Irradiancia solar media diaria por municipio y mes,Average Daily Solar Irradiance by Municipality and Month,machine translation of La Maraña's name
+gis-294,layer_lagos_y_lagunas,Lagos y lagunas,Lakes and Lagoons,machine translation of La Maraña's name
+gis-333,layer_land_mobile_bcast,land mobile bcast,Land Mobile Broadcast,machine translation of La Maraña's name
+gis-334,layer_land_mobile_commercial,land mobile commercial,Land Mobile Commercial,machine translation of La Maraña's name
+gis-335,layer_lavanderias_pr,Lavanderias PR,Laundries PR,machine translation of La Maraña's name
+gis-396,layer_legales_limites_linea_2015,Legales limites linea 2015,Legal Boundaries Line 2015,machine translation of La Maraña's name
+legalesmunicipios2015,layer_legales_municipios_2015,legales municipios 2015,Legal Municipalities 2015,machine translation of La Maraña's name
+gis-569,layer_licuefaccion,Licuefaccion,Liquefaction,machine translation of La Maraña's name
+gis-635,layer_limite_apegrn,Limite APEGRN,APEGRN Boundary,machine translation of La Maraña's name
+gis-570,layer_limite_de_inundacion_por_tsunami_de_puerto_rico,Limite de inundacion por tsunami de Puerto Rico,Puerto Rico Tsunami Flood Limit,machine translation of La Maraña's name
+gis-279,layer_limite_del_carso,Limite del carso,Karst Limit,machine translation of La Maraña's name
+gis-174,layer_limite_de_puerto_rico_2010,Limite de Puerto Rico 2010,Puerto Rico Boundary 2010,machine translation of La Maraña's name
+gis-280,layer_limite_zona_carso,Limite Zona Carso,Karst Zone Limit,machine translation of La Maraña's name
+gis-138,layer_lineas_de_gravedad,Lineas de gravedad,Gravity Lines,machine translation of La Maraña's name
+gis-139,layer_lineas_de_servicio,Lineas de servicio,Service Lines,machine translation of La Maraña's name
+gis-237,layer_lineas_de_transmision_115kv_2014,Lineas de transmision 115Kv 2014,Transmission Lines 115Kv 2014,machine translation of La Maraña's name
+gis-238,layer_lineas_de_transmision_230kv_2014,Lineas de transmision 230Kv 2014,Transmission Lines 230Kv 2014,machine translation of La Maraña's name
+gis-236,layer_lineas_de_transmision_38k_v_2014,Lineas de transmision 38k V 2014,Transmission Lines 38kV 2014,machine translation of La Maraña's name
+gis-239,layer_lineas_distribucion_2014,Lineas Distribucion 2014,Distribution Lines 2014,machine translation of La Maraña's name
+gis-140,layer_lineas_matrices,Lineas matrices,Trunk Lines,machine translation of La Maraña's name
+gis-384,layer_lineas_prtc,lineas prtc,PRTC Lines,machine translation of La Maraña's name
+gis-268,layer_lineas_sensibilidad_costa_esi_rsi,Lineas sensibilidad costa ESI RSI,ESI RSI Coast Sensitivity Lines,machine translation of La Maraña's name
+gis-240,layer_lineas_transmision_2014,Lineas transmision 2014,Transmission Lines 2014,machine translation of La Maraña's name
+gis-175,layer_lugares_censo_2010,Lugares Censo 2010,Census Places 2010,machine translation of La Maraña's name
+gis-263,layer_mamiferos_marinos,Mamiferos marinos,Marine Mammals,machine translation of La Maraña's name
+gis-264,layer_mamiferos_terrestres,Mamiferos terrestres,Terrestrial Mammals,machine translation of La Maraña's name
+gis-206,layer_mangles_restauracion,Mangles restauracion,Mangrove Restoration,machine translation of La Maraña's name
+gis-302,layer_mapa_base_crim_ogp_hidrografia_2006,mapa base crim ogp hidrografia 2006,Base Map CRIM OGP Hydrography 2006,machine translation of La Maraña's name
+gis-399,layer_mapa_catastral_de_adjuntas,Mapa Catastral de Adjuntas,Cadastral Map of Adjuntas,machine translation of La Maraña's name
+gis-400,layer_mapa_catastral_de_aguada,Mapa Catastral de Aguada,Cadastral Map of Aguada,machine translation of La Maraña's name
+gis-401,layer_mapa_catastral_de_aguadilla,Mapa Catastral de Aguadilla,Cadastral Map of Aguadilla,machine translation of La Maraña's name
+gis-402,layer_mapa_catastral_de_aguas_buenas,Mapa Catastral de Aguas Buenas,Cadastral Map of Aguas Buenas,machine translation of La Maraña's name
+gis-403,layer_mapa_catastral_de_aibonito,Mapa Catastral de Aibonito,Cadastral Map of Aibonito,machine translation of La Maraña's name
+gis-404,layer_mapa_catastral_de_anasco,Mapa Catastral de Anasco,Cadastral Map of Anasco,machine translation of La Maraña's name
+gis-405,layer_mapa_catastral_de_arecibo,Mapa Catastral de Arecibo,Cadastral Map of Arecibo,machine translation of La Maraña's name
+gis-406,layer_mapa_catastral_de_arroyo,Mapa Catastral de Arroyo,Cadastral Map of Arroyo,machine translation of La Maraña's name
+gis-407,layer_mapa_catastral_de_barceloneta,Mapa Catastral de Barceloneta,Cadastral Map of Barceloneta,machine translation of La Maraña's name
+gis-408,layer_mapa_catastral_de_barranquitas,Mapa Catastral de Barranquitas,Cadastral Map of Barranquitas,machine translation of La Maraña's name
+gis-409,layer_mapa_catastral_de_bayamon,Mapa Catastral de Bayamon,Cadastral Map of Bayamon,machine translation of La Maraña's name
+gis-410,layer_mapa_catastral_de_cabo_rojo,Mapa Catastral de Cabo Rojo,Cadastral Map of Cabo Rojo,machine translation of La Maraña's name
+gis-411,layer_mapa_catastral_de_caguas,Mapa Catastral de Caguas,Cadastral Map of Caguas,machine translation of La Maraña's name
+gis-412,layer_mapa_catastral_de_camuy,Mapa Catastral de Camuy,Cadastral Map of Camuy,machine translation of La Maraña's name
+gis-413,layer_mapa_catastral_de_canovanas,Mapa Catastral de Canovanas,Cadastral Map of Canovanas,machine translation of La Maraña's name
+gis-414,layer_mapa_catastral_de_carolina,Mapa Catastral de Carolina,Cadastral Map of Carolina,machine translation of La Maraña's name
+gis-415,layer_mapa_catastral_de_catano,Mapa Catastral de Catano,Cadastral Map of Catano,machine translation of La Maraña's name
+gis-416,layer_mapa_catastral_de_cayey,Mapa Catastral de Cayey,Cadastral Map of Cayey,machine translation of La Maraña's name
+gis-417,layer_mapa_catastral_de_ceiba,Mapa Catastral de Ceiba,Cadastral Map of Ceiba,machine translation of La Maraña's name
+gis-418,layer_mapa_catastral_de_ciales,Mapa Catastral de Ciales,Cadastral Map of Ciales,machine translation of La Maraña's name
+gis-419,layer_mapa_catastral_de_cidra,Mapa Catastral de Cidra,Cadastral Map of Cidra,machine translation of La Maraña's name
+gis-420,layer_mapa_catastral_de_coamo,Mapa Catastral de Coamo,Cadastral Map of Coamo,machine translation of La Maraña's name
+gis-421,layer_mapa_catastral_de_comerio,Mapa Catastral de Comerio,Cadastral Map of Comerio,machine translation of La Maraña's name
+gis-422,layer_mapa_catastral_de_corozal,Mapa Catastral de Corozal,Cadastral Map of Corozal,machine translation of La Maraña's name
+gis-423,layer_mapa_catastral_de_culebra,Mapa Catastral de Culebra,Cadastral Map of Culebra,machine translation of La Maraña's name
+gis-424,layer_mapa_catastral_de_dorado,Mapa Catastral de Dorado,Cadastral Map of Dorado,machine translation of La Maraña's name
+gis-425,layer_mapa_catastral_de_fajardo,Mapa Catastral de Fajardo,Cadastral Map of Fajardo,machine translation of La Maraña's name
+gis-426,layer_mapa_catastral_de_florida,Mapa Catastral de Florida,Cadastral Map of Florida,machine translation of La Maraña's name
+gis-427,layer_mapa_catastral_de_guanica,Mapa Catastral de Guanica,Cadastral Map of Guanica,machine translation of La Maraña's name
+gis-428,layer_mapa_catastral_de_guayama,Mapa Catastral de Guayama,Cadastral Map of Guayama,machine translation of La Maraña's name
+gis-429,layer_mapa_catastral_de_guayanilla,Mapa Catastral de Guayanilla,Cadastral Map of Guayanilla,machine translation of La Maraña's name
+gis-430,layer_mapa_catastral_de_guaynabo,Mapa Catastral de Guaynabo,Cadastral Map of Guaynabo,machine translation of La Maraña's name
+gis-431,layer_mapa_catastral_de_gurabo,Mapa Catastral de Gurabo,Cadastral Map of Gurabo,machine translation of La Maraña's name
+gis-432,layer_mapa_catastral_de_hatillo,Mapa Catastral de Hatillo,Cadastral Map of Hatillo,machine translation of La Maraña's name
+gis-433,layer_mapa_catastral_de_hormigueros,Mapa Catastral de Hormigueros,Cadastral Map of Hormigueros,machine translation of La Maraña's name
+gis-434,layer_mapa_catastral_de_humacao,Mapa Catastral de Humacao,Cadastral Map of Humacao,machine translation of La Maraña's name
+gis-435,layer_mapa_catastral_de_isabela,Mapa Catastral de Isabela,Cadastral Map of Isabela,machine translation of La Maraña's name
+gis-436,layer_mapa_catastral_de_jayuya,Mapa Catastral de Jayuya,Cadastral Map of Jayuya,machine translation of La Maraña's name
+gis-437,layer_mapa_catastral_de_juana_diaz,Mapa Catastral de Juana Diaz,Cadastral Map of Juana Diaz,machine translation of La Maraña's name
+gis-438,layer_mapa_catastral_de_juncos,Mapa Catastral de Juncos,Cadastral Map of Juncos,machine translation of La Maraña's name
+gis-439,layer_mapa_catastral_de_lajas,Mapa Catastral de Lajas,Cadastral Map of Lajas,machine translation of La Maraña's name
+gis-440,layer_mapa_catastral_de_lares,Mapa Catastral de Lares,Cadastral Map of Lares,machine translation of La Maraña's name
+gis-441,layer_mapa_catastral_de_las_marias,Mapa Catastral de Las Marias,Cadastral Map of Las Marias,machine translation of La Maraña's name
+gis-442,layer_mapa_catastral_de_las_piedras,Mapa Catastral de Las Piedras,Cadastral Map of Las Piedras,machine translation of La Maraña's name
+gis-443,layer_mapa_catastral_de_loiza,Mapa Catastral de Loiza,Cadastral Map of Loiza,machine translation of La Maraña's name
+gis-444,layer_mapa_catastral_de_luquillo,Mapa Catastral de Luquillo,Cadastral Map of Luquillo,machine translation of La Maraña's name
+gis-445,layer_mapa_catastral_de_manati,Mapa Catastral de Manati,Cadastral Map of Manati,machine translation of La Maraña's name
+gis-446,layer_mapa_catastral_de_maricao,Mapa Catastral de Maricao,Cadastral Map of Maricao,machine translation of La Maraña's name
+gis-447,layer_mapa_catastral_de_maunabo,Mapa Catastral de Maunabo,Cadastral Map of Maunabo,machine translation of La Maraña's name
+gis-448,layer_mapa_catastral_de_mayaguez,Mapa Catastral de Mayaguez,Cadastral Map of Mayaguez,machine translation of La Maraña's name
+gis-449,layer_mapa_catastral_de_moca,Mapa Catastral de Moca,Cadastral Map of Moca,machine translation of La Maraña's name
+gis-450,layer_mapa_catastral_de_morovis,Mapa Catastral de Morovis,Cadastral Map of Morovis,machine translation of La Maraña's name
+gis-451,layer_mapa_catastral_de_naguabo,Mapa Catastral de Naguabo,Cadastral Map of Naguabo,machine translation of La Maraña's name
+gis-452,layer_mapa_catastral_de_naranjito,Mapa Catastral de Naranjito,Cadastral Map of Naranjito,machine translation of La Maraña's name
+gis-453,layer_mapa_catastral_de_orocovis,Mapa Catastral de Orocovis,Cadastral Map of Orocovis,machine translation of La Maraña's name
+gis-454,layer_mapa_catastral_de_patillas,Mapa Catastral de Patillas,Cadastral Map of Patillas,machine translation of La Maraña's name
+gis-455,layer_mapa_catastral_de_penuelas,Mapa Catastral de Penuelas,Cadastral Map of Penuelas,machine translation of La Maraña's name
+gis-456,layer_mapa_catastral_de_ponce,Mapa Catastral de Ponce,Cadastral Map of Ponce,machine translation of La Maraña's name
+gis-457,layer_mapa_catastral_de_quebradillas,Mapa Catastral de Quebradillas,Cadastral Map of Quebradillas,machine translation of La Maraña's name
+gis-458,layer_mapa_catastral_de_rincon,Mapa Catastral de Rincon,Cadastral Map of Rincon,machine translation of La Maraña's name
+gis-459,layer_mapa_catastral_de_rio_grande,Mapa Catastral de Rio Grande,Cadastral Map of Rio Grande,machine translation of La Maraña's name
+gis-460,layer_mapa_catastral_de_sabana_grande,Mapa Catastral de Sabana Grande,Cadastral Map of Sabana Grande,machine translation of La Maraña's name
+gis-461,layer_mapa_catastral_de_salinas,Mapa Catastral de Salinas,Cadastral Map of Salinas,machine translation of La Maraña's name
+gis-462,layer_mapa_catastral_de_san_german,Mapa Catastral de San German,Cadastral Map of San German,machine translation of La Maraña's name
+gis-463,layer_mapa_catastral_de_san_juan,Mapa Catastral de San Juan,Cadastral Map of San Juan,machine translation of La Maraña's name
+gis-464,layer_mapa_catastral_de_san_lorenzo,Mapa Catastral de San Lorenzo,Cadastral Map of San Lorenzo,machine translation of La Maraña's name
+gis-465,layer_mapa_catastral_de_san_sebastian,Mapa Catastral de San Sebastian,Cadastral Map of San Sebastian,machine translation of La Maraña's name
+gis-466,layer_mapa_catastral_de_santa_isabel,Mapa Catastral de Santa Isabel,Cadastral Map of Santa Isabel,machine translation of La Maraña's name
+gis-467,layer_mapa_catastral_de_toa_alta,Mapa Catastral de Toa Alta,Cadastral Map of Toa Alta,machine translation of La Maraña's name
+gis-468,layer_mapa_catastral_de_toa_baja,Mapa Catastral de Toa Baja,Cadastral Map of Toa Baja,machine translation of La Maraña's name
+gis-469,layer_mapa_catastral_de_trujillo_alto,Mapa Catastral de Trujillo Alto,Cadastral Map of Trujillo Alto,machine translation of La Maraña's name
+gis-470,layer_mapa_catastral_de_utuado,Mapa Catastral de Utuado,Cadastral Map of Utuado,machine translation of La Maraña's name
+gis-471,layer_mapa_catastral_de_vega_alta,Mapa Catastral de Vega Alta,Cadastral Map of Vega Alta,machine translation of La Maraña's name
+gis-472,layer_mapa_catastral_de_vega_baja,Mapa Catastral de Vega Baja,Cadastral Map of Vega Baja,machine translation of La Maraña's name
+gis-473,layer_mapa_catastral_de_vieques,Mapa Catastral de Vieques,Cadastral Map of Vieques,machine translation of La Maraña's name
+gis-474,layer_mapa_catastral_de_villalba,Mapa Catastral de Villalba,Cadastral Map of Villalba,machine translation of La Maraña's name
+gis-475,layer_mapa_catastral_de_yabucoa,Mapa Catastral de Yabucoa,Cadastral Map of Yabucoa,machine translation of La Maraña's name
+gis-476,layer_mapa_catastral_de_yauco,Mapa Catastral de Yauco,Cadastral Map of Yauco,machine translation of La Maraña's name
+gis-571,layer_mapa_compuesto_de_amenazas_umet,Mapa Compuesto de Amenazas UMET,UMET Hazard Composite Map,machine translation of La Maraña's name
+gis-573,layer_marejada_coclonica_general,Marejada Coclonica General,General Tsunami,machine translation of La Maraña's name
+gis-336,layer_mds_itfs,mds itfs,MDS ITFS,machine translation of La Maraña's name
+gis-141,layer_medicion_de_red,Medicion de red,Network Measurement,machine translation of La Maraña's name
+gis-337,layer_merge_22beachmonitoringstat,merge 22beachmonitoringstat,Merge 22beachmonitoringstat,machine translation of La Maraña's name
+gis-339,layer_microwave,microwave,Microwave,machine translation of La Maraña's name
+gis-176,layer_municipios_censo_2010,Municipios Censo 2010,Municipalities Census 2010,machine translation of La Maraña's name
+gis-636,layer_nrca_estudio_de_suelos_2006,NRCA Estudio de suelos 2006,NRCA Soil Study 2006,machine translation of La Maraña's name
+gis-637,layer_nrcs_estudio_de_suelos_1965_1982,NRCS Estudio de suelos 1965 1982,NRCS Soil Study 1965 1982,machine translation of La Maraña's name
+gis-369,layer_nrhp_pr_arqueologia_sensitivo,nrhp pr arqueologia sensitivo,Nrhp pr archaeology sensitive,machine translation of La Maraña's name
+gis-340,layer_oficinas_prtc,oficinas prtc,Prtc offices,machine translation of La Maraña's name
+gis-606,layer_paradas_2025,Paradas 2025,Stops 2025,machine translation of La Maraña's name
+gis-241,layer_patios_de_interruptores_2014,Patios de interruptores 2014,Switchyards 2014,machine translation of La Maraña's name
+gis-265,layer_peces,Peces,Fish,machine translation of La Maraña's name
+gis-120,layer_pendientes_agricola_de_0_a_10_pct,Pendientes agricola de 0 a 10 Pct,Agricultural Slopes 0 to 10 Pct,machine translation of La Maraña's name
+pendientesagricolade0a10pct1,layer_pendientes_agricola_de_0_a_10_pct_1,Pendientes agricola de 0 a 10 Pct 1,Agricultural Slopes 0 to 10 Pct 1,machine translation of La Maraña's name
+gis-121,layer_pendientes_agricola_de_10_a_20_pct,Pendientes agricola de 10 a 20 Pct,Agricultural Slopes 10 to 20 Pct,machine translation of La Maraña's name
+pendientesagricolade10a20pct1,layer_pendientes_agricola_de_10_a_20_pct_1,Pendientes agricola de 10 a 20 Pct 1,Agricultural Slopes 10 to 20 Pct 1,machine translation of La Maraña's name
+gis-607,layer_pistas_de_aeropuertos,Pistas de Aeropuertos,Airport Runways,machine translation of La Maraña's name
+gis-638,layer_plan_de_uso_de_terrenos_2015,Plan de Uso de Terrenos 2015,Land Use Plan 2015,machine translation of La Maraña's name
+gis-639,layer_plan_de_uso_de_terrenos_put_2015,Plan de Uso de Terrenos PUT 2015,Land Use Plan PUT 2015,machine translation of La Maraña's name
+gis-142,layer_plantas_de_alcantarillado_sanitario,Plantas de alcantarillado sanitario,Sanitary Sewer Plants,machine translation of La Maraña's name
+gis-242,layer_plantas_de_baterias_2014,Plantas de baterias 2014,Battery Plants 2014,machine translation of La Maraña's name
+gis-143,layer_plantas_de_filtracion_2014,Plantas de filtracion 2014,Filtration Plants 2014,machine translation of La Maraña's name
+gis-243,layer_plantas_de_turbinas_de_gas_2014,Plantas de turbinas de gas 2014,Gas Turbine Plants 2014,machine translation of La Maraña's name
+gis-244,layer_plantas_hidroelectricas_2014,Plantas hidroelectricas 2014,Hydroelectric Plants 2014,machine translation of La Maraña's name
+gis-297,layer_playas_junta_de_planificacion,Playas Junta de Planificacion,Beaches Planning Board,machine translation of La Maraña's name
+gis-608,layer_plazas_de_peaje,Plazas de peaje,Toll Plazas,machine translation of La Maraña's name
+gis-609,layer_plazas_peajes_2017,PLAZAS PEAJES 2017,TOLL PLAZAS 2017,machine translation of La Maraña's name
+gis-245,layer_postes_2014,Postes 2014,Poles 2014,machine translation of La Maraña's name
+gis-144,layer_pozos,pozos,Wells,machine translation of La Maraña's name
+gis-574,layer_pr_area_epicentros_1989_2001,Pr Area Epicentros 1989 2001,Pr Area Epicenters 1989 2001,machine translation of La Maraña's name
+gis-181,layer_precipitacion_media_diaria_por_municipio_y_mes_milimetros,Precipitacion media diaria por municipio y mes milimetros,Average Daily Precipitation by Municipality and Month Millimeters,machine translation of La Maraña's name
+gis-182,layer_precipitacion_media_diaria_por_municipio_y_mes_pulgadas,Precipitacion media diaria por municipio y mes pulgadas,Average Daily Precipitation by Municipality and Month Inches,machine translation of La Maraña's name
+gis-183,layer_precipitacion_media_diaria_por_municipio_y_temporada_mili,Precipitacion media diaria por municipio y temporada milimetros,Average Daily Precipitation by Municipality and Season Millimeters,machine translation of La Maraña's name
+gis-184,layer_precipitacion_media_diaria_por_municipio_y_temporada_pulg,Precipitacion media diaria por municipio y temporada pulgadas,Average Daily Precipitation by Municipality and Season Inches,machine translation of La Maraña's name
+gis-185,layer_precipitacion_media_diaria_por_region_y_mes_milimetros,Precipitacion media diaria por region y mes milimetros,Average daily precipitation by region and month millimeters,machine translation of La Maraña's name
+gis-186,layer_precipitacion_media_diaria_por_region_y_mes_pulgadas,Precipitacion media diaria por region y mes pulgadas,Average daily precipitation by region and month inches,machine translation of La Maraña's name
+gis-187,layer_precipitacion_media_diaria_por_region_y_temporada_milimet,Precipitacion media diaria por region y temporada milimetros,Average daily precipitation by region and season millimeters,machine translation of La Maraña's name
+gis-188,layer_precipitacion_media_diaria_por_region_y_temporada_pulgada,Precipitacion media diaria por region y temporada pulgadas,Average daily precipitation by region and season inches,machine translation of La Maraña's name
+gis-398,layer_prhta_regions,PRHTA REGIONS,PRHTA REGIONS,machine translation of La Maraña's name
+gis-575,layer_principales_fallas_geologicas_de_puerto_rico,Principales fallas geologicas de Puerto Rico,Main geological faults of Puerto Rico,machine translation of La Maraña's name
+gis-211,layer_prioridad_conservacion,prioridad conservacion,Conservation priority,machine translation of La Maraña's name
+gis-641,layer_propiedades_autoridad_tierras,propiedades autoridad tierras,Land Authority properties,machine translation of La Maraña's name
+gis-122,layer_propiedades_de_la_autoridad_de_tierras,Propiedades de la Autoridad de Tierras,Land Authority Properties,machine translation of La Maraña's name
+propiedadesdelaautoridaddetierras1,layer_propiedades_de_la_autoridad_de_tierras_1,Propiedades de la Autoridad de Tierras 1,Land Authority Properties 1,machine translation of La Maraña's name
+gis-342,layer_propiedades_del_rnlh_en_pr,Propiedades del RNLH en PR,RNLH properties in PR,machine translation of La Maraña's name
+gis-371,layer_propiedades_pridco_estructuras,propiedades pridco estructuras,PRIDCO properties structures,machine translation of La Maraña's name
+gis-372,layer_propiedades_pridco_parcelas,propiedades pridco parcelas,PRIDCO properties parcels,machine translation of La Maraña's name
+gis-370,layer_prop_vivienda,Prop Vivienda,Housing Properties,machine translation of La Maraña's name
+proteccionepafacilityregistrysystem2011,layer_proteccion_epa_facility_registry_system_2011,proteccion epa facility registry system 2011,Protection epa facility registry system 2011,machine translation of La Maraña's name
+gis-072,layer_proteccion_gomeras_2010,g11 proteccion gomeras 2010,Protection gomeras 2010,machine translation of La Maraña's name
+gis-346,layer_proyectos_rurales,proyectos rurales,Rural projects,machine translation of La Maraña's name
+gis-347,layer_proyectos_urbanos,proyectos urbanos,Urban projects,machine translation of La Maraña's name
+gis-281,layer_puerto_rico_carso,Puerto Rico Carso,Puerto Rico Carso,machine translation of La Maraña's name
+gis-611,layer_puerto_rico_state_carreteras_dtop_october2016,Puerto Rico state Carreteras DTOP October2016,Puerto Rico state Carreteras DTOP October2016,machine translation of La Maraña's name
+gis-348,layer_puertos_ap2003,puertos AP2003,Ports AP2003,machine translation of La Maraña's name
+gis-613,layer_puntos_de_aeropuertos,Puntos de Aeropuertos,Airport Points,machine translation of La Maraña's name
+gis-145,layer_puntos_de_muestreo,Puntos de muestreo,Sampling Points,machine translation of La Maraña's name
+gis-146,layer_puntos_de_servicio,Puntos de servicio,Service Points,machine translation of La Maraña's name
+gis-477,layer_put_adjuntas,PUT Adjuntas,PUT Adjuntas,machine translation of La Maraña's name
+gis-478,layer_put_aguada,PUT Aguada,PUT Aguada,machine translation of La Maraña's name
+gis-479,layer_put_aguadilla,PUT Aguadilla,PUT Aguadilla,machine translation of La Maraña's name
+gis-480,layer_put_aguas_buenas,PUT Aguas Buenas,PUT Aguas Buenas,machine translation of La Maraña's name
+gis-481,layer_put_aibonito,PUT Aibonito,PUT Aibonito,machine translation of La Maraña's name
+gis-482,layer_put_anasco,PUT Anasco,PUT Anasco,machine translation of La Maraña's name
+gis-483,layer_put_arecibo,PUT Arecibo,PUT Arecibo,machine translation of La Maraña's name
+gis-484,layer_put_arroyo,PUT Arroyo,PUT Arroyo,machine translation of La Maraña's name
+gis-485,layer_put_barceloneta,PUT Barceloneta,PUT Barceloneta,machine translation of La Maraña's name
+gis-486,layer_put_barranquitas,PUT Barranquitas,PUT Barranquitas,machine translation of La Maraña's name
+gis-487,layer_put_bayamon,PUT Bayamon,PUT Bayamon,machine translation of La Maraña's name
+gis-488,layer_put_cabo_rojo,PUT Cabo Rojo,PUT Cabo Rojo,machine translation of La Maraña's name
+gis-489,layer_put_caguas,PUT Caguas,PUT Caguas,machine translation of La Maraña's name
+gis-490,layer_put_camuy,PUT Camuy,PUT Camuy,machine translation of La Maraña's name
+gis-491,layer_put_canovanas,PUT Canovanas,PUT Canovanas,machine translation of La Maraña's name
+gis-492,layer_put_carolina,PUT Carolina,PUT Carolina,machine translation of La Maraña's name
+gis-493,layer_put_catano,PUT Catano,PUT Catano,machine translation of La Maraña's name
+gis-494,layer_put_cayey,PUT Cayey,PUT Cayey,machine translation of La Maraña's name
+gis-495,layer_put_ceiba,PUT Ceiba,PUT Ceiba,machine translation of La Maraña's name
+gis-496,layer_put_ciales,PUT Ciales,PUT Ciales,machine translation of La Maraña's name
+gis-497,layer_put_cidra,PUT Cidra,PUT Cidra,machine translation of La Maraña's name
+gis-642,layer_put_clasificacion_puerto_rico,PUT Clasificacion Puerto Rico,PUT Puerto Rico Classification,machine translation of La Maraña's name
+gis-498,layer_put_coamo,PUT Coamo,PUT Coamo,machine translation of La Maraña's name
+gis-499,layer_put_comerio,PUT Comerio,PUT Comerio,machine translation of La Maraña's name
+gis-500,layer_put_corozal,PUT Corozal,PUT Corozal,machine translation of La Maraña's name
+gis-501,layer_put_culebra,PUT Culebra,PUT Culebra,machine translation of La Maraña's name
+gis-502,layer_put_dorado,PUT Dorado,PUT Dorado,machine translation of La Maraña's name
+gis-503,layer_put_fajardo,PUT Fajardo,PUT Fajardo,machine translation of La Maraña's name
+gis-504,layer_put_florida,PUT Florida,PUT Florida,machine translation of La Maraña's name
+gis-505,layer_put_guanica,PUT Guanica,PUT Guanica,machine translation of La Maraña's name
+gis-506,layer_put_guayama,PUT Guayama,PUT Guayama,machine translation of La Maraña's name
+gis-507,layer_put_guayanilla,PUT Guayanilla,PUT Guayanilla,machine translation of La Maraña's name
+gis-508,layer_put_guaynabo,PUT Guaynabo,PUT Guaynabo,machine translation of La Maraña's name
+gis-509,layer_put_gurabo,PUT Gurabo,PUT Gurabo,machine translation of La Maraña's name
+gis-510,layer_put_hatillo,PUT Hatillo,PUT Hatillo,machine translation of La Maraña's name
+gis-511,layer_put_hormigueros,PUT Hormigueros,PUT Hormigueros,machine translation of La Maraña's name
+gis-512,layer_put_humacao,PUT Humacao,PUT Humacao,machine translation of La Maraña's name
+gis-513,layer_put_isabela,PUT Isabela,PUT Isabela,machine translation of La Maraña's name
+gis-514,layer_put_jayuya,PUT Jayuya,PUT Jayuya,machine translation of La Maraña's name
+gis-515,layer_put_juana_diaz,PUT Juana Diaz,PUT Juana Diaz,machine translation of La Maraña's name
+gis-516,layer_put_juncos,PUT Juncos,PUT Juncos,machine translation of La Maraña's name
+gis-517,layer_put_lajas,PUT Lajas,PUT Lajas,machine translation of La Maraña's name
+gis-518,layer_put_lares,PUT Lares,PUT Lares,machine translation of La Maraña's name
+gis-519,layer_put_las_marias,PUT Las Marias,PUT Las Marias,machine translation of La Maraña's name
+gis-520,layer_put_las_piedras,PUT Las Piedras,PUT Las Piedras,machine translation of La Maraña's name
+gis-521,layer_put_loiza,PUT Loiza,PUT Loiza,machine translation of La Maraña's name
+gis-522,layer_put_luquillo,PUT Luquillo,PUT Luquillo,machine translation of La Maraña's name
+gis-523,layer_put_manati,PUT Manati,PUT Manati,machine translation of La Maraña's name
+gis-524,layer_put_maricao,PUT Maricao,PUT Maricao,machine translation of La Maraña's name
+gis-525,layer_put_maunabo,PUT Maunabo,PUT Maunabo,machine translation of La Maraña's name
+gis-526,layer_put_mayaguez,PUT Mayaguez,PUT Mayaguez,machine translation of La Maraña's name
+gis-527,layer_put_moca,PUT Moca,PUT Moca,machine translation of La Maraña's name
+gis-528,layer_put_morovis,PUT Morovis,PUT Morovis,machine translation of La Maraña's name
+gis-529,layer_put_naguabo,PUT Naguabo,PUT Naguabo,machine translation of La Maraña's name
+gis-530,layer_put_naranjito,PUT Naranjito,PUT Naranjito,machine translation of La Maraña's name
+gis-531,layer_put_orocovis,PUT Orocovis,PUT Orocovis,machine translation of La Maraña's name
+gis-532,layer_put_patillas,PUT Patillas,PUT Patillas,machine translation of La Maraña's name
+gis-533,layer_put_penuelas,PUT Penuelas,PUT Penuelas,machine translation of La Maraña's name
+gis-534,layer_put_ponce,PUT Ponce,PUT Ponce,machine translation of La Maraña's name
+gis-535,layer_put_quebradillas,PUT Quebradillas,PUT Quebradillas,machine translation of La Maraña's name
+gis-536,layer_put_rincon,PUT Rincon,PUT Rincon,machine translation of La Maraña's name
+gis-537,layer_put_rio_grande,PUT Rio Grande,PUT Rio Grande,machine translation of La Maraña's name
+gis-538,layer_put_sabana_grande,PUT Sabana Grande,PUT Sabana Grande,machine translation of La Maraña's name
+gis-539,layer_put_salinas,PUT Salinas,PUT Salinas,machine translation of La Maraña's name
+gis-540,layer_put_san_german,PUT San German,PUT San German,machine translation of La Maraña's name
+gis-541,layer_put_san_juan,PUT San Juan,PUT San Juan,machine translation of La Maraña's name
+gis-542,layer_put_san_lorenzo,PUT San Lorenzo,PUT San Lorenzo,machine translation of La Maraña's name
+gis-543,layer_put_san_sebastian,PUT San Sebastian,PUT San Sebastian,machine translation of La Maraña's name
+gis-544,layer_put_santa_isabel,PUT Santa Isabel,PUT Santa Isabel,machine translation of La Maraña's name
+gis-545,layer_put_toa_alta,PUT Toa Alta,PUT Toa Alta,machine translation of La Maraña's name
+gis-546,layer_put_toa_baja,PUT Toa Baja,PUT Toa Baja,machine translation of La Maraña's name
+gis-547,layer_put_trujillo_alto,PUT Trujillo Alto,PUT Trujillo Alto,machine translation of La Maraña's name
+gis-548,layer_put_utuado,PUT Utuado,PUT Utuado,machine translation of La Maraña's name
+gis-549,layer_put_vega_alta,PUT Vega Alta,PUT Vega Alta,machine translation of La Maraña's name
+gis-550,layer_put_vega_baja,PUT Vega Baja,PUT Vega Baja,machine translation of La Maraña's name
+gis-551,layer_put_vieques,PUT Vieques,PUT Vieques,machine translation of La Maraña's name
+gis-552,layer_put_villalba,PUT Villalba,PUT Villalba,machine translation of La Maraña's name
+gis-553,layer_put_yabucoa,PUT Yabucoa,PUT Yabucoa,machine translation of La Maraña's name
+gis-554,layer_put_yauco,PUT Yauco,PUT Yauco,machine translation of La Maraña's name
+gis-147,layer_recolectores_de_aguas_pluviales,Recolectores de aguas pluviales,Rainwater collectors,machine translation of La Maraña's name
+gis-374,layer_recursos_arqueologicos,recursos arqueologicos,Archaeological resources,machine translation of La Maraña's name
+gis-212,layer_refugios_del_servicio_de_pesca_y_vida_silvestre_fws,Refugios del Servicio de Pesca y Vida Silvestre FWS,FWS Fish and Wildlife Service Shelters,machine translation of La Maraña's name
+gis-282,layer_regiones_carsicas,Regiones carsicas,Karstic regions,machine translation of La Maraña's name
+gis-148,layer_registros_de_inspeccion,Registros de inspeccion,Inspection records,machine translation of La Maraña's name
+registrosdevacio,layer_registros_de_vacio,Registros de vacio,Vacuum records,machine translation of La Maraña's name
+gis-266,layer_reptiles,Reptiles,Reptiles,machine translation of La Maraña's name
+gis-213,layer_reservas_naturales,reservas naturales,Natural reserves,machine translation of La Maraña's name
+residencialespublicos2009,layer_residenciales_publicos_2009,Residenciales publicos 2009,Public housing 2009,machine translation of La Maraña's name
+gis-614,layer_roadsegment,roadsegment,Roadsegment,machine translation of La Maraña's name
+gis-615,layer_ruta_panoramica_2016,RUTA PANORAMICA 2016,SCENIC ROUTE 2016,machine translation of La Maraña's name
+gis-616,layer_rutas_de_la_autoridad_metropolitana_de_autobuses_ama,Rutas de la Autoridad Metropolitana de Autobuses AMA,AMA Metropolitan Bus Authority Routes,machine translation of La Maraña's name
+gis-617,layer_rutas_de_transporte_publico_pr_2010,Rutas de transporte publico PR 2010,Public transport routes PR 2010,machine translation of La Maraña's name
+gis-619,layer_rutas_ferroviarias_propuestas,Rutas ferroviarias propuestas,Proposed railway routes,machine translation of La Maraña's name
+gis-620,layer_rutas_maritimas_fajar_vieq_culebra,RUTAS MARITIMAS FAJAR VIEQ CULEBRA,SEA ROUTES FAJAR VIEQ CULEBRA,machine translation of La Maraña's name
+gis-385,layer_rutas_maritimas_rutas_ap_2003,rutas maritimas rutas AP 2003,Sea routes AP routes 2003,machine translation of La Maraña's name
+gis-622,layer_rutas_y_direcciones_2025,Rutas y direcciones 2025,Routes and directions 2025,machine translation of La Maraña's name
+gis-177,layer_sectores_censo_2010,Sectores Censo 2010,2010 Census Sectors,machine translation of La Maraña's name
+gis-178,layer_sectores_electorales_cee_2017,Sectores Electorales CEE 2017,2017 CEE Electoral Sectors,machine translation of La Maraña's name
+gis-623,layer_segmentos_de_senderos,Segmentos de Senderos,Trail Segments,machine translation of La Maraña's name
+gis-269,layer_sensibilidad_costas_tramos_rios_esi_rsi,Sensibilidad costas tramos ríos ESI RSI,ESI RSI Rivers Stretches Coast Sensitivity,machine translation of La Maraña's name
+gis-214,layer_sistema_cavernas_rio_camuy_2010,Sistema cavernas rio camuy 2010,2010 Camuy River Cave System,machine translation of La Maraña's name
+gis-283,layer_sistema_cuevas_camuy,Sistema Cuevas Camuy,Camuy Caves System,machine translation of La Maraña's name
+gis-350,layer_sitios_historicos,Sitios historicos,Historic Sites,machine translation of La Maraña's name
+gis-179,layer_subbarrios_2010,Subbarrios 2010,2010 Subbarrios,machine translation of La Maraña's name
+gis-180,layer_subdivisiones_de_municipios_2010,Subdivisiones de Municipios 2010,2010 Municipality Subdivisions,machine translation of La Maraña's name
+gis-247,layer_subestaciones_2014_1,Subestaciones 2014 1,2014 Substations 1,machine translation of La Maraña's name
+gis-248,layer_subestaciones_2014_2,Subestaciones 2014 2,2014 Substations 2,machine translation of La Maraña's name
+gis-123,layer_suelos_agricolas,suelos agricolas,Agricultural Lands,machine translation of La Maraña's name
+suelosagricolas1,layer_suelos_agricolas_1,suelos agricolas 1,Agricultural Lands 1,machine translation of La Maraña's name
+gis-124,layer_suelos_agricolas_clases_1_a_4,Suelos agricolas clases 1 a 4,Agricultural Lands Classes 1 to 4,machine translation of La Maraña's name
+suelosagricolasclases1a41,layer_suelos_agricolas_clases_1_a_4_1,Suelos agricolas clases 1 a 4 1,Agricultural Lands Classes 1 to 4 1,machine translation of La Maraña's name
+gis-576,layer_suelos_densidad,Suelos Densidad,Soil Density,machine translation of La Maraña's name
+gis-285,layer_sumideros_30m,Sumideros 30m,30m Sinkholes,machine translation of La Maraña's name
+gis-284,layer_sumideros_5_30m,Sumideros 5 30m,5 30m Sinkholes,machine translation of La Maraña's name
+gis-125,layer_superficies_impermeables,Superficies impermeables,Impermeable Surfaces,machine translation of La Maraña's name
+superficiesimpermeables1,layer_superficies_impermeables_1,Superficies impermeables 1,Impermeable Surfaces 1,machine translation of La Maraña's name
+gis-149,layer_tanques,Tanques,Tanks,machine translation of La Maraña's name
+gis-582,layer_temperatura_del_aire_maxima_por_municipio_y_mes_fahrenhei,Temperatura del aire maxima por municipio y mes Fahrenheit,Maximum Air Temperature by Municipality and Month Fahrenheit,machine translation of La Maraña's name
+gis-583,layer_temperatura_del_aire_maxima_por_region_y_mes_fahrenheit,Temperatura del aire maxima por region y mes Fahrenheit,Maximum Air Temperature by Region and Month Fahrenheit,machine translation of La Maraña's name
+gis-584,layer_temperatura_del_aire_media_por_municipio_y_mes_fahrenheit,Temperatura del aire media por municipio y mes Fahrenheit,Average Air Temperature by Municipality and Month Fahrenheit,machine translation of La Maraña's name
+gis-585,layer_temperatura_del_aire_media_por_region_y_mes_fahrenheit,Temperatura del aire media por region y mes Fahrenheit,Average Air Temperature by Region and Month Fahrenheit,machine translation of La Maraña's name
+gis-586,layer_temperatura_del_aire_minima_por_municipio_y_mes_fahrenhei,Temperatura del aire minima por municipio y mes Fahrenheit,Minimum Air Temperature by Municipality and Month Fahrenheit,machine translation of La Maraña's name
+gis-587,layer_temperatura_del_aire_minima_por_region_y_mes_fahrenheit,Temperatura del aire minima por region y mes Fahrenheit,Minimum Air Temperature by Region and Month Fahrenheit,machine translation of La Maraña's name
+gis-249,layer_termoelectricas_2014,Termoelectricas 2014,2014 Thermoelectric Plants,machine translation of La Maraña's name
+gis-577,layer_terremotos_historicos_de_puerto_rico,Terremotos historicos de Puerto Rico,Historic Earthquakes of Puerto Rico,machine translation of La Maraña's name
+gis-379,layer_terrenos_remanentes_aep_2007,terrenos remanentes aep 2007,2007 aep Remnant Lands,machine translation of La Maraña's name
+gis-386,layer_tiger_carreteras_2000,Tiger Carreteras 2000,2000 Tiger Roads,machine translation of La Maraña's name
+gis-387,layer_tiger_carreteras_2012,Tiger Carreteras 2012,2012 Tiger Roads,machine translation of La Maraña's name
+gis-644,layer_tipo_de_suelo_arecibo,tipo de suelo arecibo,Arecibo Soil Type,machine translation of La Maraña's name
+gis-645,layer_tipo_de_suelo_elyunque,tipo de suelo elyunque,El Yunque Soil Type,machine translation of La Maraña's name
+gis-646,layer_tipo_de_suelo_humacao,tipo de suelo humacao,Humacao Soil Type,machine translation of La Maraña's name
+gis-647,layer_tipo_de_suelo_mayaguez,tipo de suelo mayaguez,Mayaguez Soil Type,machine translation of La Maraña's name
+gis-648,layer_tipo_de_suelo_ponce,tipo de suelo ponce,Ponce Soil Type,machine translation of La Maraña's name
+gis-649,layer_tipo_de_suelo_sangerman,tipo de suelo sangerman,San German Soil Type,machine translation of La Maraña's name
+gis-650,layer_tipo_de_suelo_sanjuan,tipo de suelo sanjuan,San Juan Soil Type,machine translation of La Maraña's name
+gis-250,layer_to_auto_switch_2014,TO Auto Switch 2014,TO Auto Switch 2014,machine translation of La Maraña's name
+gis-353,layer_todas_la_oficinas_regionales,Todas la Oficinas Regionales,All Regional Offices,machine translation of La Maraña's name
+gis-150,layer_toma,Toma,Intake,machine translation of La Maraña's name
+gis-354,layer_torres_comunicaciones,Torres Comunicaciones,Communications Towers,machine translation of La Maraña's name
+gis-251,layer_torres_de_transmision_2014,Torres de transmision 2014,Transmission Towers 2014,machine translation of La Maraña's name
+gis-252,layer_transformadores_2014_1,Transformadores 2014 1,Transformers 2014 1,machine translation of La Maraña's name
+gis-253,layer_transformadores_2014_2,Transformadores 2014 2,Transformers 2014 2,machine translation of La Maraña's name
+gis-624,layer_tren_urbano,TREN URBANO,TREN URBANO,machine translation of La Maraña's name
+gis-625,layer_tren_urbano_estaciones,TREN URBANO ESTACIONES,TREN URBANO STATIONS,machine translation of La Maraña's name
+gis-627,layer_tren_urbano_estaciones_puntos,TREN URBANO ESTACIONES PUNTOS,TREN URBANO STATIONS POINTS,machine translation of La Maraña's name
+gis-254,layer_tswitching_units_2014,TSwitching Units 2014,Switching Units 2014,machine translation of La Maraña's name
+gis-151,layer_tuberias_de_bombeo,Tuberias de bombeo,Pumping Mains,machine translation of La Maraña's name
+gis-380,layer_tv_contour,tv contour,Tv contour,machine translation of La Maraña's name
+gis-355,layer_tv_digital,TV DIGITAL,DIGITAL TV,machine translation of La Maraña's name
+gis-356,layer_tv_ntsc,TV NTSC,NTSC TV,machine translation of La Maraña's name
+gis-255,layer_unidades_de_conmutacion_2014,Unidades de conmutacion 2014,Switching Units 2014,machine translation of La Maraña's name
+gis-651,layer_unidades_de_suelo_por_municipio,Unidades de Suelo por Municipio,Land Units by Municipality,machine translation of La Maraña's name
+gis-652,layer_usfs_cobertura_del_terreno_2000,USFS Cobertura del terreno 2000,USFS Land Cover 2000,machine translation of La Maraña's name
+gis-076,layer_usgs_topographic_contours,USGS Topographic Contours,USGS Topographic Contours,machine translation of La Maraña's name
+gis-653,layer_uso_de_suelo_drna_1977,Uso de Suelo DRNA 1977,DRNA Land Use 1977,machine translation of La Maraña's name
+gis-654,layer_uso_de_suelo_drna_1987,Uso de Suelo DRNA 1987,DRNA Land Use 1987,machine translation of La Maraña's name
+gis-657,layer_usvi_counties,USVI counties,USVI counties,machine translation of La Maraña's name
+gis-152,layer_valvula_de_control,Válvula de Control,Control Valve,machine translation of La Maraña's name
+gis-153,layer_valvulas_de_control_de_agua_2014,Valvulas de control de agua 2014,Water Control Valves 2014,machine translation of La Maraña's name
+gis-154,layer_valvulas_del_sistema_2014,Valvulas del sistema 2014,System Valves 2014,machine translation of La Maraña's name
+gis-667,layer_velocidad_media_del_viento_a_10_m_por_municipio_y_mes_mps,Velocidad media del viento a 10 m por municipio y mes mps,Average Wind Speed at 10 m by Municipality and Month mps,machine translation of La Maraña's name
+gis-668,layer_velocidad_media_del_viento_a_10_m_por_municipio_y_mes_nud,Velocidad media del viento a 10 m por municipio y mes nudos,Average Wind Speed at 10 m by Municipality and Month knots,machine translation of La Maraña's name
+gis-669,layer_velocidad_media_del_viento_a_10_m_por_region_y_mes_mps,Velocidad media del viento a 10 m por region y mes mps,Average Wind Speed at 10 m by Region and Month mps,machine translation of La Maraña's name
+gis-670,layer_velocidad_media_del_viento_a_10_m_por_region_y_mes_nudos,Velocidad media del viento a 10 m por region y mes nudos,Average Wind Speed at 10 m by Region and Month knots,machine translation of La Maraña's name
+gis-357,layer_vertederos_cerrados_activos,vertederos cerrados activos,Active closed landfills,machine translation of La Maraña's name
+gis-358,layer_vertederos_en_operacion,vertederos en operación,Landfills in operation,machine translation of La Maraña's name
+gis-359,layer_vertederospr_1983,VertederosPR 1983,LandfillsPR 1983,machine translation of La Maraña's name
+gis-388,layer_vestigios_ferrocarril,vestigios ferrocarril,Railway remnants,machine translation of La Maraña's name
+gis-658,layer_yunque_federal,yunque federal,Yunque federal,machine translation of La Maraña's name
+gis-659,layer_yunque_proclama,yunque proclama,Yunque proclamation,machine translation of La Maraña's name
+gis-660,layer_yunque_ze,yunque ze,Yunque ze,machine translation of La Maraña's name
+gis-298,layer_zona_costanera,Zona costanera,Coastal Zone,machine translation of La Maraña's name
+gis-661,layer_zona_de_interes_turistico_carolina,Zona de interes turistico Carolina,Tourist Interest Zone Carolina,machine translation of La Maraña's name
+gis-662,layer_zona_de_interes_turistico_fajardoriogrande,Zona de interes turistico FajardoRioGrande,Tourist Interest Zone FajardoRioGrande,machine translation of La Maraña's name
+gis-663,layer_zona_de_interes_turistico_ponce,Zona de interes turistico Ponce,Tourist Interest Zone Ponce,machine translation of La Maraña's name
+gis-665,layer_zona_maritimo_terrestre_2014,ZONA MARITIMO TERRESTRE 2014,MARITIME ZONE 2014,machine translation of La Maraña's name
+gis-578,layer_zonas_desalojo_all,Zonas Desalojo ALL,Evacuation Zones ALL,machine translation of La Maraña's name
+zonasdesalojoallproject,layer_zonas_desalojo_all_project,zonas desalojo all project,Evacuation Zones ALL,machine translation of La Maraña's name
+gis-666,layer_zonificacion_junta_de_planificacion_2015,Zonificacion Junta de Planificacion 2015,Zoning Planning Board 2015,machine translation of La Maraña's name
