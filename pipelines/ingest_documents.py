@@ -1,6 +1,6 @@
 """Ingest documents into Mappa's database.
 
-Reads source documents (JSON corpus for now, PDF/DOCX later),
+Reads the documents staged by ingest_lamarana_docs,
 chunks the text, computes embeddings, and inserts rows into
 `documents` and `document_chunks`.
 
@@ -29,9 +29,6 @@ from sentence_transformers import SentenceTransformer
 
 from core import EMBED_DIM  # noqa: F401
 from core import EMBEDDING_MODEL as DEFAULT_MODEL
-
-ROOT = Path(__file__).resolve().parent.parent
-DOCUMENTS_JSON = ROOT / "data" / "documents.json"
 
 CHUNK_TOKENS_TARGET = 400
 CHUNK_OVERLAP_TOKENS = 60
@@ -211,7 +208,10 @@ def _vector_literal(vec: np.ndarray) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest documents into Mappa database.")
     parser.add_argument(
-        "--source", type=Path, default=DOCUMENTS_JSON, help="Path to documents.json"
+        "--source",
+        type=Path,
+        required=True,
+        help="Staged documents JSON, from ingest_lamarana_docs",
     )
     parser.add_argument(
         "--commit",

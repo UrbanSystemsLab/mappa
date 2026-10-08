@@ -62,21 +62,6 @@ def match_key(name: str) -> str:
     return norm(base)
 
 
-def table_for(layer: str, taken: set[str]) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "_", norm_keep_words(layer)).strip("_")
-    name = f"layer_{slug}"[:MAX_IDENT]
-    if name not in taken:
-        taken.add(name)
-        return name
-    for n in range(2, 100):
-        suffix = f"_{n}"
-        candidate = f"{name[: MAX_IDENT - len(suffix)]}{suffix}"
-        if candidate not in taken:
-            taken.add(candidate)
-            return candidate
-    raise RuntimeError(f"cannot make a unique table name for {layer}")
-
-
 def norm_keep_words(text: str) -> str:
     t = unicodedata.normalize("NFKD", (text or "").lower())
     return "".join(c for c in t if not unicodedata.combining(c))

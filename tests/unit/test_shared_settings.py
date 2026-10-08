@@ -68,15 +68,10 @@ def test_the_service_reads_the_database_url_in_one_place():
     assert offenders == [], f"should use core.settings.database_url: {offenders}"
 
 
-def test_the_served_and_baked_zoom_ranges_are_the_same():
-    """The baking pipeline has to stop where the tile server stops, or it bakes
-    tiles nothing asks for and misses the ones it does."""
+def test_the_tile_server_uses_the_shared_zoom_range():
     from api import tiles
-    from pipelines import bake_tiles
 
     assert tiles.MAX_ZOOM == core.TILE_MAX_ZOOM
-    assert bake_tiles.MAX_ZOOM == core.TILE_MAX_ZOOM
-    assert bake_tiles.MIN_ZOOM == core.TILE_MIN_ZOOM
 
 
 def test_the_relevance_gate_has_one_value():

@@ -258,16 +258,3 @@ def categories(lang: str = "es", available_only: bool = False) -> list[dict[str,
             row["available"] += available
             row["count"] += total
         return sorted(merged.values(), key=lambda r: r["category"])
-
-
-def tile_columns(table_name: str) -> tuple[str | None, str | None]:
-    """label/sublabel columns for a layer's tiles, from the registry rather than a
-    hardcoded map in the tile service."""
-    with db.connection() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT label_column, sublabel_column FROM layer_registry WHERE table_name = %s",
-            (table_name,),
-        )
-        row = cur.fetchone()
-    return (row[0], row[1]) if row else (None, None)

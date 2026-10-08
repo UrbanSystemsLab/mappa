@@ -4,6 +4,10 @@ Every figure the assistant states comes from one of these: computed from the
 shapes in the database, never read out of a document. Layers arrive as registry
 rows, so the table names interpolated below come from the catalogue, not from
 a request.
+
+Each runs under the connection's statement timeout (settings.db_statement_timeout_ms).
+A measurement takes about a second; one that runs out the timeout is reported to
+the assistant as too slow, so it cannot hold a connection the map needs.
 """
 
 from __future__ import annotations
@@ -23,7 +27,6 @@ def count(layer: Layer, place: Place | None = None) -> int:
     where, params = scope(place)
     with db.connection() as conn:
         cur = conn.cursor()
-        cur.execute("SET LOCAL statement_timeout = '45s'")
         cur.execute(
             f'SELECT count(*) FROM "{layer.table}" f WHERE f.geom IS NOT NULL{where}', params
         )
@@ -35,7 +38,6 @@ def count_inside(layer: Layer, area: Layer, place: Place | None = None) -> tuple
     where, params = scope(place)
     with db.connection() as conn:
         cur = conn.cursor()
-        cur.execute("SET LOCAL statement_timeout = '90s'")
         cur.execute(
             f'SELECT count(*) FILTER (WHERE EXISTS (SELECT 1 FROM "{area.table}" a '
             f"WHERE ST_Intersects(a.geom, f.geom))), count(*) "
@@ -58,7 +60,6 @@ def count_within(
     deg = metres / _METRES_PER_DEGREE
     with db.connection() as conn:
         cur = conn.cursor()
-        cur.execute("SET LOCAL statement_timeout = '120s'")
         cur.execute(
             f'SELECT count(*) FILTER (WHERE EXISTS (SELECT 1 FROM "{other.table}" o '
             f"WHERE o.geom && ST_Expand(f.geom, %s) "
@@ -77,7 +78,6 @@ def area_share(area: Layer, place: Place) -> tuple[float, float]:
     """
     with db.connection() as conn:
         cur = conn.cursor()
-        cur.execute("SET LOCAL statement_timeout = '180s'")
         cur.execute(
             f"""SELECT ST_Area(r.geom::geography) / 1e6,
                        coalesce((SELECT ST_Area(ST_Union(ST_Intersection(

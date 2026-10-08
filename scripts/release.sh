@@ -90,17 +90,14 @@ if [ "$TARGET" = staging ]; then
   gcloud run deploy "$SERVICE" --source . "${COMMON[@]}" \
     --service-account "$RUNTIME_SA" --add-cloudsql-instances "$INSTANCE" \
     --set-secrets "DATABASE_URL=mappa-database-url:latest" \
-    --set-env-vars "APP_ENV=staging,DATABASE_NAME=$DB,LLM_PROVIDER=gemini,GCP_PROJECT=$PROJECT,VERTEX_LOCATION=$REGION,RESPONSE_LANG=en" \
+    --set-env-vars "APP_ENV=staging,DATABASE_NAME=$DB,GCP_PROJECT=$PROJECT,VERTEX_LOCATION=$REGION" \
     --cpu 2 --memory 4Gi --concurrency 4 --min-instances 0 --max-instances 3 \
-    --allow-unauthenticated --quiet
-  # NYU allows a public site only once it carries this tag. On the first deploy
-  # the service did not exist yet, so the tag could not be there and opening it
-  # to everyone failed - staging answered 403. Tag first, then open it.
+    --no-invoker-iam-check --quiet
+  # Public the same way production is: the invoker check is off, because NYU's
+  # policy refuses an allUsers grant. The tag marks it as an approved public site.
   gcloud resource-manager tags bindings create --tag-value="$PUBLIC_TAG" --location="$REGION" \
     --parent="//run.googleapis.com/projects/$PROJECT/locations/$REGION/services/$SERVICE" \
     >/dev/null 2>&1 || true   # already tagged on later deploys
-  gcloud run services add-iam-policy-binding "$SERVICE" --region "$REGION" --project "$PROJECT" \
-    --member=allUsers --role=roles/run.invoker --format=none
 else
   # Not rebuilt: the exact image staging was checked on.
   gcloud run deploy "$SERVICE" --image "$IMAGE" "${COMMON[@]}" --quiet
