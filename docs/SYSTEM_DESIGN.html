@@ -1,0 +1,371 @@
+<title>Mappealo System Design</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#F2F4F6; --card:#FFFFFF; --sunk:#E7EBEF;
+    --ink:#1B2430; --ink-2:#5A6673; --ink-3:#8593A1;
+    --line:#D6DDE4; --line-2:#E9EDF1;
+    --brand:#0B5D4B; --accent:#0D9488;
+    --ok:#137A4B; --ok-bg:#E2F1E9;
+    --warn:#96690C; --warn-bg:#F7EEDA;
+    --crit:#AB3826; --crit-bg:#F8E7E3;
+    --shadow:0 1px 2px rgba(27,36,48,.05), 0 8px 24px rgba(27,36,48,.07);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#111820; --card:#18212B; --sunk:#1F2A35;
+      --ink:#E6EBF0; --ink-2:#9BA9B7; --ink-3:#6D7C8A;
+      --line:#2B3744; --line-2:#222D38;
+      --brand:#4FB79B; --accent:#2FC7B4;
+      --ok:#4CC08A; --ok-bg:rgba(76,192,138,.13);
+      --warn:#D9AE4B; --warn-bg:rgba(217,174,75,.13);
+      --crit:#E27A66; --crit-bg:rgba(226,122,102,.13);
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#111820; --card:#18212B; --sunk:#1F2A35;
+    --ink:#E6EBF0; --ink-2:#9BA9B7; --ink-3:#6D7C8A;
+    --line:#2B3744; --line-2:#222D38;
+    --brand:#4FB79B; --accent:#2FC7B4;
+    --ok:#4CC08A; --ok-bg:rgba(76,192,138,.13);
+    --warn:#D9AE4B; --warn-bg:rgba(217,174,75,.13);
+    --crit:#E27A66; --crit-bg:rgba(226,122,102,.13);
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+       line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding-block:40px 80px;padding-left:20px;padding-right:20px}
+
+  header{border-bottom:2px solid var(--ink);padding-bottom:18px;
+         display:flex;justify-content:space-between;align-items:flex-end;gap:22px;flex-wrap:wrap}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+           color:var(--brand);margin-bottom:8px}
+  h1{font-size:36px;margin:0;letter-spacing:-.025em;font-weight:600;line-height:1.05;text-wrap:balance}
+  .meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);text-align:right;line-height:1.95}
+
+  .thesis{font-size:16.5px;line-height:1.62;max-width:68ch;margin:26px 0 0;color:var(--ink-2)}
+  .thesis strong{color:var(--ink);font-weight:600}
+
+  h2{font-size:22px;margin:54px 0 4px;letter-spacing:-.015em;font-weight:600;
+     display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px}
+  h2 .n{font-family:var(--mono);font-size:11px;color:var(--brand);letter-spacing:.12em;font-weight:500}
+  h3{font-size:16px;margin:30px 0 6px;font-weight:600;letter-spacing:-.005em}
+  p{margin:12px 0;max-width:72ch}
+  .lede{color:var(--ink-2);font-size:14px;margin:12px 0 18px;max-width:74ch}
+
+  /* request path */
+  .path{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:20px;
+        margin:20px 0;box-shadow:var(--shadow);overflow-x:auto}
+  .tier{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:stretch;margin-bottom:8px}
+  .tier:last-child{margin-bottom:0}
+  .tlab{font-family:var(--mono);font-size:9px;letter-spacing:.11em;text-transform:uppercase;
+        color:var(--ink-3);display:flex;align-items:center;justify-content:flex-end;text-align:right;
+        padding-right:12px;border-right:2px solid var(--line)}
+  .boxes{display:flex;gap:8px;flex-wrap:wrap}
+  .box{flex:1;min-width:132px;background:var(--sunk);border:1px solid var(--line);
+       border-radius:4px;padding:10px 12px}
+  .box.now{border-color:var(--accent);background:var(--ok-bg)}
+  .box.todo{border-style:dashed;border-color:var(--ink-3);background:transparent}
+  .bn{font-size:12.5px;font-weight:600;line-height:1.3}
+  .bd{font-size:10.5px;color:var(--ink-2);margin-top:3px;line-height:1.45}
+  .btag{font-family:var(--mono);font-size:8px;letter-spacing:.09em;text-transform:uppercase;
+        margin-top:5px;display:block}
+  .box.now .btag{color:var(--ok)} .box.todo .btag{color:var(--ink-3)}
+  .flow{text-align:center;color:var(--ink-3);font-size:13px;line-height:1;margin:2px 0}
+  .legend-row{display:flex;gap:16px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line-2);
+              font-family:var(--mono);font-size:9.5px;color:var(--ink-2);flex-wrap:wrap}
+  .legend-row i{display:inline-block;width:11px;height:11px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0;background:var(--card);
+        border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  thead th{font-family:var(--mono);font-size:9px;letter-spacing:.11em;text-transform:uppercase;
+           color:var(--ink-2);background:var(--sunk);padding:9px 13px;text-align:left;font-weight:600}
+  td{padding:10px 13px;border-top:1px solid var(--line-2);vertical-align:top}
+  td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tw{overflow-x:auto}
+  .good{color:var(--ok);font-weight:600}
+  .bad{color:var(--crit);font-weight:600}
+
+  .pill{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9px;font-weight:600;
+        padding:2px 8px;border-radius:3px;letter-spacing:.07em;text-transform:uppercase}
+  .p-ok{background:var(--ok-bg);color:var(--ok)}
+  .p-warn{background:var(--warn-bg);color:var(--warn)}
+  .p-crit{background:var(--crit-bg);color:var(--crit)}
+
+  .note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--nc,var(--accent));
+        border-radius:5px;padding:15px 18px;margin:16px 0}
+  .note.warn{--nc:var(--warn)} .note.crit{--nc:var(--crit)}
+  .note h4{margin:0 0 5px;font-size:14.5px;font-weight:600}
+  .note p{margin:6px 0 0;font-size:13.5px;color:var(--ink-2);max-width:74ch}
+  .note p strong{color:var(--ink)}
+
+  pre{background:var(--sunk);border:1px solid var(--line);border-radius:5px;padding:13px 15px;
+      overflow-x:auto;font-family:var(--mono);font-size:11.5px;line-height:1.65;margin:14px 0}
+  code{font-family:var(--mono);font-size:.9em;background:var(--sunk);padding:1px 5px;
+       border-radius:3px;border:1px solid var(--line-2)}
+  pre code{background:none;border:0;padding:0}
+  .cm{color:var(--ink-3)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  ul{margin:10px 0;padding-left:19px}
+  li{margin:6px 0;font-size:13.5px;color:var(--ink-2)}
+  li strong{color:var(--ink)}
+
+  footer{margin-top:62px;padding-top:18px;border-top:1px solid var(--line);
+         font-family:var(--mono);font-size:10px;color:var(--ink-3);
+         display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+  @media(max-width:760px){
+    .cols{grid-template-columns:1fr}
+    .tier{grid-template-columns:1fr}
+    .tlab{justify-content:flex-start;text-align:left;border-right:0;border-left:2px solid var(--line);
+          padding-left:10px;padding-right:0;margin-bottom:6px}
+    h1{font-size:27px}
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div>
+    <div class="eyebrow">Engineering · System Design</div>
+    <h1>Mappealo System Design</h1>
+  </div>
+  <div class="meta">
+    NYU Urban Systems Lab<br>
+    La Maraña · Rebuild by Design<br>
+    16 Sep 2026 · working draft
+  </div>
+</header>
+
+<p class="thesis">
+  Mappealo answers questions about land, hazard and planning in Puerto Rico using only
+  documents and geospatial layers La Maraña provides. Two halves — <strong>a map you
+  can interrogate</strong> and <strong>an assistant that can only speak from the
+  loaded data</strong> — and the design problem is keeping both honest as the catalog
+  goes from ten layers to six hundred.
+</p>
+
+<!-- ===================== 1 ===================== -->
+<h2><span class="n">01</span>What the system is</h2>
+<p class="lede">Three request paths, sharing one database. Green is built and measured;
+dashed is designed but not yet built.</p>
+
+<div class="path">
+  <div class="tier">
+    <div class="tlab">Client</div>
+    <div class="boxes">
+      <div class="box now"><div class="bn">Map</div><div class="bd">MapLibre GL, vector tiles, click for feature attributes</div><span class="btag">live</span></div>
+      <div class="box now"><div class="bn">Layer browser</div><div class="bd">Server-side search + facets over the catalog</div><span class="btag">live</span></div>
+      <div class="box now"><div class="bn">Assistant</div><div class="bd">Cited answers; knows which layers are on screen</div><span class="btag">live</span></div>
+    </div>
+  </div>
+  <div class="flow">↓</div>
+  <div class="tier">
+    <div class="tlab">Edge</div>
+    <div class="boxes">
+      <div class="box todo"><div class="bn">CDN</div><div class="bd">Tiles are immutable — cache them once, globally</div><span class="btag">needed</span></div>
+      <div class="box todo"><div class="bn">Gateway</div><div class="bd">Rate limits, WAF, identity, per-caller quotas</div><span class="btag">needed</span></div>
+    </div>
+  </div>
+  <div class="flow">↓</div>
+  <div class="tier">
+    <div class="tlab">Services</div>
+    <div class="boxes">
+      <div class="box now"><div class="bn">Tile service</div><div class="bd"><code>ST_AsMVT</code> per z/x/y, pooled, cached</div><span class="btag">live</span></div>
+      <div class="box now"><div class="bn">Catalog</div><div class="bd">Search, facets, provenance per layer</div><span class="btag">live</span></div>
+      <div class="box now"><div class="bn">Query service</div><div class="bd">Retrieval → spatial facts → grounded answer</div><span class="btag">live</span></div>
+      <div class="box todo"><div class="bn">Spatial engine</div><div class="bd">Buffers, overlays, distance, zonal stats</div><span class="btag">the gap</span></div>
+    </div>
+  </div>
+  <div class="flow">↓</div>
+  <div class="tier">
+    <div class="tlab">Data</div>
+    <div class="boxes">
+      <div class="box now"><div class="bn">PostGIS + pgvector</div><div class="bd">Geometry, pyramid columns, 45.6k doc chunks, HNSW index</div><span class="btag">live</span></div>
+      <div class="box now"><div class="bn">layer_registry</div><div class="bd">Names, categories, styling, provenance, confidence</div><span class="btag">live</span></div>
+      <div class="box todo"><div class="bn">Baked tiles</div><div class="bd">Pre-rendered per zoom, served as static files</div><span class="btag">for 600</span></div>
+    </div>
+  </div>
+  <div class="legend-row">
+    <span><i style="background:var(--ok-bg);border:1px solid var(--accent)"></i>built and measured</span>
+    <span><i style="border:1px dashed var(--ink-3)"></i>designed, not built</span>
+  </div>
+</div>
+
+<div class="note">
+  <h4>The one rule the whole system serves</h4>
+  <p>Every statement the product makes is traceable to something La Maraña supplied.
+  The assistant is forbidden outside knowledge and emits no links of its own; every
+  layer carries the agency, year and inventory it came from, plus <strong>how confident
+  that metadata is</strong> — using La Maraña's own vocabulary: confirmed, inferred,
+  reconstructed, unknown. Asked for the capital of France, it declines and shows no
+  sources.</p>
+</div>
+
+<!-- ===================== 2 ===================== -->
+<h2><span class="n">02</span>Where it stands, measured</h2>
+<p class="lede">Numbers from the running system, not estimates.</p>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Dimension</th><th>Today</th><th>At 600 layers</th><th></th></tr></thead>
+  <tbody>
+    <tr><td>Layers loaded</td><td class="n">10</td><td class="n">600</td><td><span class="pill p-warn">60×</span></td></tr>
+    <tr><td>Documents</td><td class="n">84 municipal plans · 45,596 chunks</td><td class="n">full inventory</td><td><span class="pill p-ok">scales</span></td></tr>
+    <tr><td>Layer metadata</td><td>database rows</td><td>database rows</td><td><span class="pill p-ok">solved</span></td></tr>
+    <tr><td>Tile delivery</td><td>generated per request</td><td>must be pre-baked</td><td><span class="pill p-crit">ceiling</span></td></tr>
+    <tr><td>Database</td><td class="n">1 vCPU · 3.8 GB · 100 conns</td><td>larger + read replicas</td><td><span class="pill p-warn">tight</span></td></tr>
+    <tr><td>Auth / quotas</td><td>none</td><td>required before public</td><td><span class="pill p-crit">blocker</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>What the tile work actually bought</h3>
+<p>The source geometry is the bottleneck, not the pipeline. Plan de Uso holds
+<strong>29.3 million vertices across 996 polygons</strong>; one landslide polygon alone
+has 567,502. Generalising that on every request is what made the map crawl, so it is
+now done once at ingest into two pyramid levels.</p>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Layer</th><th>Original</th><th>Simple (z10–13)</th><th>Coarse (&lt;z10)</th><th>Reduction</th></tr></thead>
+  <tbody>
+    <tr><td>Plan de Uso 2015</td><td class="n">29,349,964</td><td class="n">1,377,142</td><td class="n">699,058</td><td class="n good">97.6%</td></tr>
+    <tr><td>FEMA 0.2% 2018</td><td class="n">5,705,149</td><td class="n">77,357</td><td class="n">23,716</td><td class="n good">99.6%</td></tr>
+    <tr><td>Landslide</td><td class="n">3,012,056</td><td class="n">741,513</td><td class="n">449,411</td><td class="n good">85.1%</td></tr>
+    <tr><td>FEMA FIRM 2009</td><td class="n">833,588</td><td class="n">45,912</td><td class="n">16,462</td><td class="n good">98.0%</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>At zoom 12 — where people actually work — land use went from <strong>190 KB / 1.67 s
+to 21 KB / 0.28 s</strong>, and landslide from 4.06 s to 0.47 s. Island-wide views are
+still ~3 s for the two heavy layers, cached after the first build.</p>
+
+<div class="note crit">
+  <h4>Three failures worth remembering, because they recur at 600</h4>
+  <p><strong>Silent truncation.</strong> The old endpoint capped output at 6,000 features, so
+  the landslide layer showed 11% of itself with no warning — a hazard map that understates
+  hazard. Tiles removed the cap.</p>
+  <p><strong>Silent empty tiles.</strong> Then a slow tile timed out, my code returned an empty
+  tile, and half of Puerto Rico rendered as land with no land-use classification. Same
+  mistake in a new place: <em>missing data that looks like real data</em>. Failures now return
+  503 and stay visible.</p>
+  <p><strong>Orphaned queries.</strong> Killing the server does not cancel a running query —
+  Postgres keeps going. Three tile queries ran for 36 minutes, pinning a 1-vCPU instance.
+  Timeouts are now set on the connection, not per call, because on Cloud Run instances are
+  recycled constantly and these accumulate.</p>
+</div>
+
+<!-- ===================== 3 ===================== -->
+<h2><span class="n">03</span>What has to change for 600</h2>
+
+<h3>Tiles get baked, not generated</h3>
+<p>Generating a tile per request works at ten layers on one small instance. It will not
+hold at six hundred: the expensive tiles are the zoomed-out ones, every viewer wants them,
+and each costs seconds of database CPU. The standard answer is to build each layer's tile
+pyramid once and serve static files.</p>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Approach</th><th>How</th><th>Cost shape</th><th>Fit here</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Dynamic</strong> — today</td><td><code>ST_AsMVT</code> per request</td><td>DB CPU per view</td><td>fine at 10, ceiling at 600</td></tr>
+    <tr><td><strong>Pre-baked PMTiles</strong></td><td>Build once → one file on Cloud Storage → CDN</td><td>near-zero per view</td><td><span class="pill p-ok">recommended</span></td></tr>
+    <tr><td><strong>Managed</strong> — Mapbox, ESRI</td><td>Upload; they host and serve</td><td>metered per user</td><td>a bill La Maraña inherits</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Our 600 layers are reference data that rarely changes — close to the ideal case for
+baking. A rebuild runs only when La Maraña republishes a layer, and
+<code>dataset_version</code> in the registry already busts the cache when they do.</p>
+
+<h3>The spatial engine is the real missing half</h3>
+<p>The assistant can retrieve documents and read point-in-polygon facts. It cannot yet
+answer "schools within 500 m of a river in Arecibo", or "what percentage of this parcel is
+in a flood zone" — questions that need buffers, overlays and zonal statistics. That is a
+service, not a prompt change.</p>
+<p>How a question becomes a spatial query matters as much as that it can. Letting a model
+emit SQL against the database is the fast path and the dangerous one. The design here is a
+<strong>constrained tool layer</strong>: a fixed set of parameterised spatial operations the
+model may call, never free-form SQL. Slower to build, auditable, and every number stays
+explainable and citable — which is the same standard the documents are held to.</p>
+
+<h3>Ingest has to condition geometry</h3>
+<p>Two of ten layers arrived pathological. At that rate, roughly a hundred and twenty of
+six hundred will be. Measuring vertex counts, simplifying into pyramid levels, and flagging
+the outliers belongs in the loader — discovering it at layer 400 is not a plan.</p>
+<pre><code><span class="cm"># what every incoming layer passes through</span>
+measure    → vertices, size, geometry validity, SRID
+condition  → geom_simple (~30 m) and geom_coarse (~350 m), both indexed
+register   → layer_registry row: names, category, provenance, confidence
+verify     → tile a sample z/x/y at each pyramid level before publishing</code></pre>
+<p>Written to be resumable, because it has to be: the first version ran one
+<code>UPDATE</code> per layer and dropped the connection fifteen minutes into a 5.7-million-vertex
+layer. It now commits in batches and skips rows already done.</p>
+
+<!-- ===================== 4 ===================== -->
+<h2><span class="n">04</span>The interface question</h2>
+
+<div class="note">
+  <h4>"I like the Mapbox interface" — what that actually means</h4>
+  <p>Mapbox's look does not come from the Mapbox library. <strong>MapLibre is a fork of
+  Mapbox GL JS — the same rendering engine.</strong> What reads as "Mapbox quality" is the
+  <em>basemap style</em>: a vector basemap with restrained, desaturated cartography and careful
+  label typography, so data layers sit on top instead of fighting the ground.</p>
+  <p>We are currently drawing on raw OpenStreetMap raster tiles, which are dense, saturated
+  and designed to be read on their own. That is the entire difference.</p>
+</div>
+
+<div class="cols">
+  <div>
+    <h3>What to change</h3>
+    <ul>
+      <li><strong>A muted vector basemap.</strong> Protomaps ships an open basemap as a single PMTiles file we can host ourselves — no key, no per-view billing, and it matches the tile pipeline we are already building.</li>
+      <li><strong>Restrained layer styling.</strong> Hazards read as texture and pattern, boundaries as hairlines, facilities as points. Not six flat fills competing.</li>
+      <li><strong>One accent.</strong> Semantic colour reserved for hazard severity, never decoration.</li>
+      <li><strong>Map-first layout.</strong> Panels float over the map rather than pushing it down.</li>
+    </ul>
+  </div>
+  <div>
+    <h3>Multiple layers at once</h3>
+    <p style="font-size:13.5px">Today every polygon layer draws as a flat 35% fill, so two
+    together are mud and three are unreadable. The fix is compositional rather than
+    cosmetic:</p>
+    <ul>
+      <li><strong>One fill at a time.</strong> The most recently added polygon layer fills; earlier ones drop to outline.</li>
+      <li><strong>Hazards as hatch.</strong> Patterns overlay legibly where flat fills cannot.</li>
+      <li><strong>Order follows meaning.</strong> Boundaries beneath, hazards above, facilities on top — not add-order.</li>
+      <li><strong>Legend earns its place</strong> once more than one layer is on.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===================== 5 ===================== -->
+<h2><span class="n">05</span>Decisions needed</h2>
+<div class="tw">
+<table>
+  <thead><tr><th>Question</th><th>Who</th><th>Blocks</th></tr></thead>
+  <tbody>
+    <tr><td>Bake tiles ahead of time, or keep generating per request?</td><td>Internal</td><td>The 600-layer load</td></tr>
+    <tr><td>Do we build the spatial engine, and how far — buffers, or routing?</td><td>Internal</td><td>Most of what users will ask</td></tr>
+    <tr><td>Self-hosted vector basemap, or stay on raster?</td><td>Internal</td><td>How the product reads</td></tr>
+    <tr><td>Which 40–60 layers matter most?</td><td>La Maraña</td><td>Useful answers sooner</td></tr>
+    <tr><td>Layers whose metadata could not be recovered — publish with a note, or hold back?</td><td>La Maraña</td><td>Catalog policy</td></tr>
+    <tr><td>Accounts: the design scope says yes, NYU IT was told no</td><td>Internal</td><td>Auth design; a contradiction on record</td></tr>
+    <tr><td>What must La Maraña do without engineers after April 2027?</td><td>Both</td><td>Admin tooling, and the handoff itself</td></tr>
+  </tbody>
+</table>
+</div>
+
+<footer>
+  <span>Mappealo — system design, working draft</span>
+  <span>NYU Urban Systems Lab · La Maraña · Rebuild by Design</span>
+</footer>
+</div>

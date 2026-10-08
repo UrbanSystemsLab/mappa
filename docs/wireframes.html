@@ -1,0 +1,816 @@
+<title>Mappealo Wireframes</title>
+<style>
+  :root{
+    --paper:#EDE7DA; --card:#F7F3EA; --ink:#12201C; --ink-2:#4A5A52;
+    --line:#D6CDBA; --line-soft:#E3DCCB; --chrome:#E2DACA;
+    --brand:#0B5D4B; --teal:#0D9488; --coral:#C4553B; --sand:#B8860B; --slate:#5B7C8D;
+    --shadow:0 1px 2px rgba(18,32,28,.06), 0 8px 28px rgba(18,32,28,.08);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#121816; --card:#1A2320; --ink:#EDE7DA; --ink-2:#9DB0A7;
+      --line:#2C3A35; --line-soft:#222E2A; --chrome:#222E2A;
+      --brand:#4FB79B; --teal:#2FC7B4; --coral:#E0765C; --sand:#D9B443; --slate:#7FA3B5;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#121816; --card:#1A2320; --ink:#EDE7DA; --ink-2:#9DB0A7;
+    --line:#2C3A35; --line-soft:#222E2A; --chrome:#222E2A;
+    --brand:#4FB79B; --teal:#2FC7B4; --coral:#E0765C; --sand:#D9B443; --slate:#7FA3B5;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+       -webkit-font-smoothing:antialiased;line-height:1.55}
+  .wrap{max-width:1120px;margin:0 auto;padding:40px 24px 80px}
+
+  .mast{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:10px;
+        display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  .mark{display:flex;align-items:center;gap:12px}
+  .mast h1{font-family:var(--serif);font-size:40px;line-height:1;margin:0;letter-spacing:-.02em}
+  .mast .sub{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+             color:var(--ink-2);margin-top:6px}
+  .meta{font-family:var(--mono);font-size:11px;color:var(--ink-2);text-align:right;line-height:1.9}
+  .lede{font-family:var(--serif);font-size:19px;line-height:1.6;max-width:66ch;margin:22px 0 44px;color:var(--ink-2)}
+  .lede strong{color:var(--ink);font-weight:600}
+
+  .sec{margin:56px 0 20px;display:flex;align-items:baseline;gap:14px;
+       border-bottom:1px solid var(--line);padding-bottom:9px}
+  .sec .n{font-family:var(--mono);font-size:11px;color:var(--brand);letter-spacing:.12em}
+  .sec h2{font-family:var(--serif);font-size:25px;margin:0;letter-spacing:-.01em}
+  .sec .note{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-2);
+             letter-spacing:.08em;text-transform:uppercase}
+
+  .brandgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+  .bcard{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:20px}
+  .bcard h3{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+            color:var(--ink-2);margin:0 0 14px;font-weight:600}
+  .sw{display:flex;border-radius:3px;overflow:hidden;border:1px solid var(--line)}
+  .sw div{flex:1;height:54px}
+  .swlabel{display:flex;margin-top:7px}
+  .swlabel span{flex:1;font-family:var(--mono);font-size:9px;color:var(--ink-2);text-align:center}
+  .spec .big{font-family:var(--serif);font-size:32px;line-height:1.1;letter-spacing:-.02em}
+  .spec .mid{font-size:14px;margin-top:10px}
+  .spec .sm{font-family:var(--mono);font-size:11px;color:var(--ink-2);margin-top:8px;letter-spacing:.05em}
+  .lockup-row{display:flex;align-items:center;gap:11px}
+  .lockup-row .wm{font-family:var(--serif);font-size:26px;letter-spacing:-.015em;font-weight:600}
+  .lockup-row.inv{background:var(--brand);padding:11px 15px;border-radius:3px;margin-top:16px}
+  .lockup-row.inv .wm{color:#F7F3EA}
+
+  /* confidence tiers */
+  .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px}
+  .tier{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:16px 18px;
+        border-top:3px solid var(--tc)}
+  .tier .tname{display:flex;align-items:center;gap:8px;font-family:var(--sans);font-weight:700;
+               font-size:13px;color:var(--tc);letter-spacing:.01em}
+  .tier .tdot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+  .tier h4{font-family:var(--serif);font-size:15px;margin:9px 0 6px;letter-spacing:-.01em}
+  .tier p{font-size:12px;color:var(--ink-2);margin:0 0 9px;line-height:1.5}
+  .tier .ex{font-family:var(--mono);font-size:9.5px;color:var(--ink-2);letter-spacing:.04em;
+            border-top:1px solid var(--line-soft);padding-top:8px;line-height:1.6}
+  .t-ver{--tc:var(--teal)} .t-cal{--tc:var(--sand)} .t-inf{--tc:var(--slate)} .t-non{--tc:var(--ink-2)}
+
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;
+        padding:2px 8px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase;
+        font-family:var(--sans);white-space:nowrap;vertical-align:1px}
+  .chip i{width:7px;height:7px;border-radius:50%;display:block}
+  .c-ver{background:rgba(13,148,136,.15);color:var(--teal)} .c-ver i{background:var(--teal)}
+  .c-cal{background:rgba(184,134,11,.16);color:var(--sand)} .c-cal i{background:var(--sand)}
+  .c-inf{background:rgba(91,124,141,.17);color:var(--slate)} .c-inf i{background:var(--slate)}
+  .c-non{background:rgba(74,90,82,.13);color:var(--ink-2)} .c-non i{background:var(--ink-2)}
+
+  /* artboards */
+  .board{margin:26px 0 8px;background:var(--card);border:1px solid var(--line);border-radius:5px;
+         box-shadow:var(--shadow);overflow:hidden}
+  .bhead{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);
+         background:var(--chrome)}
+  .dots{display:flex;gap:5px}
+  .dots i{width:9px;height:9px;border-radius:50%;background:var(--line);display:block}
+  .burl{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);background:var(--card);
+        padding:3px 11px;border-radius:20px;flex:1;text-align:center;max-width:340px;margin:0 auto}
+  .caption{display:flex;gap:12px;align-items:baseline;margin:0 0 4px;flex-wrap:wrap}
+  .caption .cn{font-family:var(--mono);font-size:11px;color:var(--brand);letter-spacing:.1em;flex:0 0 auto}
+  .caption h3{font-family:var(--serif);font-size:19px;margin:0;letter-spacing:-.01em}
+  .caption p{font-size:13px;color:var(--ink-2);margin:0 0 0 auto;text-align:right;max-width:46ch}
+  .askq{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--brand);
+        border-radius:4px;padding:12px 16px;margin:14px 0 0;font-family:var(--serif);
+        font-size:15.5px;line-height:1.5;color:var(--ink)}
+  .askq .lbl{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+             color:var(--ink-2);display:block;margin-bottom:5px}
+
+  .app-top{display:flex;align-items:center;gap:11px;background:var(--brand);color:#F2EEE4;padding:10px 16px}
+  .app-top .wm{font-family:var(--serif);font-size:16.5px;font-weight:600}
+  .app-top .nav{display:flex;gap:16px;margin-left:22px;font-size:11.5px;opacity:.82}
+  .app-top .lang{margin-left:auto;display:flex;background:rgba(255,255,255,.16);border-radius:20px;padding:2px}
+  .app-top .lang b{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:600}
+  .app-top .lang b.on{background:#F7F3EA;color:var(--brand)}
+  .app-top .lang b.off{opacity:.75}
+
+  .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:26px;padding:40px 34px;align-items:center;
+        background:linear-gradient(160deg, var(--card) 0%, var(--paper) 100%)}
+  .hero h2{font-family:var(--serif);font-size:34px;line-height:1.15;margin:0 0 13px;letter-spacing:-.025em}
+  .hero p{font-size:14px;color:var(--ink-2);margin:0 0 20px;max-width:42ch;line-height:1.6}
+  .askbar{display:flex;gap:8px;align-items:center;background:var(--card);border:1.5px solid var(--brand);
+          border-radius:10px;padding:11px 13px}
+  .askbar .ph{flex:1;font-size:12.5px;color:var(--ink-2)}
+  .askbar .go{width:30px;height:30px;border-radius:8px;background:var(--brand);color:#F7F3EA;
+              display:flex;align-items:center;justify-content:center;font-size:13px}
+  .starters{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+  .starter{font-size:11.5px;background:var(--card);border:1px solid var(--line);border-radius:20px;
+           padding:6px 12px;color:var(--ink-2)}
+  .trust{display:flex;gap:22px;margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}
+  .trust div{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);letter-spacing:.04em}
+  .trust b{display:block;font-family:var(--serif);font-size:22px;color:var(--ink);font-weight:600}
+
+  .globe{width:250px;height:250px}
+  @media (prefers-reduced-motion:no-preference){
+    .grat{animation:spin 42s linear infinite;transform-origin:150px 150px}
+    .ping{animation:ping 2.6s ease-out infinite}
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes ping{0%{r:7;opacity:.85}70%{r:26;opacity:0}100%{r:26;opacity:0}}
+
+  .split{display:grid;grid-template-columns:minmax(0,46%) minmax(0,54%);gap:9px;padding:9px;
+         background:var(--paper);min-height:390px}
+  .pane{background:var(--card);border:1px solid var(--line-soft);border-radius:4px;overflow:hidden;
+        display:flex;flex-direction:column}
+  .chat-msgs{padding:13px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .bub{max-width:92%;padding:10px 13px;border-radius:12px;font-size:11.5px;line-height:1.55}
+  .bub.u{background:var(--brand);color:#F2EEE4;align-self:flex-end;border-bottom-right-radius:3px}
+  .bub.b{background:var(--paper);border:1px solid var(--line-soft);align-self:flex-start;
+         border-bottom-left-radius:3px;max-width:100%}
+  .who{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:8.5px;
+       letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+  .fact{padding:8px 10px;border-radius:7px;margin:7px 0;border-left:3px solid var(--fc);background:var(--card)}
+  .fact.ver{--fc:var(--teal)} .fact.cal{--fc:var(--sand)} .fact.inf{--fc:var(--slate)}
+  .fact .fh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:3px}
+  .fact .fv{font-family:var(--serif);font-size:14.5px;letter-spacing:-.01em}
+  .fact .fn{font-size:10px;color:var(--ink-2);line-height:1.5;margin-top:2px}
+  .srcs{margin-top:9px;padding-top:7px;border-top:1px solid var(--line-soft)}
+  .srcs .sh{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
+            color:var(--ink-2);margin-bottom:4px}
+  .srcs a{font-size:10.5px;color:var(--brand);display:block;margin:2px 0;text-decoration:none}
+  .composer{border-top:1px solid var(--line-soft);padding:10px 12px;display:flex;gap:7px;align-items:center}
+  .composer .inp{flex:1;background:var(--paper);border:1px solid var(--line-soft);border-radius:9px;
+                 padding:8px 11px;font-size:11px;color:var(--ink-2)}
+  .composer .send{width:32px;height:32px;border-radius:8px;background:var(--brand);color:#F7F3EA;
+                  display:flex;align-items:center;justify-content:center;font-size:13px}
+
+  .maptools{display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line-soft);background:var(--card)}
+  .mtool{font-size:10px;font-family:var(--mono);letter-spacing:.04em;border:1px solid var(--line);
+         border-radius:6px;padding:4px 9px;color:var(--ink-2)}
+  .mtool.on{background:var(--brand);color:#F7F3EA;border-color:var(--brand)}
+  .mapface{flex:1;position:relative;background:
+      linear-gradient(var(--line-soft) 1px, transparent 1px) 0 0/26px 26px,
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px) 0 0/26px 26px, var(--paper);
+      display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .mapchip{position:absolute;background:var(--card);border:1px solid var(--line);border-radius:20px;
+           padding:5px 11px;font-size:10px;font-family:var(--mono);letter-spacing:.03em;box-shadow:var(--shadow)}
+  .lgd{position:absolute;background:var(--card);border:1px solid var(--line);border-radius:6px;
+       padding:10px 12px;box-shadow:var(--shadow);font-size:10px;line-height:1.9}
+  .lgd .lr{display:flex;align-items:center;gap:7px}
+  .lgd .lk{width:15px;height:8px;border-radius:2px;flex:0 0 auto}
+
+  /* comparison table */
+  .cmp{width:100%;border-collapse:collapse;font-size:11px}
+  .cmp th,.cmp td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line-soft)}
+  .cmp thead th{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
+                color:var(--ink-2);background:var(--paper);font-weight:600}
+  .cmp tbody th{font-family:var(--mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;
+                color:var(--ink-2);font-weight:600;background:var(--paper);white-space:nowrap}
+  .cmp td{font-variant-numeric:tabular-nums}
+  .cmp td.best{background:rgba(13,148,136,.1);font-weight:600}
+  .cmp .warn{color:var(--coral);font-weight:600}
+  .rank{display:flex;align-items:center;gap:6px;font-family:var(--serif);font-size:15px}
+  .rank .medal{width:19px;height:19px;border-radius:50%;background:var(--brand);color:#F7F3EA;
+               font-family:var(--sans);font-size:10px;font-weight:700;display:flex;
+               align-items:center;justify-content:center}
+
+  /* source split */
+  .srcsplit{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line-soft);
+            border-radius:6px;overflow:hidden}
+  .srcsplit > div{padding:14px 16px}
+  .srcsplit .left{background:var(--paper);border-right:1px solid var(--line-soft)}
+  .srcsplit .sh2{font-family:var(--mono);font-size:8.5px;letter-spacing:.11em;text-transform:uppercase;
+                 color:var(--ink-2);margin-bottom:9px}
+  .quote{font-family:var(--serif);font-size:12px;line-height:1.65;border-left:2px solid var(--line);
+         padding-left:11px;margin-bottom:10px;color:var(--ink)}
+  .plain{font-size:12px;line-height:1.65}
+  .plain li{margin:5px 0}
+
+  .annots{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:13px;margin-top:15px}
+  .ann{display:flex;gap:9px;font-size:12.5px;line-height:1.5}
+  .ann .k{font-family:var(--mono);font-size:9.5px;color:#F7F3EA;background:var(--brand);width:18px;height:18px;
+          border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:2px}
+  .ann b{display:block}
+  .ann span{color:var(--ink-2)}
+
+  .qgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:14px}
+  .qcard{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--coral);
+         border-radius:4px;padding:15px 17px}
+  .qcard h4{font-family:var(--serif);font-size:15.5px;margin:0 0 6px}
+  .qcard p{font-size:12.5px;color:var(--ink-2);margin:0;line-height:1.55}
+
+  footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);
+         font-family:var(--mono);font-size:10.5px;color:var(--ink-2);display:flex;
+         justify-content:space-between;gap:18px;flex-wrap:wrap}
+
+  @media(max-width:820px){
+    .hero{grid-template-columns:1fr;padding:28px 22px}
+    .split{grid-template-columns:1fr}
+    .srcsplit{grid-template-columns:1fr}
+    .mast h1{font-size:31px}
+  }
+
+  @media print{
+    :root{
+      --paper:#EDE7DA; --card:#F7F3EA; --ink:#12201C; --ink-2:#4A5A52;
+      --line:#D6CDBA; --line-soft:#E3DCCB; --chrome:#E2DACA;
+      --brand:#0B5D4B; --teal:#0D9488; --coral:#C4553B; --sand:#B8860B; --slate:#5B7C8D;
+      --shadow:none;
+    }
+    *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+    @page{size:Letter portrait;margin:13mm 11mm}
+    body{background:var(--paper)}
+    .wrap{max-width:none;padding:0}
+    .grat,.ping{animation:none !important}
+    .board,.tiers,.brandgrid,.qgrid,.annots,.srcsplit{break-inside:avoid;page-break-inside:avoid}
+    .caption,.askq,.sec{break-after:avoid;page-break-after:avoid}
+    .sec.pb{break-before:page;page-break-before:always}
+    footer{break-inside:avoid}
+    a{text-decoration:none;color:var(--brand)}
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="mast">
+    <div class="mark">
+      <svg width="38" height="38" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <ellipse cx="20" cy="20" rx="18" ry="7" fill="none" stroke="currentColor" stroke-width="1" opacity=".45"/>
+        <ellipse cx="20" cy="20" rx="7.5" ry="18" fill="none" stroke="currentColor" stroke-width="1" opacity=".45"/>
+        <circle cx="24.5" cy="23.5" r="3.6" fill="#C4553B"/>
+      </svg>
+      <div>
+        <h1>Mappealo</h1>
+        <div class="sub">Wireframes &amp; Product Direction</div>
+      </div>
+    </div>
+    <div class="meta">
+      NYU Urban Systems Lab<br>
+      La Maraña · Rebuild by Design<br>
+      v2 — working draft
+    </div>
+  </div>
+
+  <p class="lede">
+    A geospatial planning assistant for Puerto Rico communities. Five screens, each built around a
+    real question a community member or planner would ask — and each showing the thing that makes
+    the product defensible: <strong>every claim is labelled by how it was established, and traceable
+    to the document or layer it came from.</strong>
+  </p>
+
+  <!-- ============ A · IDENTITY ============ -->
+  <div class="sec"><span class="n">A</span><h2>Identity</h2><span class="note">Mark · Palette · Type</span></div>
+  <div class="brandgrid">
+    <div class="bcard">
+      <h3>Mark &amp; wordmark</h3>
+      <div class="lockup-row">
+        <svg width="30" height="30" viewBox="0 0 40 40" aria-hidden="true" style="color:var(--brand)">
+          <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <ellipse cx="20" cy="20" rx="18" ry="7" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".5"/>
+          <ellipse cx="20" cy="20" rx="7.5" ry="18" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".5"/>
+          <circle cx="24.5" cy="23.5" r="3.8" fill="var(--coral)"/>
+        </svg>
+        <span class="wm" style="color:var(--brand)">Mappealo</span>
+      </div>
+      <div class="lockup-row inv">
+        <svg width="26" height="26" viewBox="0 0 40 40" aria-hidden="true" style="color:#F7F3EA">
+          <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <ellipse cx="20" cy="20" rx="18" ry="7" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".5"/>
+          <circle cx="24.5" cy="23.5" r="3.8" fill="#E0765C"/>
+        </svg>
+        <span class="wm">Mappealo</span>
+      </div>
+      <p style="font-size:11.5px;color:var(--ink-2);margin:14px 0 0;line-height:1.55">
+        A graticule with a single marker set on Puerto Rico. The name stays untranslated in both languages.
+      </p>
+    </div>
+    <div class="bcard">
+      <h3>Palette</h3>
+      <div class="sw">
+        <div style="background:#0B5D4B"></div><div style="background:#0D9488"></div>
+        <div style="background:#B8860B"></div><div style="background:#5B7C8D"></div>
+        <div style="background:#C4553B"></div><div style="background:#EDE7DA"></div>
+      </div>
+      <div class="swlabel">
+        <span>Jungle</span><span>Verified</span><span>Computed</span><span>Inferred</span><span>Hazard</span><span>Limestone</span>
+      </div>
+      <p style="font-size:11.5px;color:var(--ink-2);margin:13px 0 0;line-height:1.55">
+        Three of the six colors are load-bearing: they encode how a fact was established.
+        Coral is reserved for hazard. Nothing is decorative.
+      </p>
+    </div>
+    <div class="bcard spec">
+      <h3>Typography</h3>
+      <div class="big">¿Qué puedo construir aquí?</div>
+      <div class="mid">Interface and body text stays plain and legible at small sizes, in both languages.</div>
+      <div class="sm">2.4 KM · 18.03° N, 66.85° W</div>
+      <p style="font-size:11.5px;color:var(--ink-2);margin:14px 0 0;line-height:1.55">
+        Serif display borrows from printed planning documents — the authority the tool cites.
+        Mono carries every measured value.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ B · CONFIDENCE ============ -->
+  <div class="sec"><span class="n">B</span><h2>Confidence taxonomy</h2><span class="note">The core design system</span></div>
+  <p style="font-size:13.5px;color:var(--ink-2);max-width:70ch;margin:0 0 20px;line-height:1.6">
+    Not every statement in an answer is established the same way. A distance the system measured is not
+    the same kind of fact as a zone classification read off an official layer. The interface
+    labels each one, so a reader can tell at a glance what to rely on — and a single answer can
+    carry more than one tier.
+  </p>
+  <div class="tiers">
+    <div class="tier t-ver">
+      <div class="tname"><span class="tdot" style="background:var(--teal)"></span>Verificado</div>
+      <h4>Stated in an official source</h4>
+      <p>Read directly from a government layer or quoted from an adopted plan. The strongest claim the tool makes.</p>
+      <div class="ex">EX · “Dentro de zona inundable FEMA 2009”<br>FUENTE · Capa oficial FEMA</div>
+    </div>
+    <div class="tier t-cal">
+      <div class="tname"><span class="tdot" style="background:var(--sand)"></span>Calculado</div>
+      <h4>Measured by the system</h4>
+      <p>Computed geometrically — distance, count, overlap. Accurate as arithmetic, but the method and its limits are stated.</p>
+      <div class="ex">EX · “2.4 km en línea recta”<br>MÉTODO · Distancia euclidiana, no por carretera</div>
+    </div>
+    <div class="tier t-inf">
+      <div class="tname"><span class="tdot" style="background:var(--slate)"></span>Inferido</div>
+      <h4>Synthesized from document text</h4>
+      <p>Summarized or interpreted from prose in a plan. Always paired with the passage it came from so a reader can check it.</p>
+      <div class="ex">EX · “El plan prioriza vivienda resiliente”<br>FUENTE · Plan de Mitigación, secc. 4.6</div>
+    </div>
+    <div class="tier t-non">
+      <div class="tname"><span class="tdot" style="background:var(--ink-2)"></span>Sin dato</div>
+      <h4>Not in the library</h4>
+      <p>The documents do not answer it. The tool says so and routes the user onward — and shows no citations.</p>
+      <div class="ex">EX · “No hay información suficiente”<br>ACCIÓN · Remite a Junta de Planificación / OGPe</div>
+    </div>
+  </div>
+
+  <!-- ============ 01 ============ -->
+  <div class="sec pb"><span class="n">01</span><h2>Landing &amp; entry</h2><span class="note">Screen 1 of 5</span></div>
+  <div class="caption">
+    <span class="cn">01</span><h3>Bilingual from the first touch</h3>
+    <p>The day-one question, asked plainly. No jargon, no account, no empty text box.</p>
+  </div>
+  <div class="askq"><span class="lbl">The question this screen is built for</span>
+    “What information should I review to determine what can be built on a piece of land in Puerto Rico?”</div>
+  <div class="board">
+    <div class="bhead"><div class="dots"><i></i><i></i><i></i></div><div class="burl">mappealo.org</div></div>
+    <div class="app-top">
+      <svg width="19" height="19" viewBox="0 0 40 40" aria-hidden="true" style="color:#F2EEE4">
+        <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2"/>
+        <ellipse cx="20" cy="20" rx="18" ry="7" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".55"/>
+        <circle cx="24.5" cy="23.5" r="4" fill="#E0765C"/>
+      </svg>
+      <span class="wm">Mappealo</span>
+      <div class="nav"><span>Mapa</span><span>Datos</span><span>Sobre</span></div>
+      <div class="lang"><b class="on">ES</b><b class="off">EN</b></div>
+    </div>
+    <div class="hero">
+      <div>
+        <h2>¿Qué necesitas saber sobre un terreno en Puerto Rico?</h2>
+        <p>Pregunta en español o inglés. Cada respuesta indica de dónde viene
+           y qué tan firme es el dato.</p>
+        <div class="askbar">
+          <span class="ph">¿Qué debo revisar para saber qué se puede construir en un terreno?</span>
+          <span class="go">➤</span>
+        </div>
+        <div class="starters">
+          <span class="starter">¿Puedo construir en zona inundable?</span>
+          <span class="starter">¿Dónde están los refugios?</span>
+          <span class="starter">Explorar el mapa →</span>
+        </div>
+        <div class="trust">
+          <div><b>78</b>municipios</div>
+          <div><b>84</b>planes cargados</div>
+          <div><b>100%</b>con fuente</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center">
+        <svg class="globe" viewBox="0 0 300 300" aria-label="Globe centered on Puerto Rico">
+          <defs>
+            <radialGradient id="gs" cx="38%" cy="32%">
+              <stop offset="0%" stop-color="var(--teal)" stop-opacity=".30"/>
+              <stop offset="70%" stop-color="var(--brand)" stop-opacity=".16"/>
+              <stop offset="100%" stop-color="var(--brand)" stop-opacity=".06"/>
+            </radialGradient>
+            <clipPath id="gc"><circle cx="150" cy="150" r="118"/></clipPath>
+          </defs>
+          <circle cx="150" cy="150" r="118" fill="url(#gs)" stroke="var(--brand)" stroke-width="1.3"/>
+          <g class="grat" clip-path="url(#gc)" stroke="var(--brand)" fill="none" opacity=".34" stroke-width=".9">
+            <ellipse cx="150" cy="150" rx="118" ry="40"/><ellipse cx="150" cy="150" rx="118" ry="78"/>
+            <ellipse cx="150" cy="150" rx="40" ry="118"/><ellipse cx="150" cy="150" rx="78" ry="118"/>
+            <line x1="32" y1="150" x2="268" y2="150"/><line x1="150" y1="32" x2="150" y2="268"/>
+          </g>
+          <g clip-path="url(#gc)" fill="var(--brand)" opacity=".28">
+            <path d="M74 96 q26-16 47-4 t28 20 q-8 20-30 22 t-40-10 z"/>
+            <path d="M150 176 q22-8 32 10 t6 44 q-20 10-32-8 t-6-46 z"/>
+          </g>
+          <circle class="ping" cx="186" cy="158" r="7" fill="var(--coral)" opacity=".5"/>
+          <circle cx="186" cy="158" r="5" fill="var(--coral)" stroke="#F7F3EA" stroke-width="1.5"/>
+          <text x="198" y="152" font-family="ui-monospace,monospace" font-size="9"
+                fill="var(--ink-2)" letter-spacing="1">PUERTO RICO</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="annots">
+    <div class="ann"><span class="k">1</span><div><b>One question, front and centre</b><span>The search bar is pre-filled with the day-one question rather than a blank prompt.</span></div></div>
+    <div class="ann"><span class="k">2</span><div><b>Genuinely bilingual</b><span>ES/EN switches the whole product — interface, layer names, and the answer — not browser translate.</span></div></div>
+    <div class="ann"><span class="k">3</span><div><b>Counts as proof</b><span>Coverage stated up front, drawn live from the database.</span></div></div>
+  </div>
+
+  <!-- ============ 02 ============ -->
+  <div class="sec pb"><span class="n">02</span><h2>Confidence-tiered answer</h2><span class="note">Screen 2 of 5</span></div>
+  <div class="caption">
+    <span class="cn">02</span><h3>Two kinds of fact in one answer</h3>
+    <p>A measured distance and an official classification, each labelled for what it is.</p>
+  </div>
+  <div class="askq"><span class="lbl">The question this screen is built for</span>
+    “Which hospital or health center is closest in a straight line to this Yabucoa community,
+    and is that facility inside a flood or landslide zone?”</div>
+  <div class="board">
+    <div class="bhead"><div class="dots"><i></i><i></i><i></i></div><div class="burl">mappealo.org/mapa/yabucoa</div></div>
+    <div class="app-top"><span class="wm">Mappealo</span>
+      <div class="lang"><b class="on">ES</b><b class="off">EN</b></div></div>
+    <div class="split">
+      <div class="pane">
+        <div class="chat-msgs">
+          <div class="bub u">¿Cuál hospital o centro de salud está más cerca en línea recta de esta comunidad
+            en Yabucoa, y está dentro de zona inundable o de deslizamiento?</div>
+          <div class="bub b">
+            <div class="who">Mappealo</div>
+            El centro de salud más cercano es el <b>CDT de Yabucoa</b>.
+
+            <div class="fact cal">
+              <div class="fh"><span class="fv">2.4 km</span>
+                <span class="chip c-cal"><i></i>Calculado</span></div>
+              <div class="fn">Distancia en línea recta desde el centroide de la comunidad.
+                No es distancia por carretera ni tiempo de viaje.</div>
+            </div>
+
+            <div class="fact ver">
+              <div class="fh"><span class="fv">En zona inundable</span>
+                <span class="chip c-ver"><i></i>Verificado</span></div>
+              <div class="fn">El CDT cae dentro de la zona inundable FEMA FIRM 2009 <b>[1]</b>.
+                Fuera de zona susceptible a deslizamientos <b>[2]</b>.</div>
+            </div>
+
+            <div class="srcs">
+              <div class="sh">Fuentes</div>
+              <a>🗺️ Zonas inundables FEMA FIRM · 2009</a>
+              <a>🗺️ Susceptibilidad a deslizamientos USGS · 2020</a>
+              <a>🗺️ Hospitales y CDTs · Depto. de Salud</a>
+            </div>
+          </div>
+        </div>
+        <div class="composer">
+          <div class="inp">¿Y el siguiente más cercano fuera de zona inundable?</div>
+          <div class="send">➤</div>
+        </div>
+      </div>
+      <div class="pane">
+        <div class="maptools">
+          <span class="mtool on">◉ Punto</span><span class="mtool">⬟ Área</span>
+          <span class="mtool">⇔ Medir</span><span class="mtool" style="margin-left:auto">Capas (3)</span>
+        </div>
+        <div class="mapface">
+          <svg viewBox="0 0 340 200" style="width:94%">
+            <path d="M30 150 q40-60 110-70 t150 20 q20 50-40 80 t-160 10 z"
+                  fill="var(--brand)" opacity=".1" stroke="var(--brand)" stroke-width="1.2"/>
+            <path d="M120 100 q60-20 120 10 q-20 40-90 34 t-30-44 z" fill="#2b6cb0" opacity=".3"/>
+            <circle cx="128" cy="132" r="6" fill="var(--coral)" stroke="#F7F3EA" stroke-width="1.8"/>
+            <circle cx="224" cy="106" r="6" fill="#c53030" stroke="#F7F3EA" stroke-width="1.8"/>
+            <line x1="128" y1="132" x2="224" y2="106" stroke="var(--sand)" stroke-width="2" stroke-dasharray="5 4"/>
+            <text x="158" y="112" font-family="ui-monospace,monospace" font-size="10"
+                  fill="var(--sand)" font-weight="bold">2.4 km</text>
+            <text x="96" y="152" font-family="ui-monospace,monospace" font-size="8.5" fill="var(--ink-2)">COMUNIDAD</text>
+            <text x="232" y="100" font-family="ui-monospace,monospace" font-size="8.5" fill="var(--ink-2)">CDT</text>
+          </svg>
+          <span class="mapchip" style="top:12px;left:12px">📍 Yabucoa</span>
+          <div class="lgd" style="right:13px;bottom:13px">
+            <div class="lr"><span class="lk" style="background:#2b6cb0;opacity:.5"></span>Zona inundable 2009</div>
+            <div class="lr"><span class="lk" style="background:#c53030;border-radius:50%;width:9px;height:9px"></span>CDT / hospital</div>
+            <div class="lr"><span class="lk" style="background:var(--sand)"></span>Distancia calculada</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="annots">
+    <div class="ann"><span class="k">1</span><div><b>The contrast is the point</b><span>Amber “calculado” beside teal “verificado” shows, without explanation, that these are different kinds of claim.</span></div></div>
+    <div class="ann"><span class="k">2</span><div><b>Method stated, not buried</b><span>“Straight line, not by road” appears with the number — the limitation travels with the fact.</span></div></div>
+    <div class="ann"><span class="k">3</span><div><b>The map proves the measurement</b><span>The dashed line on the map is the same 2.4 km stated in the answer.</span></div></div>
+    <div class="ann"><span class="k">4</span><div><b>Follow-up is anticipated</b><span>“The next closest one outside a flood zone” is offered as the natural next question.</span></div></div>
+  </div>
+
+  <!-- ============ 03 ============ -->
+  <div class="sec pb"><span class="n">03</span><h2>Map selection drives the question</h2><span class="note">Screen 3 of 5</span></div>
+  <div class="caption">
+    <span class="cn">03</span><h3>Draw an area, ask about what's inside it</h3>
+    <p>The hybrid moment: the map supplies the context the question depends on.</p>
+  </div>
+  <div class="askq"><span class="lbl">The question this screen is built for</span>
+    “For the community outlined on the map in Naranjito, identify bridges and road segments
+    exposed to flooding or landslides.”</div>
+  <div class="board">
+    <div class="bhead"><div class="dots"><i></i><i></i><i></i></div><div class="burl">mappealo.org/mapa/naranjito</div></div>
+    <div class="app-top"><span class="wm">Mappealo</span>
+      <div class="lang"><b class="on">ES</b><b class="off">EN</b></div></div>
+    <div class="split">
+      <div class="pane">
+        <div class="chat-msgs">
+          <div style="align-self:flex-end;display:flex;align-items:center;gap:6px;
+                      background:rgba(13,148,136,.14);border:1px dashed var(--teal);border-radius:8px;
+                      padding:5px 10px;font-size:10px;font-family:var(--mono);color:var(--teal);
+                      letter-spacing:.05em">⬟ SELECCIÓN EN MAPA · 4.2 km²</div>
+          <div class="bub u">Para la comunidad delimitada en el mapa, identifica puentes y segmentos
+            de carretera expuestos a inundación o deslizamiento.</div>
+          <div class="bub b">
+            <div class="who">Mappealo</div>
+            Dentro del área seleccionada hay <b>3 puentes</b> y <b>6.8 km</b> de carretera estatal.
+
+            <div class="fact cal">
+              <div class="fh"><span class="fv">2 de 3 puentes expuestos</span>
+                <span class="chip c-cal"><i></i>Calculado</span></div>
+              <div class="fn">Intersección geométrica entre la capa de puentes y las zonas de riesgo
+                dentro del polígono dibujado.</div>
+            </div>
+            <div class="fact ver">
+              <div class="fh"><span class="fv">3.1 km en zona inundable</span>
+                <span class="chip c-ver"><i></i>Verificado</span></div>
+              <div class="fn">PR-164 y PR-152 cruzan zona inundable FEMA 2009 <b>[1]</b>.
+                1.4 km adicionales en ladera susceptible a deslizamiento <b>[2]</b>.</div>
+            </div>
+            <div class="fact inf">
+              <div class="fh"><span class="fv">Ruta de evacuación afectada</span>
+                <span class="chip c-inf"><i></i>Inferido</span></div>
+              <div class="fn">El plan municipal identifica la PR-164 como vía de acceso crítica
+                para esta zona <b>[3]</b>.</div>
+            </div>
+            <div class="srcs">
+              <div class="sh">Fuentes</div>
+              <a>🗺️ Carreteras estatales · 2021</a>
+              <a>🗺️ Zonas inundables FEMA · 2009</a>
+              <a>📄 Plan de Mitigación — Naranjito · 2021</a>
+            </div>
+          </div>
+        </div>
+        <div class="composer"><div class="inp">Escribe tu pregunta…</div><div class="send">➤</div></div>
+      </div>
+      <div class="pane">
+        <div class="maptools">
+          <span class="mtool">◉ Punto</span><span class="mtool on">⬟ Área</span>
+          <span class="mtool">⇔ Medir</span><span class="mtool" style="margin-left:auto">Borrar selección</span>
+        </div>
+        <div class="mapface">
+          <svg viewBox="0 0 340 200" style="width:94%">
+            <path d="M20 140 q50-70 120-76 t170 30 q14 60-50 84 t-180 4 z"
+                  fill="var(--brand)" opacity=".09" stroke="var(--brand)" stroke-width="1.1"/>
+            <path d="M110 90 q70-16 130 16 q-24 42-100 36 t-30-52 z" fill="#2b6cb0" opacity=".26"/>
+            <path d="M180 62 q46 8 66 30 q-30 12-62 0 t-4-30 z" fill="#b7791f" opacity=".3"/>
+            <!-- roads -->
+            <path d="M60 150 q70-40 120-30 t130 -20" stroke="#333" stroke-width="2" fill="none" opacity=".55"/>
+            <path d="M120 176 q40-60 96-74" stroke="#333" stroke-width="2" fill="none" opacity=".55"/>
+            <!-- exposed segments -->
+            <path d="M138 116 q48-16 92 4" stroke="var(--coral)" stroke-width="3.4" fill="none"/>
+            <path d="M156 132 q28-30 54-42" stroke="var(--coral)" stroke-width="3.4" fill="none"/>
+            <!-- selection polygon -->
+            <path d="M96 74 L214 60 L246 128 L166 166 L88 138 Z" fill="var(--teal)" fill-opacity=".1"
+                  stroke="var(--teal)" stroke-width="2" stroke-dasharray="7 5"/>
+            <g fill="#F7F3EA" stroke="var(--coral)" stroke-width="2.2">
+              <rect x="150" y="108" width="9" height="9" rx="1.5"/>
+              <rect x="196" y="112" width="9" height="9" rx="1.5"/>
+            </g>
+            <rect x="120" y="148" width="9" height="9" rx="1.5" fill="#F7F3EA" stroke="var(--brand)" stroke-width="2.2"/>
+          </svg>
+          <span class="mapchip" style="top:12px;left:12px">⬟ Área seleccionada · 4.2 km²</span>
+          <div class="lgd" style="right:13px;bottom:13px">
+            <div class="lr"><span class="lk" style="background:var(--coral)"></span>Vía expuesta</div>
+            <div class="lr"><span class="lk" style="background:#F7F3EA;border:2px solid var(--coral)"></span>Puente expuesto</div>
+            <div class="lr"><span class="lk" style="background:var(--teal);opacity:.35"></span>Tu selección</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="annots">
+    <div class="ann"><span class="k">1</span><div><b>Selection is a first-class input</b><span>The drawn polygon appears in the conversation as a tagged chip, so the answer's scope is explicit and re-runnable.</span></div></div>
+    <div class="ann"><span class="k">2</span><div><b>Three tiers in one answer</b><span>Counted intersections, an official classification, and an inference from the municipal plan — each marked.</span></div></div>
+    <div class="ann"><span class="k">3</span><div><b>The map renders the finding</b><span>Exposed segments and bridges highlight in place; the answer and the map never disagree.</span></div></div>
+  </div>
+
+  <!-- ============ 04 ============ -->
+  <div class="sec pb"><span class="n">04</span><h2>Reasoning across domains</h2><span class="note">Screen 4 of 5</span></div>
+  <div class="caption">
+    <span class="cn">04</span><h3>One question, five datasets</h3>
+    <p>Cadastre, zoning, hazard, mobility and public services resolved into a single comparison.</p>
+  </div>
+  <div class="askq"><span class="lbl">The question this screen is built for</span>
+    “Compare the four selected lots for a community center based on size, permitted use, risks,
+    pedestrian access, and proximity to schools and health centers.”</div>
+  <div class="board">
+    <div class="bhead"><div class="dots"><i></i><i></i><i></i></div><div class="burl">mappealo.org/comparar</div></div>
+    <div class="app-top"><span class="wm">Mappealo</span>
+      <div class="lang"><b class="on">ES</b><b class="off">EN</b></div></div>
+    <div style="padding:20px 22px;background:var(--card)">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+        <div style="font-family:var(--serif);font-size:20px">Cuatro solares · Centro comunitario</div>
+        <span class="mapchip" style="position:static">⬟ 4 seleccionados en el mapa</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--ink-2)">5 conjuntos de datos combinados</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="cmp">
+          <thead><tr>
+            <th style="width:128px">Criterio</th>
+            <th>Solar A · Bo. Palmas</th><th>Solar B · Bo. Río</th>
+            <th>Solar C · Centro</th><th>Solar D · Bo. Cedro</th>
+          </tr></thead>
+          <tbody>
+            <tr><th>Tamaño <span class="chip c-ver" style="margin-left:4px"><i></i>Ver</span></th>
+              <td>1,240 m²</td><td class="best">2,180 m²</td><td>960 m²</td><td>1,510 m²</td></tr>
+            <tr><th>Uso permitido <span class="chip c-ver" style="margin-left:4px"><i></i>Ver</span></th>
+              <td>Residencial</td><td class="best">Dotacional</td><td class="best">Dotacional</td><td>Rústico común</td></tr>
+            <tr><th>Inundación <span class="chip c-ver" style="margin-left:4px"><i></i>Ver</span></th>
+              <td class="warn">Zona AE</td><td>Fuera</td><td>Fuera</td><td class="warn">Zona AE</td></tr>
+            <tr><th>Deslizamiento <span class="chip c-ver" style="margin-left:4px"><i></i>Ver</span></th>
+              <td>Bajo</td><td>Bajo</td><td>Bajo</td><td class="warn">Alto</td></tr>
+            <tr><th>Acceso peatonal <span class="chip c-cal" style="margin-left:4px"><i></i>Cal</span></th>
+              <td>340 m a parada</td><td class="best">120 m a parada</td><td>90 m a parada</td><td>1,100 m</td></tr>
+            <tr><th>Escuelas &lt;1 km <span class="chip c-cal" style="margin-left:4px"><i></i>Cal</span></th>
+              <td>2</td><td class="best">3</td><td class="best">4</td><td>0</td></tr>
+            <tr><th>Salud &lt;2 km <span class="chip c-cal" style="margin-left:4px"><i></i>Cal</span></th>
+              <td>1</td><td>1</td><td class="best">2</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:16px;margin-top:17px">
+        <div class="bub b" style="max-width:100%">
+          <div class="who">Mappealo</div>
+          <div class="fact inf" style="margin-top:0">
+            <div class="fh"><span class="fv">Solar B es el más adecuado</span>
+              <span class="chip c-inf"><i></i>Inferido</span></div>
+            <div class="fn">Es el único que combina tamaño suficiente, uso dotacional permitido y
+              ubicación fuera de zona inundable. Solar C tiene mejor acceso a servicios pero
+              menos de la mitad del área. Solares A y D quedan descartados por riesgo.</div>
+          </div>
+          <div style="font-size:10.5px;color:var(--ink-2);margin-top:8px;line-height:1.55">
+            Esta recomendación es una síntesis, no una determinación regulatoria.
+            Cada dato de origen está marcado arriba y enlazado abajo.
+          </div>
+          <div class="srcs">
+            <div class="sh">Fuentes</div>
+            <a>🗺️ Catastro CRIM · 2023 &nbsp;·&nbsp; 🗺️ Plan de Uso de Terrenos · 2015</a>
+            <a>🗺️ FEMA FIRM · 2009 &nbsp;·&nbsp; 🗺️ Deslizamientos USGS · 2020</a>
+            <a>🗺️ Escuelas · 2021 &nbsp;·&nbsp; 🗺️ Hospitales y CDTs · 2023</a>
+          </div>
+        </div>
+        <div class="mapface" style="min-height:196px;border:1px solid var(--line-soft);border-radius:5px">
+          <svg viewBox="0 0 220 170" style="width:92%">
+            <path d="M16 130 q40-56 96-62 t96 22 q10 44-40 62 t-152 -22 z"
+                  fill="var(--brand)" opacity=".09" stroke="var(--brand)" stroke-width="1"/>
+            <path d="M26 108 q50-14 96 6 q-18 34-70 30 t-26-36 z" fill="#2b6cb0" opacity=".26"/>
+            <rect x="46" y="98" width="20" height="16" rx="2" fill="var(--coral)" fill-opacity=".45"
+                  stroke="var(--coral)" stroke-width="1.6"/>
+            <rect x="108" y="66" width="26" height="20" rx="2" fill="var(--teal)" fill-opacity=".5"
+                  stroke="var(--teal)" stroke-width="2.2"/>
+            <rect x="150" y="86" width="16" height="14" rx="2" fill="var(--teal)" fill-opacity=".25"
+                  stroke="var(--teal)" stroke-width="1.6"/>
+            <rect x="82" y="126" width="18" height="15" rx="2" fill="var(--coral)" fill-opacity=".45"
+                  stroke="var(--coral)" stroke-width="1.6"/>
+            <text x="52" y="95" font-family="ui-monospace,monospace" font-size="8" fill="var(--ink-2)">A</text>
+            <text x="116" y="62" font-family="ui-monospace,monospace" font-size="8.5"
+                  fill="var(--teal)" font-weight="bold">B</text>
+            <text x="154" y="83" font-family="ui-monospace,monospace" font-size="8" fill="var(--ink-2)">C</text>
+            <text x="87" y="123" font-family="ui-monospace,monospace" font-size="8" fill="var(--ink-2)">D</text>
+          </svg>
+          <span class="mapchip" style="bottom:9px;left:9px;font-size:9px">B recomendado</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="annots">
+    <div class="ann"><span class="k">1</span><div><b>Tier labels sit on the criteria</b><span>Every row declares whether it was read from a source or measured — the taxonomy scales to tables, not just prose.</span></div></div>
+    <div class="ann"><span class="k">2</span><div><b>The recommendation is marked “inferred”</b><span>The synthesis is explicitly the softest claim on the screen, and says so.</span></div></div>
+    <div class="ann"><span class="k">3</span><div><b>Six datasets, one answer</b><span>Cadastre, zoning, two hazard layers, transit and public facilities resolved together.</span></div></div>
+  </div>
+
+  <!-- ============ 05 ============ -->
+  <div class="sec pb"><span class="n">05</span><h2>Source &amp; plain language</h2><span class="note">Screen 5 of 5</span></div>
+  <div class="caption">
+    <span class="cn">05</span><h3>The regulation, and what it actually means</h3>
+    <p>Exact cited text on one side, plain-language conditions on the other. Never one without the other.</p>
+  </div>
+  <div class="askq"><span class="lbl">The question this screen is built for</span>
+    “For the selected parcel, cite the sections governing the proposed use and explain in
+    plain language what conditions they establish.”</div>
+  <div class="board">
+    <div class="bhead"><div class="dots"><i></i><i></i><i></i></div><div class="burl">mappealo.org/parcela/094-052-118-06</div></div>
+    <div class="app-top"><span class="wm">Mappealo</span>
+      <div class="lang"><b class="on">ES</b><b class="off">EN</b></div></div>
+    <div style="padding:20px 22px;background:var(--card)">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:15px;flex-wrap:wrap">
+        <div>
+          <div style="font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--ink-2)">PARCELA · CRIM</div>
+          <div style="font-family:var(--serif);font-size:22px;letter-spacing:-.01em">094-052-118-06</div>
+        </div>
+        <span class="mapchip" style="position:static">Uso propuesto · Centro comunitario</span>
+        <span class="chip c-ver" style="margin-left:auto"><i></i>3 secciones citadas</span>
+      </div>
+      <div class="srcsplit">
+        <div class="left">
+          <div class="sh2">Texto citado · Reglamento Conjunto 2020</div>
+          <div class="quote">
+            “§ 6.2.4 — En distritos dotacionales (D-1), se permitirá el uso institucional comunitario
+            siempre que la estructura no exceda el cincuenta por ciento (50%) de ocupación del solar…”
+          </div>
+          <div class="quote">
+            “§ 6.2.9 — Todo uso institucional deberá proveer un mínimo de un (1) espacio de
+            estacionamiento por cada cincuenta (50) metros cuadrados de área bruta…”
+          </div>
+          <div class="quote">
+            “§ 9.1.2 — En terrenos dentro de zona inundable especial, se requerirá elevación mínima
+            sobre la elevación base de inundación conforme a los mapas FIRM vigentes…”
+          </div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--ink-2);margin-top:11px;
+                      border-top:1px solid var(--line);padding-top:8px;line-height:1.7">
+            FUENTE · Reglamento Conjunto 2020, Junta de Planificación<br>
+            PROCEDENCIA · Inventario La Maraña
+          </div>
+        </div>
+        <div>
+          <div class="sh2">En lenguaje sencillo <span class="chip c-inf" style="margin-left:6px"><i></i>Inferido</span></div>
+          <div class="plain">
+            <b>Sí se puede construir un centro comunitario aquí</b>, con tres condiciones:
+            <ul>
+              <li><b>La mitad del solar debe quedar libre.</b> El edificio no puede cubrir más del
+                50% del terreno — en este solar de 2,180 m², eso son 1,090 m² máximo. <b>[§6.2.4]</b></li>
+              <li><b>Hace falta estacionamiento.</b> Un espacio por cada 50 m² construidos —
+                unos 22 espacios si se construye al máximo. <b>[§6.2.9]</b></li>
+              <li><b>No aplica elevación por inundación.</b> Esta parcela queda fuera de zona
+                inundable especial, así que §9.1.2 no le aplica. <b>[§9.1.2]</b></li>
+            </ul>
+          </div>
+          <div style="background:var(--paper);border:1px solid var(--line-soft);border-radius:6px;
+                      padding:10px 12px;margin-top:12px;font-size:11px;color:var(--ink-2);line-height:1.6">
+            Esta interpretación resume el texto citado a la izquierda. No sustituye una consulta
+            formal con la OGPe ni una determinación de la Junta de Planificación.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="annots">
+    <div class="ann"><span class="k">1</span><div><b>Side by side, always</b><span>Plain language never appears without the exact section text beside it — a reader can check the interpretation in one glance.</span></div></div>
+    <div class="ann"><span class="k">2</span><div><b>Interpretation is labelled inferred</b><span>The regulation is verified; the explanation of it is not. The screen distinguishes them.</span></div></div>
+    <div class="ann"><span class="k">3</span><div><b>Applied to this parcel</b><span>Generic rules resolved into real numbers for this lot — 1,090 m², 22 spaces — and a section marked not applicable.</span></div></div>
+    <div class="ann"><span class="k">4</span><div><b>Limits stated in place</b><span>The disclaimer sits with the interpretation, not in a footer nobody reads.</span></div></div>
+  </div>
+
+  <!-- ============ C ============ -->
+  <div class="sec pb"><span class="n">C</span><h2>Open questions for the team</h2><span class="note">Decisions needed</span></div>
+  <div class="qgrid">
+    <div class="qcard">
+      <h4>Confidence taxonomy — feasibility</h4>
+      <p>Verified / computed / inferred is designed here. The system must be able to tell them apart
+         before the UI can show them. Needs an engineering spike alongside the design.</p>
+    </div>
+    <div class="qcard">
+      <h4>Datasets not yet loaded</h4>
+      <p>Screens 04 and 05 assume cadastre (CRIM), zoning districts and transit stops.
+         Currently we hold hazard, facility and boundary layers plus 84 municipal plans.</p>
+    </div>
+    <div class="qcard">
+      <h4>Public access</h4>
+      <p>NYU policy currently blocks anonymous access. Org-policy exception, or move the front end
+         to the ClimateIQ pattern? Blocks any public launch.</p>
+    </div>
+    <div class="qcard">
+      <h4>Inventory reconciliation</h4>
+      <p>84 plans are loaded from a government manifest. These should be matched against
+         La Maraña's official inventory before launch.</p>
+    </div>
+  </div>
+
+  <footer>
+    <span>Mappealo — wireframes v2 · working draft, not final visual design</span>
+    <span>NYU Urban Systems Lab · La Maraña · Rebuild by Design</span>
+  </footer>
+</div>

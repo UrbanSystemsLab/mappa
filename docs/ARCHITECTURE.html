@@ -1,0 +1,490 @@
+<title>Mappealo Platform Architecture</title>
+<style>
+  :root{
+    --bg:#F4F2ED; --surface:#FFFFFF; --surface-2:#EAE7E0; --ink:#141A18; --ink-2:#5A6560;
+    --line:#D9D4CA; --line-2:#EDEAE3;
+    --brand:#0B5D4B; --teal:#0D9488; --amber:#B8860B; --red:#B3392A; --slate:#5B7C8D;
+    --ok-bg:rgba(13,148,136,.12); --warn-bg:rgba(184,134,11,.13); --crit-bg:rgba(179,57,42,.11);
+    --shadow:0 1px 2px rgba(20,26,24,.05),0 6px 20px rgba(20,26,24,.06);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0F1413; --surface:#171E1C; --surface-2:#1E2725; --ink:#E8E4DB; --ink-2:#94A39D;
+      --line:#2A3633; --line-2:#212B28;
+      --brand:#4FB79B; --teal:#2FC7B4; --amber:#D9B443; --red:#E0705C; --slate:#7FA3B5;
+      --ok-bg:rgba(47,199,180,.13); --warn-bg:rgba(217,180,67,.13); --crit-bg:rgba(224,112,92,.13);
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0F1413; --surface:#171E1C; --surface-2:#1E2725; --ink:#E8E4DB; --ink-2:#94A39D;
+    --line:#2A3633; --line-2:#212B28;
+    --brand:#4FB79B; --teal:#2FC7B4; --amber:#D9B443; --red:#E0705C; --slate:#7FA3B5;
+    --ok-bg:rgba(47,199,180,.13); --warn-bg:rgba(217,180,67,.13); --crit-bg:rgba(224,112,92,.13);
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px;margin:0 auto;padding:44px 24px 90px}
+
+  .mast{border-bottom:2px solid var(--ink);padding-bottom:16px;display:flex;
+        justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+  .mast h1{font-family:var(--serif);font-size:38px;margin:0;letter-spacing:-.025em;line-height:1.05}
+  .mast .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;
+           color:var(--brand);margin-bottom:7px}
+  .mast .meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);text-align:right;line-height:1.9}
+  .verdict{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--red);
+           border-radius:5px;padding:20px 24px;margin:26px 0 8px;box-shadow:var(--shadow)}
+  .verdict h2{font-family:var(--serif);font-size:21px;margin:0 0 9px;letter-spacing:-.01em}
+  .verdict p{margin:0 0 10px;font-size:14.5px;max-width:76ch}
+  .verdict p:last-child{margin-bottom:0}
+  .verdict b{color:var(--ink)}
+
+  h2.sec{font-family:var(--serif);font-size:26px;margin:58px 0 6px;letter-spacing:-.015em;
+         display:flex;align-items:baseline;gap:13px}
+  h2.sec .num{font-family:var(--mono);font-size:11px;color:var(--brand);letter-spacing:.12em}
+  .subhead{color:var(--ink-2);font-size:14px;margin:0 0 22px;max-width:78ch}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0;background:var(--surface);
+        border:1px solid var(--line);border-radius:5px;overflow:hidden}
+  thead th{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+           color:var(--ink-2);background:var(--surface-2);padding:9px 13px;text-align:left;font-weight:600}
+  td{padding:10px 13px;border-top:1px solid var(--line-2);vertical-align:top}
+  td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tw{overflow-x:auto}
+
+  .sev{display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;
+       padding:2px 8px;border-radius:3px;letter-spacing:.06em;text-transform:uppercase;
+       font-family:var(--sans);white-space:nowrap}
+  .s-crit{background:var(--crit-bg);color:var(--red)}
+  .s-warn{background:var(--warn-bg);color:var(--amber)}
+  .s-ok{background:var(--ok-bg);color:var(--teal)}
+
+  .finding{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:17px 20px;
+           margin:14px 0;border-left:3px solid var(--fc)}
+  .finding.crit{--fc:var(--red)} .finding.warn{--fc:var(--amber)} .finding.ok{--fc:var(--teal)}
+  .finding h4{font-family:var(--serif);font-size:17px;margin:0 0 4px;letter-spacing:-.01em;
+              display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .finding p{margin:7px 0 0;font-size:13.5px;color:var(--ink-2);max-width:80ch}
+  .finding p b{color:var(--ink)}
+  .evidence{font-family:var(--mono);font-size:11px;background:var(--surface-2);border-radius:4px;
+            padding:9px 12px;margin-top:10px;color:var(--ink-2);line-height:1.75;
+            border-left:2px solid var(--line);overflow-x:auto}
+  .evidence b{color:var(--ink)}
+
+  /* architecture diagram */
+  .arch{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:22px;
+        margin:20px 0;box-shadow:var(--shadow)}
+  .tier{display:grid;grid-template-columns:104px 1fr;gap:14px;align-items:stretch;margin-bottom:9px}
+  .tier:last-child{margin-bottom:0}
+  .tlabel{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+          color:var(--ink-2);display:flex;align-items:center;justify-content:flex-end;
+          text-align:right;padding-right:2px;border-right:2px solid var(--line)}
+  .tboxes{display:flex;gap:9px;flex-wrap:wrap}
+  .box{flex:1;min-width:128px;background:var(--surface-2);border:1px solid var(--line);
+       border-radius:4px;padding:11px 13px}
+  .box.new{border-color:var(--teal);background:var(--ok-bg)}
+  .box .bn{font-size:12.5px;font-weight:600;line-height:1.35}
+  .box .bd{font-size:10.5px;color:var(--ink-2);margin-top:3px;line-height:1.45}
+  .box .tag{font-family:var(--mono);font-size:8px;letter-spacing:.09em;text-transform:uppercase;
+            color:var(--teal);margin-top:5px;display:block}
+  .flowdown{text-align:center;color:var(--ink-2);font-size:15px;margin:1px 0;line-height:1}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .col h4{font-family:var(--mono);font-size:10px;letter-spacing:.11em;text-transform:uppercase;
+          color:var(--ink-2);margin:0 0 9px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .col ul{margin:0;padding-left:18px;font-size:13px;color:var(--ink-2)}
+  .col li{margin:7px 0}
+  .col li b{color:var(--ink)}
+
+  .phase{background:var(--surface);border:1px solid var(--line);border-radius:5px;margin:13px 0;
+         overflow:hidden}
+  .phead{display:flex;align-items:center;gap:12px;padding:12px 17px;background:var(--surface-2);
+         border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .phead .pn{font-family:var(--mono);font-size:10px;color:#fff;background:var(--brand);
+             padding:3px 9px;border-radius:3px;letter-spacing:.08em}
+  .phead h4{font-family:var(--serif);font-size:17px;margin:0;letter-spacing:-.01em}
+  .phead .eta{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-2);
+              letter-spacing:.06em}
+  .pbody{padding:14px 17px}
+  .pbody ul{margin:0;padding-left:18px;font-size:13px;color:var(--ink-2)}
+  .pbody li{margin:6px 0}
+  .pbody li b{color:var(--ink)}
+  .unlocks{font-size:12px;color:var(--teal);margin-top:11px;padding-top:9px;
+           border-top:1px solid var(--line-2);font-weight:600}
+
+  code{font-family:var(--mono);font-size:.9em;background:var(--surface-2);padding:1px 5px;
+       border-radius:3px;border:1px solid var(--line-2)}
+  pre{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:14px 16px;
+      overflow-x:auto;font-family:var(--mono);font-size:11.5px;line-height:1.65;margin:14px 0}
+  pre .c{color:var(--ink-2)}
+  pre .k{color:var(--teal);font-weight:600}
+
+  footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);
+         font-family:var(--mono);font-size:10.5px;color:var(--ink-2);
+         display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+  @media(max-width:780px){
+    .cols{grid-template-columns:1fr}
+    .tier{grid-template-columns:1fr}
+    .tlabel{justify-content:flex-start;text-align:left;border-right:0;border-left:2px solid var(--line);
+            padding-left:8px;margin-bottom:5px}
+    .mast h1{font-size:29px}
+  }
+  @media print{
+    :root{--bg:#fff;--surface:#fff;--surface-2:#F2F0EA;--ink:#141A18;--ink-2:#5A6560;
+          --line:#D9D4CA;--line-2:#EDEAE3;--shadow:none}
+    *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+    @page{size:Letter portrait;margin:14mm 12mm}
+    .wrap{max-width:none;padding:0}
+    .finding,.phase,.arch,table,.verdict{break-inside:avoid;page-break-inside:avoid}
+    h2.sec{break-after:avoid;page-break-after:avoid;break-before:page;page-break-before:always}
+    h2.sec:first-of-type{break-before:auto;page-break-before:auto}
+  }
+</style>
+
+<div class="wrap">
+
+<div class="mast">
+  <div>
+    <div class="k">Engineering · System Design</div>
+    <h1>Mappealo Platform Architecture</h1>
+  </div>
+  <div class="meta">
+    From prototype to platform<br>
+    Target: 600+ layers · public scale<br>
+    v1 — for technical review
+  </div>
+</div>
+
+<div class="verdict">
+  <h2>Direct answer: no, not yet — and that was the right call until now</h2>
+  <p>What exists today is an <b>MVP built to prove the concept</b>, and it does that: retrieval grounded
+  strictly in La Maraña's documents, a working map, bilingual answers, citations. That was the correct
+  thing to build first.</p>
+  <p>It will <b>not</b> scale to 600 layers or public traffic. Two of the failures are already measurable
+  in the current 10-layer build — including one that is a <b>correctness</b> problem, not a performance
+  one. The retrieval side, by contrast, was built on foundations that do scale.</p>
+  <p>This document states what breaks, what holds, and the architecture to move to — sequenced so the
+  product keeps working throughout.</p>
+</div>
+
+<!-- ============ 1 · CURRENT STATE ============ -->
+<h2 class="sec"><span class="num">01</span>Current state — measured, not estimated</h2>
+<p class="subhead">Every number below was taken from the running system today.</p>
+
+<div class="finding crit">
+  <h4>Hazard layers are silently truncated <span class="sev s-crit">Critical · correctness</span></h4>
+  <p>The layer endpoint caps output at <code>_MAX_FEATURES = 6000</code>. The landslide susceptibility
+  layer holds <b>53,935 features</b>, so <b>89% of it never reaches the user</b> — with no warning
+  in the UI or the payload. A resident can look at the landslide layer, not see their hillside
+  highlighted, and conclude they are safe. For a hazard tool this is the most serious defect in the
+  system.</p>
+  <div class="evidence">layer_landsl_monroe_plus_slop50pct → <b>53,935</b> in DB · <b>6,000</b> served · 1.3 MB</div>
+</div>
+
+<div class="finding crit">
+  <h4>Whole layers ship to the browser as GeoJSON <span class="sev s-crit">Critical · scale</span></h4>
+  <p>Each layer is serialized in full and sent over HTTP. One land-use layer is <b>26.4 MB</b> for
+  fewer than a thousand features, because the polygons are detailed. At 600 layers this is not
+  slow — it is impossible, and on the mobile connections most community users have, even two or
+  three layers is already unusable.</p>
+  <div class="evidence">layer_plan_uso_terrenos_2015 → 996 features · <b>26.4 MB</b> single response
+  <br>10 layers today = 63,628 features · projected <b>600 layers</b></div>
+</div>
+
+<div class="finding warn">
+  <h4>Layer metadata is hardcoded in JavaScript <span class="sev s-warn">Blocker at scale</span></h4>
+  <p>Display names, categories and translations live in a literal dictionary in the frontend
+  (<code>LAYER_LABELS</code>, <code>CATEGORY</code>). Adding a layer means editing and redeploying
+  the client. This is workable for 10 and absurd for 600 — and it is the root reason the layer panel
+  looks thin: there is no data model behind it to design against.</p>
+</div>
+
+<div class="finding warn">
+  <h4>Layer cache is per-instance and unbounded <span class="sev s-warn">Warning</span></h4>
+  <p>Built GeoJSON is held in a process-local dictionary. It is not shared between Cloud Run
+  instances, is lost on every deploy, and has no eviction — memory grows until the instance is
+  recycled. With 600 layers a single instance cannot hold the working set.</p>
+</div>
+
+<div class="finding warn">
+  <h4>The embedding model runs inside the API process <span class="sev s-warn">Warning</span></h4>
+  <p>Every question loads and runs a sentence-transformer in the request path. It inflates cold
+  starts, ties CPU-heavy inference to request-serving capacity, and means the API cannot scale on
+  request volume independently of model load.</p>
+</div>
+
+<div class="finding ok">
+  <h4>Retrieval foundations are sound <span class="sev s-ok">Holds up</span></h4>
+  <p>The parts that are hardest to retrofit were done correctly: an <b>HNSW index</b> on the
+  embedding column (approximate-nearest-neighbour, not a sequential scan), <b>GiST indexes</b> on
+  every spatial table, and a normalized document/chunk schema with provenance. Retrieval will scale
+  from 45K to millions of chunks on this design.</p>
+  <div class="evidence">idx_document_chunks_embedding · <b>hnsw (embedding vector_cosine_ops)</b>
+  <br>GiST indexes on layer tables: <b>10 / 10</b> · chunks today: 45,596</div>
+</div>
+
+<div class="finding crit">
+  <h4>No authentication, authorization, rate limiting or quotas <span class="sev s-crit">Blocks public launch</span></h4>
+  <p>Every endpoint is open and unmetered. A single script could exhaust the Vertex AI budget in
+  minutes. There is no notion of identity, role, tenant, or per-caller limit anywhere in the system.</p>
+</div>
+
+<!-- ============ 2 · TARGET ============ -->
+<h2 class="sec"><span class="num">02</span>Target architecture</h2>
+<p class="subhead">Green blocks are new. Everything else exists today and is kept.</p>
+
+<div class="arch">
+  <div class="tier">
+    <div class="tlabel">Client</div>
+    <div class="tboxes">
+      <div class="box"><div class="bn">Web app</div><div class="bd">MapLibre GL · vector tiles · streamed answers</div></div>
+      <div class="box new"><div class="bn">Layer browser</div><div class="bd">Faceted search over the registry, virtualized for 600+</div><span class="tag">New</span></div>
+    </div>
+  </div>
+  <div class="flowdown">↓</div>
+  <div class="tier">
+    <div class="tlabel">Edge</div>
+    <div class="tboxes">
+      <div class="box new"><div class="bn">CDN</div><div class="bd">Immutable tile + static caching at the edge</div><span class="tag">New</span></div>
+      <div class="box new"><div class="bn">API gateway</div><div class="bd">TLS, routing, WAF, global rate limits</div><span class="tag">New</span></div>
+      <div class="box new"><div class="bn">Identity</div><div class="bd">OIDC · JWT · API keys for programmatic access</div><span class="tag">New</span></div>
+    </div>
+  </div>
+  <div class="flowdown">↓</div>
+  <div class="tier">
+    <div class="tlabel">Services</div>
+    <div class="tboxes">
+      <div class="box new"><div class="bn">Tile service</div><div class="bd">ST_AsMVT → /tiles/{layer}/{z}/{x}/{y}.mvt</div><span class="tag">New</span></div>
+      <div class="box"><div class="bn">Query service</div><div class="bd">RAG orchestration, spatial facts, citations</div></div>
+      <div class="box new"><div class="bn">Embedding service</div><div class="bd">Model out of the request path; autoscaled separately</div><span class="tag">New</span></div>
+      <div class="box new"><div class="bn">Catalog service</div><div class="bd">Layer registry, facets, i18n, provenance</div><span class="tag">New</span></div>
+    </div>
+  </div>
+  <div class="flowdown">↓</div>
+  <div class="tier">
+    <div class="tlabel">Data</div>
+    <div class="tboxes">
+      <div class="box"><div class="bn">PostGIS + pgvector</div><div class="bd">Geometry, chunks, HNSW index — read replicas as load grows</div></div>
+      <div class="box new"><div class="bn">Cache (Redis)</div><div class="bd">Shared tile, embedding and semantic-answer cache</div><span class="tag">New</span></div>
+      <div class="box new"><div class="bn">Object storage</div><div class="bd">Source PDFs, pre-rendered tile archives, exports</div><span class="tag">New</span></div>
+    </div>
+  </div>
+  <div class="flowdown">↓</div>
+  <div class="tier">
+    <div class="tlabel">Platform</div>
+    <div class="tboxes">
+      <div class="box new"><div class="bn">Ingestion orchestration</div><div class="bd">Versioned, idempotent, with lineage per dataset</div><span class="tag">New</span></div>
+      <div class="box new"><div class="bn">Observability</div><div class="bd">Tracing, structured logs, cost + latency per query</div><span class="tag">New</span></div>
+      <div class="box new"><div class="bn">Eval harness in CI</div><div class="bd">Retrieval + answer quality gates on every deploy</div><span class="tag">New</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3 · DECISIONS ============ -->
+<h2 class="sec"><span class="num">03</span>The decisions that matter</h2>
+
+<h3 style="font-family:var(--serif);font-size:19px;margin:26px 0 4px">3.1 &nbsp;Vector tiles replace GeoJSON</h3>
+<p class="subhead">The single highest-value change. It fixes the truncation bug and the payload
+problem at the same time.</p>
+<div class="tw">
+<table>
+  <thead><tr><th>Dimension</th><th>Today · GeoJSON</th><th>Target · Vector tiles (MVT)</th></tr></thead>
+  <tbody>
+    <tr><td>Unit of transfer</td><td>Entire layer</td><td>One 512px tile at the viewed zoom</td></tr>
+    <tr><td>Land-use layer</td><td class="num">26.4 MB</td><td class="num">~20–60 KB per tile</td></tr>
+    <tr><td>Landslide layer</td><td>Truncated to 6,000 of 53,935</td><td><b>Complete</b> — generalized per zoom, never dropped</td></tr>
+    <tr><td>Caching</td><td>Per-instance memory</td><td>Immutable URLs, cached at CDN edge</td></tr>
+    <tr><td>600 layers</td><td>Not possible</td><td>Cost scales with what is <i>viewed</i>, not what exists</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><span class="c">-- PostGIS generates the tile directly; no application-side geometry work.</span>
+<span class="k">SELECT</span> ST_AsMVT(t, 'layer', 4096, 'geom') <span class="k">FROM</span> (
+  <span class="k">SELECT</span> id, name,
+         ST_AsMVTGeom(geom, ST_TileEnvelope(:z, :x, :y), 4096, 64, <span class="k">true</span>) <span class="k">AS</span> geom
+  <span class="k">FROM</span> layer_landslide
+  <span class="k">WHERE</span> geom && ST_TileEnvelope(:z, :x, :y)   <span class="c">-- GiST index does the work</span>
+) t;</pre>
+<p class="subhead" style="margin-top:12px">Generalization is per zoom level, so a statewide view sends
+simplified geometry and a street-level view sends full detail — the user always sees the whole layer,
+at the fidelity the view warrants. Tiles are immutable and versioned by dataset, so the CDN can hold
+them indefinitely.</p>
+
+<h3 style="font-family:var(--serif);font-size:19px;margin:32px 0 4px">3.2 &nbsp;A layer registry, not a JavaScript dictionary</h3>
+<p class="subhead">600 layers need a data model with facets, translations and provenance —
+which is also what makes a serious layer browser designable.</p>
+<pre><span class="k">CREATE TABLE</span> layer_registry (
+  id              text <span class="k">PRIMARY KEY</span>,
+  name_es         text <span class="k">NOT NULL</span>,   name_en  text <span class="k">NOT NULL</span>,
+  category        text <span class="k">NOT NULL</span>,   subcategory text,
+  keywords        text[],                    <span class="c">-- drives search + chat layer matching</span>
+  source_agency   text <span class="k">NOT NULL</span>,   source_inventory text <span class="k">NOT NULL</span>,  <span class="c">-- provenance, always</span>
+  vintage_year    int,                       license text,
+  geometry_type   text,                      feature_count bigint,
+  min_zoom        int <span class="k">DEFAULT</span> 0,      max_zoom int <span class="k">DEFAULT</span> 14,
+  style           jsonb,                     <span class="c">-- colour, opacity, legend — server-driven</span>
+  dataset_version text <span class="k">NOT NULL</span>,   <span class="c">-- cache-busts tiles on refresh</span>
+  status          text <span class="k">DEFAULT</span> 'published'
+);</pre>
+<div class="cols" style="margin-top:16px">
+  <div class="col">
+    <h4>What this unlocks in the product</h4>
+    <ul>
+      <li><b>Server-side search and facets</b> — filter by agency, hazard type, vintage, geography.</li>
+      <li><b>Adding a layer is a data operation</b>, not a frontend deploy.</li>
+      <li><b>Provenance on every layer</b> — the promise made to La Maraña, enforced in the schema.</li>
+      <li><b>Server-driven styling</b> — legend and colour defined once, consistent everywhere.</li>
+    </ul>
+  </div>
+  <div class="col">
+    <h4>What the layer browser becomes</h4>
+    <ul>
+      <li><b>Search-first</b>, because nobody scrolls 600 rows.</li>
+      <li><b>Faceted filters</b> and a virtualized list.</li>
+      <li><b>Curated layer sets</b> — "Flood planning", "Facility siting" — as one-click presets.</li>
+      <li><b>Recently used and saved</b> per user, once identity exists.</li>
+    </ul>
+  </div>
+</div>
+
+<h3 style="font-family:var(--serif);font-size:19px;margin:32px 0 4px">3.3 &nbsp;Retrieval quality at volume</h3>
+<p class="subhead">The index is right; the layers above it are missing. In order of value:</p>
+<div class="tw">
+<table>
+  <thead><tr><th>Addition</th><th>Why</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><b>Hybrid search</b><br>BM25 + vector</td><td>Pure embeddings miss exact identifiers — statute numbers, parcel IDs, agency names</td><td>Large recall gain on precise queries</td></tr>
+    <tr><td><b>Cross-encoder rerank</b></td><td>Retrieve 50 candidates, rerank to the best 6 sent to the model</td><td>The main lever on answer quality</td></tr>
+    <tr><td><b>Semantic answer cache</b></td><td>Thousands of users ask the same questions of the same municipios</td><td>Large cost and latency reduction</td></tr>
+    <tr><td><b>Streaming responses</b></td><td>Time-to-first-token instead of a multi-second blank wait</td><td>Perceived speed</td></tr>
+    <tr><td><b>Per-source filtering</b></td><td>Scope retrieval by inventory, agency, vintage, or jurisdiction</td><td>Required for multi-tenant use</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 style="font-family:var(--serif);font-size:19px;margin:32px 0 4px">3.4 &nbsp;Authentication, authorization and quotas</h3>
+<p class="subhead">Designed now, enforced from the first public deployment.</p>
+<div class="tw">
+<table>
+  <thead><tr><th>Role</th><th>Identity</th><th>Can do</th><th>Limits</th></tr></thead>
+  <tbody>
+    <tr><td><b>Anonymous</b></td><td>None</td><td>Public layers, ask questions, view citations</td><td class="num">Tight per-IP quota, CAPTCHA on burst</td></tr>
+    <tr><td><b>Community member</b></td><td>Email / OIDC</td><td>Saved areas, history, feedback on answers</td><td class="num">Standard daily quota</td></tr>
+    <tr><td><b>Planner</b></td><td>OIDC + org</td><td>Draft layers, exports, comparison tools</td><td class="num">Elevated quota</td></tr>
+    <tr><td><b>Partner / API</b></td><td>API key</td><td>Programmatic query + tile access</td><td class="num">Contracted rate, metered</td></tr>
+    <tr><td><b>Admin</b></td><td>OIDC + role</td><td>Publish layers, manage registry, view evals</td><td class="num">Audited</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="subhead" style="margin-top:12px">Authorization is enforced at the gateway and again in the data
+layer via row-level security on <code>status</code> and tenant, so an unpublished layer cannot leak
+through a tile request even if a URL is guessed. Every LLM call is metered per caller, which is what
+makes the Vertex AI spend predictable rather than unbounded.</p>
+
+<!-- ============ 4 · PHASING ============ -->
+<h2 class="sec"><span class="num">04</span>Sequencing</h2>
+<p class="subhead">Ordered by risk retired per unit of work. The product stays usable throughout;
+nothing here requires a rewrite.</p>
+
+<div class="phase">
+  <div class="phead"><span class="pn">P0</span><h4>Stop shipping wrong data</h4><span class="eta">Days</span></div>
+  <div class="pbody">
+    <ul>
+      <li><b>Surface the truncation immediately</b> — until tiles land, the API must report when a layer
+        is capped and the UI must say so. A silent 89% gap in a hazard layer cannot stand another week.</li>
+      <li><b>Cap payload responsibly</b> — return an explicit error rather than a quietly partial layer.</li>
+    </ul>
+    <div class="unlocks">Retires the one defect that could mislead a resident about their own risk.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="phead"><span class="pn">P1</span><h4>Vector tiles + layer registry</h4><span class="eta">3–4 weeks</span></div>
+  <div class="pbody">
+    <ul>
+      <li>Tile endpoint backed by <code>ST_AsMVT</code>; migrate the existing 10 layers.</li>
+      <li><code>layer_registry</code> table, seeded from the current catalog plus La Maraña's data dictionaries.</li>
+      <li>Catalog API with search, facets and pagination; delete the hardcoded frontend dictionaries.</li>
+      <li>CDN in front of tiles; shared Redis cache replaces the in-process dictionary.</li>
+    </ul>
+    <div class="unlocks">Unlocks 600 layers, fixes truncation properly, and makes the layer browser designable.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="phead"><span class="pn">P2</span><h4>Identity, quotas and the public edge</h4><span class="eta">2–3 weeks</span></div>
+  <div class="pbody">
+    <ul>
+      <li>Gateway with global rate limiting and WAF; OIDC login and API keys.</li>
+      <li>Role model above, enforced at gateway and by row-level security.</li>
+      <li>Per-caller metering on LLM spend, with budget alerts.</li>
+    </ul>
+    <div class="unlocks">Makes a public launch safe — and resolves the open NYU access question either way.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="phead"><span class="pn">P3</span><h4>Retrieval quality and throughput</h4><span class="eta">3–4 weeks</span></div>
+  <div class="pbody">
+    <ul>
+      <li>Embedding inference moved out of the request path into its own autoscaled service.</li>
+      <li>Hybrid search and cross-encoder reranking.</li>
+      <li>Semantic answer cache and streamed responses.</li>
+      <li>Eval harness wired into CI as a merge gate, extending the retrieval eval already in the repo.</li>
+    </ul>
+    <div class="unlocks">Answer quality becomes a measured, defended property rather than an impression.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="phead"><span class="pn">P4</span><h4>Platform operations</h4><span class="eta">Ongoing</span></div>
+  <div class="pbody">
+    <ul>
+      <li>Orchestrated, versioned ingestion with dataset lineage and rollback.</li>
+      <li>Tracing and per-query cost and latency attribution.</li>
+      <li>Read replicas; tile pre-rendering for the heaviest layers.</li>
+      <li>Feedback loop from reported answers back into evaluation sets.</li>
+    </ul>
+    <div class="unlocks">Makes the system operable by La Maraña after handoff, not just by us.</div>
+  </div>
+</div>
+
+<!-- ============ 5 · CONSEQUENCES ============ -->
+<h2 class="sec"><span class="num">05</span>What this means</h2>
+<div class="cols">
+  <div class="col">
+    <h4>Cost</h4>
+    <ul>
+      <li><b>Tiles lower cost</b> — CDN-cached bytes are far cheaper than repeated database reads and egress.</li>
+      <li><b>Redis and CDN add</b> a modest fixed monthly floor.</li>
+      <li><b>Semantic caching cuts the LLM line</b>, typically the largest variable cost at public volume.</li>
+      <li><b>Metering makes spend bounded</b> — today a single script could drain the Vertex budget.</li>
+    </ul>
+  </div>
+  <div class="col">
+    <h4>Consequences if deferred</h4>
+    <ul>
+      <li><b>The truncation defect persists</b> — the tool understates hazard exposure with no warning.</li>
+      <li><b>Layers stall around 20–30</b>, far short of 600, on payload alone.</li>
+      <li><b>Every new layer needs a frontend deploy</b> — La Maraña could never self-serve after handoff.</li>
+      <li><b>Public launch stays unsafe</b> without quotas, regardless of the NYU access decision.</li>
+    </ul>
+  </div>
+</div>
+<p class="subhead" style="margin-top:20px;max-width:80ch">
+None of this is a rewrite. The database schema, the grounding design, the spatial model and the
+retrieval index all carry forward unchanged — they were built correctly. What changes is how geometry
+reaches the browser, where layer metadata lives, and the operational layer around the system that an
+MVP legitimately did without.</p>
+
+<footer>
+  <span>Mappealo — platform architecture v1 · for technical review</span>
+  <span>NYU Urban Systems Lab · La Maraña · Rebuild by Design</span>
+</footer>
+</div>
