@@ -1,0 +1,1042 @@
+[
+ {
+  "id": "Q001",
+  "cat": "Land use",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "You should review the municipal land use classification, land use trends, and the Joint Regulation for the Evaluation and Issuance of Permits Related to Development, Land Use, and Business Operations [1, 2, 3, 4, 5, 6].\n\nTo determine what can be built on a piece of land, you should consult:\n\u2022 The mu"
+ },
+ {
+  "id": "Q001",
+  "cat": "Land use",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q002",
+  "cat": "Land use",
+  "spec": "S1",
+  "target": "Document",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Urban land is developed or designated for development with essential infrastructure, while developable land is designated as apt for urbanization, and rural land is kept free from urbanization to protect natural and archaeological heritage.\n\u2022 **Urban land** is defined as:\n\u2022 Developed land at the tim"
+ },
+ {
+  "id": "Q002",
+  "cat": "Land use",
+  "spec": "S1",
+  "target": "Document",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q003",
+  "cat": "Land use",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "You can find current official zoning maps and documents through the Junta de Planificaci\u00f3n, the Office of Management and Budget (OGPe), and the Department of Natural and Environmental Resources (DRNA).\n\nThe Plan Territorial is the governing document for land classification and zoning, which is devel"
+ },
+ {
+  "id": "Q003",
+  "cat": "Land use",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q004",
+  "cat": "Land use",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine the specific community uses generally permitted on land classified as rural in Caguas. The provided sources mention that rural areas are characterized by steep slopes and large parcels [1], and that Caguas has agricultural land ["
+ },
+ {
+  "id": "Q004",
+  "cat": "Land use",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q005",
+  "cat": "Land use",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine which municipalities in western Puerto Rico have a current Territorial Plan and where those plans can be found. The provided sources mention territorial plans for Coamo [1], Barranquitas [5], and discuss the general framework for"
+ },
+ {
+  "id": "Q005",
+  "cat": "Land use",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q006",
+  "cat": "Land use",
+  "spec": "S2",
+  "target": "Document",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine specific parking rules for a new small business in Rio Piedras. However, the Junta de Planificaci\u00f3n (JP) and the Oficina de Gerencia de Permisos (OGPe) are involved in regulating land use and development, which may include parkin"
+ },
+ {
+  "id": "Q006",
+  "cat": "Land use",
+  "spec": "S2",
+  "target": "Document",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q011",
+  "cat": "Hazards",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Official maps available for understanding exposure to hurricanes, earthquakes, and landslides in Puerto Rico include flood level maps, karst maps, and tsunami inundation maps.\n\u2022 Recommended Base Flood Elevation (ABFE) Maps, adopted on April 13, 2018, show base flood levels corresponding to a 1% annu"
+ },
+ {
+  "id": "Q011",
+  "cat": "Hazards",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q012",
+  "cat": "Hazards",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "A landslide susceptibility map should be interpreted by understanding that it identifies areas with varying degrees of potential for landslides, often based on factors like slope and soil conditions [4]. These maps can categorize risk into levels such as low, moderate, high, or very high, with highe"
+ },
+ {
+  "id": "Q012",
+  "cat": "Hazards",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q013",
+  "cat": "Hazards",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "This platform can provide information on potential climate risks such as extreme heat and drought, as well as data on building losses and population counts [1, 3, 4, 5]. It can also offer data on critical facilities and buildings, though this information may be incomplete [2]. Additionally, it may i"
+ },
+ {
+  "id": "Q013",
+  "cat": "Hazards",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q014",
+  "cat": "Hazards",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "The barrios in Utuado with greater landslide susceptibility are Caguana, \u00c1ngeles, Sabana Grande, Don Alonso, and Mameyes Abajo, and critical facilities in these areas are not explicitly detailed in the provided documents.\n\u2022 The barrios Caguana, \u00c1ngeles, Sabana Grande, Don Alonso, and Mameyes Abajo h"
+ },
+ {
+  "id": "Q014",
+  "cat": "Hazards",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q015",
+  "cat": "Hazards",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Areas in Loiza exposed to storm surge and with higher populations of older adults include the barrio Torrecilla Baja, areas of the Rio Grande de Lo\u00edza, the Parcelas Su\u00e1rez sector, the Colob\u00f3 community, the Las Carreras sector, and the Villa Cristiana community [1]. The population of inhabitants over"
+ },
+ {
+  "id": "Q015",
+  "cat": "Hazards",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q016",
+  "cat": "Hazards",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine where liquefaction hazards and developed areas overlap in Guanica."
+ },
+ {
+  "id": "Q016",
+  "cat": "Hazards",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q021",
+  "cat": "Water",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Territorial information needed to assess a community's flood risk includes Flood Insurance Rate Maps (FIRMs) and data on properties with repetitive and severe repetitive flood losses.\n\n\u2022 Flood Insurance Rate Maps (FIRMs) designate areas with a 100-year flood return period risk [1, 2, 4].\n\u2022 Informati"
+ },
+ {
+  "id": "Q021",
+  "cat": "Water",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q022",
+  "cat": "Water",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Being near a river means residing close to a natural watercourse, while being in an official flood zone means your property is designated as susceptible to flooding based on specific criteria and probability levels [1, 2, 3].\n\nOfficial flood zones are categorized by the Federal Emergency Management "
+ },
+ {
+  "id": "Q022",
+  "cat": "Water",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q023",
+  "cat": "Water",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine if you can view Puerto Rico's rivers, reservoirs, canals, and dams together and download a map for a presentation. The provided sources discuss karst maps and tsunami hazard maps, but do not mention a comprehensive map of water b"
+ },
+ {
+  "id": "Q023",
+  "cat": "Water",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q024",
+  "cat": "Water",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to list specific communities in Carolina that are near bodies of water and also inside flood zones. However, the municipality has Flood Insurance Rate Maps (FIRMs) that can be consulted to determine if a property is in a high-risk or low-to-m"
+ },
+ {
+  "id": "Q024",
+  "cat": "Water",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q025",
+  "cat": "Water",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine how many public schools in Arecibo are in flood zones or within 500 meters of a river. The provided sources mention that Arecibo has 21 public schools (2021 map data) and discusses flood zones and rivers [1, 6], but they do not c"
+ },
+ {
+  "id": "Q025",
+  "cat": "Water",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q026",
+  "cat": "Water",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "The urban sections of the La Plata River passing through areas with high population density are primarily in Toa Alta and Cidra. In Toa Alta, the La Plata River valley, particularly in the Pi\u00f1as and Galateo barrios, has areas with moderate, high, and very high liquefaction indices [3]. In Cidra, bar"
+ },
+ {
+  "id": "Q026",
+  "cat": "Water",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q031",
+  "cat": "Environment",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Puerto Rico's official maps include \"Suelo R\u00fastico Especialmente Protegido\" (SREP) and \"Reservas Naturales\" [3, 4, 5, 2].\n\u2022 Suelo R\u00fastico Especialmente Protegido (SREP) is land not designated for urban or developable use due to special characteristics like location, topography, aesthetic, archaeolog"
+ },
+ {
+  "id": "Q031",
+  "cat": "Environment",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q032",
+  "cat": "Environment",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "To determine if a proposed activity may affect a wetland, forest, or protected habitat, you should consult the Junta de Planificaci\u00f3n and the Departamento de Recursos Naturales y Ambientales [2]. These agencies, along with municipal plans, can provide guidance on regulating development in areas that"
+ },
+ {
+  "id": "Q032",
+  "cat": "Environment",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q033",
+  "cat": "Environment",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine if you can create a map of Puerto Rico's natural reserves, forests, beaches, and coastal areas for a class project. The provided sources primarily discuss karst maps and building structures [1, 2, 3, 4, 5, 6]. For information on "
+ },
+ {
+  "id": "Q033",
+  "cat": "Environment",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q034",
+  "cat": "Environment",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Cabo Rojo contains several protected natural areas and wetlands, including the Boquer\u00f3n State Forest, Cabo Rojo National Wildlife Refuge, Punta Guaniquilla Natural Reserve, Boquer\u00f3n Bird Refuge, and Joyuda Lagoon Natural Reserve [1]. These areas are part of the Suelo R\u00fastico Especialmente Protegido-"
+ },
+ {
+  "id": "Q034",
+  "cat": "Environment",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q035",
+  "cat": "Environment",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine where agriculturally valuable lands overlap with or lie near species observations recorded in iNaturalist in the Lajas Valley. The provided sources discuss soil types, agricultural reserves, and conservation areas in Lajas but do"
+ },
+ {
+  "id": "Q035",
+  "cat": "Environment",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q036",
+  "cat": "Environment",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "The beaches in Rinc\u00f3n that are near developed areas and coastal erosion zones include \"Domes\" beach, located between the Lighthouse and the Nuclear Plant, and \"Sandy Beach\" [1, 4]. Coastal erosion is a significant issue in Rinc\u00f3n, with long-term erosion rates observed along the coast from Punta Hig\u00fc"
+ },
+ {
+  "id": "Q036",
+  "cat": "Environment",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q041",
+  "cat": "Roads",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "The platform provides information on various types of roads, including primary, secondary, and municipal roads, as well as specific highway numbers and their routes [1, 4, 5]. It also details the classification of roads by the Autoridad de Carreteras y Transportaci\u00f3n (ACT) [1]. Additionally, the pla"
+ },
+ {
+  "id": "Q041",
+  "cat": "Roads",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q042",
+  "cat": "Roads",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "You can identify communities with limited access to major roads or public transportation by looking for areas where roads are being expanded or improved, or where there are specific mentions of communities with only one way in or out [2, 4, 6]. Additionally, communities with limited physical space a"
+ },
+ {
+  "id": "Q042",
+  "cat": "Roads",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q043",
+  "cat": "Roads",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Yes, the platform can generate a map of roads, bridges, and evacuation routes for community use. The platform can display state roads [1816] and emergency shelters [354] as map data. Projects are underway to improve road geometry to facilitate access to all geographic areas within municipalities [2]"
+ },
+ {
+  "id": "Q043",
+  "cat": "Roads",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q044",
+  "cat": "Roads",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine the number of toll plazas in San Juan, Bayamon, and Caguas, or the roads they are on."
+ },
+ {
+  "id": "Q044",
+  "cat": "Roads",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q045",
+  "cat": "Roads",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to identify which specific barrios in Maricao have primary roads that intersect areas of high landslide susceptibility. The plan mentions that prolonged rainfall can cause landslides and obstruct public roads in almost all barrios of Maricao "
+ },
+ {
+  "id": "Q045",
+  "cat": "Roads",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q046",
+  "cat": "Roads",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to answer your question about public schools in Bayamon near an Urban Train station."
+ },
+ {
+  "id": "Q046",
+  "cat": "Roads",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q051",
+  "cat": "Services",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "You can search for public schools and hospitals/CDTs on the map.\n\nThe map displays:\n\u2022 Public schools (2021) [map data]\n\u2022 Hospitals / CDTs (Puerto Rico) [map data]\n\nOther types of facilities mentioned in the mitigation plans include:\n\u2022 Medical facilities such as nursing homes and blood banks [2, 3, 4"
+ },
+ {
+  "id": "Q051",
+  "cat": "Services",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q052",
+  "cat": "Services",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to identify areas underserved by schools or health facilities. The provided documents list schools and health facilities as critical infrastructure [1, 2, 3, 4, 5, 6], but they do not offer data or methodologies for determining underserved ar"
+ },
+ {
+  "id": "Q052",
+  "cat": "Services",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q053",
+  "cat": "Services",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "There is one hospital and health center in Vieques, located in the barrio of Vieques [1, 2]. The Centro de Diagn\u00f3stico y Tratamiento de Vieques is located on Carretera PR-997 and is currently closed, with efforts underway to secure federal funds for its restoration and reopening [1]."
+ },
+ {
+  "id": "Q053",
+  "cat": "Services",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q054",
+  "cat": "Services",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine which communities in Salinas are more than five kilometers from a public school."
+ },
+ {
+  "id": "Q054",
+  "cat": "Services",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q058",
+  "cat": "Services",
+  "spec": "S4",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to prioritize areas of Culebra for a new clinic based on population, age, lack of vehicle access, distance to existing services, and coastal risk. The provided documents do not contain specific data on population distribution, age demographic"
+ },
+ {
+  "id": "Q058",
+  "cat": "Services",
+  "spec": "S4",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q061",
+  "cat": "Demographics",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Census demographic data can include race, origin, age, and housing units, and is available at the municipal level and through Census Tracts.\n\n\u2022 Detailed demographic data on population characteristics such as race, origin, age, and housing units are available for municipalities [1, 2, 3, 5, 6].\n\u2022 The"
+ },
+ {
+  "id": "Q061",
+  "cat": "Demographics",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q062",
+  "cat": "Demographics",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "You can identify communities with greater social vulnerability by looking at maps that show the location of projects with construction permits granted by the Oficina de Gerencia de Permisos [2, 3, 5, 6]. These maps illustrate future development trends within a municipality, which are considered alon"
+ },
+ {
+  "id": "Q062",
+  "cat": "Demographics",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q063",
+  "cat": "Demographics",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine which barrios in Ponce have a share of residents age 65 or older above the municipal average. The provided data lists the number of residents aged 65 and older per barrio [1], but it does not explicitly state the municipal averag"
+ },
+ {
+  "id": "Q063",
+  "cat": "Demographics",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q064",
+  "cat": "Demographics",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to determine the number of public schools in Puerto Rico municipalities with populations of 30,000 or more. The provided sources [1, 2, 3, 4, 5, 6] mention that Bayam\u00f3n, Ponce, Carolina, and Guaynabo participate individually in the NFIP, and "
+ },
+ {
+  "id": "Q064",
+  "cat": "Demographics",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q068",
+  "cat": "Demographics",
+  "spec": "S4",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to compare the barrios of Canovanas using poverty, age, disability, vehicle access, flooding, and proximity to services. The provided sources focus on the municipality's overall recovery goals and resilience strategies, such as mitigating nat"
+ },
+ {
+  "id": "Q068",
+  "cat": "Demographics",
+  "spec": "S4",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q071",
+  "cat": "Agriculture",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Land classified as an agricultural reserve is designated for non-urban use, protecting areas with significant agricultural characteristics and prohibiting development that contradicts this purpose. To understand this classification, you should review information related to soil capacity for common c"
+ },
+ {
+  "id": "Q071",
+  "cat": "Agriculture",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q072",
+  "cat": "Agriculture",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Layers that can help assess whether land is suitable for agriculture include soil survey geographic databases and classifications based on agricultural capacity. The Soil Survey Geographic Database (SSURGO) establishes classification fields based on agricultural capacity with and without risk, rangi"
+ },
+ {
+  "id": "Q072",
+  "cat": "Agriculture",
+  "spec": "S1",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q073",
+  "cat": "Agriculture",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "Approximately 65.57% of Santa Isabel lies within agricultural reserves, and its primary soil classification is \"Suelo R\u00fastico Especialmente Protegido Agr\u00edcola (SREP-A)\" [2]. The municipality's soil classifications include:\n\n\u2022 Suelo Urbano (SU): 6.49% [2]\n\u2022 Suelo R\u00fastico Com\u00fan: 10.92% [2]\n\u2022 Suelo R\u00fas"
+ },
+ {
+  "id": "Q073",
+  "cat": "Agriculture",
+  "spec": "S2",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q074",
+  "cat": "Agriculture",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There isn't enough information in the available documents to identify specific agricultural areas in the southern region that face both drought exposure and limited access to irrigation canals."
+ },
+ {
+  "id": "Q074",
+  "cat": "Agriculture",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q081",
+  "cat": "Cadastre",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "I couldn't find relevant information in the available documents for that question. Try rephrasing it, or ask about land use, permits, flood or landslide risk, or planning in Puerto Rico."
+ },
+ {
+  "id": "Q081",
+  "cat": "Cadastre",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q082",
+  "cat": "Cadastre",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "You should review the land classification and risk conditions of the vacant lot to ensure compatibility with proposed uses and federal regulations.\n\u2022 Uses must be compatible with existing risk conditions and aligned with federal regulations [1, 6].\n\u2022 Land classification is fundamental for guiding ur"
+ },
+ {
+  "id": "Q082",
+  "cat": "Cadastre",
+  "spec": "S1",
+  "target": "Hybrid",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q083",
+  "cat": "Cadastre",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "There are no public schools identified in the municipality of Cata\u00f1o in the available map data [map data]."
+ },
+ {
+  "id": "Q083",
+  "cat": "Cadastre",
+  "spec": "S2",
+  "target": "Spatial",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q084",
+  "cat": "Cadastre",
+  "spec": "S2",
+  "target": "Document",
+  "declined": true,
+  "conf": "low",
+  "ncite": 0,
+  "answer": "There is not enough information in the available documents to answer your question about public, non-personal information on usufruct programs or agreements for community land in San Juan."
+ },
+ {
+  "id": "Q084",
+  "cat": "Cadastre",
+  "spec": "S2",
+  "target": "Document",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q091",
+  "cat": "Regulations",
+  "spec": "S1",
+  "target": "Document",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "A Territorial Plan (Plan Territorial) is a municipal instrument that defines the general structure of land use planning and can include programs for expansion and regulations for developable land [3, 4]. The Puerto Rico Land Use Plan (Plan de Uso de Terrenos de Puerto Rico, PUT) consolidates the ter"
+ },
+ {
+  "id": "Q091",
+  "cat": "Regulations",
+  "spec": "S1",
+  "target": "Document",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q092",
+  "cat": "Regulations",
+  "spec": "S1",
+  "target": "Document",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "You can verify if a regulation or territorial plan is still in effect and if it has been amended by reviewing new regulations and amendments or repeals to existing ones that affect the Mitigation Plan or its public policies [1, 3, 5, 6].\n\n\u2022 Review new regulations and amendments or repeals to existin"
+ },
+ {
+  "id": "Q092",
+  "cat": "Regulations",
+  "spec": "S1",
+  "target": "Document",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q093",
+  "cat": "Regulations",
+  "spec": "S2",
+  "target": "Document",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "The San Juan municipal ordinances concerning land use and community development include the \"Reglamento de Zonificaci\u00f3n Especial de Santurce\" and the \"Reglamento de Calificaci\u00f3n Especial del Condado\" [1, 2].\n\u2022 The \"Reglamento de Zonificaci\u00f3n Especial de Santurce\" was effective May 17, 2003, and aims"
+ },
+ {
+  "id": "Q093",
+  "cat": "Regulations",
+  "spec": "S2",
+  "target": "Document",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ },
+ {
+  "id": "Q094",
+  "cat": "Regulations",
+  "spec": "S2",
+  "target": "Document",
+  "declined": false,
+  "conf": "high",
+  "ncite": 6,
+  "answer": "The current Ponce Territorial Plan, specifically the Plan de Mitigaci\u00f3n de Riesgos \u2013 Ponce (2020), addresses flood-prone areas and community facilities through various sections and regulations.\n\u2022 The \"Reglamento sobre \u00c1reas Especiales de Riesgo a Inundaci\u00f3n\" (Regulation on Special Flood Risk Areas) "
+ },
+ {
+  "id": "Q094",
+  "cat": "Regulations",
+  "spec": "S2",
+  "target": "Document",
+  "declined": true,
+  "conf": "error",
+  "ncite": 0,
+  "answer": "'cat'"
+ }
+]
