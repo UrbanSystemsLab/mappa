@@ -38,6 +38,7 @@ class Session:
     place: Place | None = None
     passages: list[Passage] = field(default_factory=list)
     layers_used: list[Layer] = field(default_factory=list)
+    measured_layers: list[Layer] = field(default_factory=list)  # what a figure came from
     steps: list[dict[str, Any]] = field(default_factory=list)
     results: list[str] = field(default_factory=list)  # every tool result, as text
     measured: bool = False  # a map tool computed something
@@ -57,6 +58,12 @@ class Session:
     def use_layer(self, layer: Layer) -> None:
         if all(x.id != layer.id for x in self.layers_used):
             self.layers_used.append(layer)
+
+    def measured_with(self, *used: Layer) -> None:
+        """Record the layers a successful measurement read - the answer's map sources."""
+        for layer in used:
+            if all(x.id != layer.id for x in self.measured_layers):
+                self.measured_layers.append(layer)
 
 
 class ToolError(Exception):
@@ -141,11 +148,9 @@ def find_layers(session: Session, topic: str) -> dict:
 
 def count_features(session: Session, layer_id: str, place_id: str | None = None) -> dict:
     layer, place = _layer(session, layer_id), _place(session, place_id)
-    return {
-        "layer": layer.name(session.lang),
-        "place": _where(place),
-        "count": spatial.count(layer, place),
-    }
+    n = spatial.count(layer, place)
+    session.measured_with(layer)
+    return {"layer": layer.name(session.lang), "place": _where(place), "count": n}
 
 
 def count_inside(
@@ -155,6 +160,7 @@ def count_inside(
     area = _layer(session, area_layer_id, area=True)
     place = _place(session, place_id)
     inside, total = spatial.count_inside(layer, area, place)
+    session.measured_with(layer, area)
     return {
         "layer": layer.name(session.lang),
         "area_layer": area.name(session.lang),
@@ -174,6 +180,7 @@ def count_within_distance(
     layer, other = _layer(session, layer_id), _layer(session, other_layer_id)
     place = _place(session, place_id)
     near, total = spatial.count_within(layer, other, metres, place)
+    session.measured_with(layer, other)
     return {
         "layer": layer.name(session.lang),
         "near_layer": other.name(session.lang),
@@ -191,6 +198,7 @@ def area_share(session: Session, area_layer_id: str, place_id: str) -> dict:
     if place is None:
         raise ToolError("area_share needs a place_id")
     total, covered = spatial.area_share(area, place)
+    session.measured_with(area)
     return {
         "area_layer": area.name(session.lang),
         "place": place.label,

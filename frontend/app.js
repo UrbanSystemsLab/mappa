@@ -225,9 +225,12 @@ function render() {
     return;
   }
   out.innerHTML = conversation.map(m => {
+    // A document the answer cited, or a map layer a figure was measured from.
     const cites = (m.citations || []).map(c =>
-      `<div class="cite">📄 <span class="ct">${esc(c.title)}</span>${
-        c.year ? ` · ${c.year}` : ''}${c.doc_id ? ` · <span class="cid">${esc(c.doc_id)}</span>` : ''}</div>`
+      `<div class="cite">${c.kind === 'layer' ? '🗺️' : '📄'} <span class="ct">${esc(c.title)}</span>${
+        c.source ? ` · ${esc(c.source)}` : ''}${
+        c.year && !String(c.title).includes(String(c.year)) ? ` · ${c.year}` : ''}${
+        c.doc_id ? ` · <span class="cid">${esc(c.doc_id)}</span>` : ''}</div>`
     ).join('');
     const thinking = m.answer === '…';
     return `

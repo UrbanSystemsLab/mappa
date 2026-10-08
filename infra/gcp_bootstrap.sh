@@ -2,7 +2,7 @@
 # Mappa — GCP bootstrap
 #
 # Provisions the RAG data-pipeline infrastructure, built for LA MARAÑA OWNERSHIP
-# (see docs/GCP_SETUP_AND_COST.md). NYU builds it; La Maraña owns the project.
+# NYU builds it; La Maraña owns the project.
 #   - Enables required APIs
 #   - Cloud SQL for PostgreSQL 16 with PostGIS + pgvector
 #   - GCS raw/processed buckets (versioned)

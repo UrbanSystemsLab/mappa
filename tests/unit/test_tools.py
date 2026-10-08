@@ -90,3 +90,39 @@ def test_layers_found_count_as_something_found(monkeypatch):
     s = tools.Session()
     tools.call(s, "find_layers", {"topic": "schools"})
     assert s.has_evidence
+
+
+def test_a_measurement_records_the_layers_it_read():
+    s = tools.Session()
+    tools.call(s, "count_inside", {"layer_id": "schools", "area_layer_id": "flood"})
+    assert [x.id for x in s.measured_layers] == ["schools", "flood"]
+
+
+def test_a_failed_measurement_is_not_a_source(monkeypatch):
+    import psycopg2
+
+    def slow(layer, place=None):
+        raise psycopg2.errors.QueryCanceled("timeout")
+
+    monkeypatch.setattr(tools.spatial, "count", slow)
+    s = tools.Session()
+    tools.call(s, "count_features", {"layer_id": "schools"})
+    assert s.measured_layers == []
+
+
+def test_map_layers_are_listed_as_sources_after_documents():
+    from api.services import answering
+
+    s = tools.Session(lang="en")
+    s.measured_with(FLOOD)
+    out = answering._finish("Eight schools are in a flood zone.", s)
+    assert out["citations"] == [
+        {
+            "kind": "layer",
+            "id": "flood",
+            "title": "Flood zones",
+            "year": None,
+            "source": "",
+            "doc_id": "",
+        }
+    ]

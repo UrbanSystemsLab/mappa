@@ -9,6 +9,8 @@ a moment ago.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -38,11 +40,16 @@ class AskRequest(BaseModel):
 
 
 class Citation(BaseModel):
+    kind: Literal["document", "layer"] = Field(
+        "document",
+        description="A document passage the answer cited, or a map layer a figure came from.",
+    )
     id: str
     title: str
     year: int | None = None
-    # Their inventory ID. No URL: an answer cites a document La Maraña holds,
-    # not a page on a government site.
+    source: str = Field("", description="For a layer: the agency that made the data.")
+    # Their inventory ID (DOC-124, GIS-328). No URL: an answer cites what La
+    # Maraña holds, not a page on a government site.
     doc_id: str = ""
 
 

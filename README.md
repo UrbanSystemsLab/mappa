@@ -22,6 +22,7 @@ docs/         see below
 
 ## Documentation
 
+- [docs/ENGINEERING_LOG.md](docs/ENGINEERING_LOG.md): what changed, when and why - the running record
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how the parts fit, and what happens to a question
 - [docs/API.md](docs/API.md): the HTTP API, for this or any other frontend ([openapi.json](docs/openapi.json))
 - [docs/RUN_LOCAL.md](docs/RUN_LOCAL.md): run it on a laptop

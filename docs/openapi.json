@@ -708,6 +708,16 @@
       },
       "Citation": {
         "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "document",
+              "layer"
+            ],
+            "title": "Kind",
+            "description": "A document passage the answer cited, or a map layer a figure came from.",
+            "default": "document"
+          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -726,6 +736,12 @@
               }
             ],
             "title": "Year"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "For a layer: the agency that made the data.",
+            "default": ""
           },
           "doc_id": {
             "type": "string",

@@ -8,7 +8,7 @@ system makes back to a file they gave us.
 **Append to this file as work lands. Do not rewrite history — corrections go in
 as corrections, because knowing something was once wrong is the useful part.**
 
-Last updated: 2026-10-02
+Last updated: 2026-10-08
 
 ---
 
@@ -629,3 +629,104 @@ told to go and look.
 A failure to warm is logged and swallowed. A container that cannot reach the
 database can still serve the map and the catalogue, and refusing to start would
 take those down too.
+
+---
+
+## 14. Their words only, a staging site, and answers from tools (3 – 8 Oct)
+
+This is the record of the system from here on. The older planning documents
+(NEXT_STEPS, SETUP_RUNBOOK, GCP_SETUP_AND_COST, DATA_PIPELINE_ARCH) described a
+plan that has since changed and were removed on 8 Oct. How the code fits together
+now is in [ARCHITECTURE.md](ARCHITECTURE.md), the API in [API.md](API.md), and
+releasing in [RELEASING.md](RELEASING.md). What changed and why goes here.
+
+### Nothing on screen that La Maraña did not say
+
+The app had been showing things we had decided: a "Recommended" section, a
+confidence badge, a trust rating computed from how many metadata fields a row
+filled in, and English layer names we had written. All removed. A rating now
+appears only where their team wrote one, in their own four words. English names
+are machine translations of their Spanish names, recorded as such
+(`name_en_source`), and the question of who should write them is with La Maraña
+(question 5d).
+
+### What is in each layer
+
+Every one of the 603 layers with data was profiled from its own columns
+(`pipelines/profile_layers.py`): 577 now show their contents when clicked. The
+cadastral layers carry owners' names, mailing addresses, sale prices and tax
+amounts; those columns are never shown, and a test holds that. `-9999`, their
+no-value marker, is hidden.
+
+Each layer turned on gets its own colour, so two or three on together can be
+told apart, and place names draw above the layers instead of under them.
+
+### Staging
+
+`mappa_staging` is a full copy of production on the same Cloud SQL server, copied
+inside Google Cloud (`scripts/copy_prod_to_staging.py`): 636 tables, zero row
+differences, every index and constraint. `scripts/release.sh` takes a commit
+through tests, staging and then production, and production runs the exact image
+staging was checked on.
+
+**Correction:** staging was first opened with an `allUsers` grant, which NYU's
+organisation policy refuses. Production was never public that way; it has Cloud
+Run's invoker check turned off (`--no-invoker-iam-check`). Staging is now the same.
+
+### Answers from tools, not keyword lists
+
+The old answer path decided what a question meant from keyword lists, about 1,900
+lines of them. Now the model reads the question and calls tools: find a place,
+search the documents, find layers, count, overlay, measure distance or area. The
+code makes the results exact and holds the answer to them:
+
+- every number in an answer must appear in a tool result, or the answer is sent
+  back once, and a sentence still carrying an unsupported number is removed
+- an answer with nothing behind it is sent back; after every round is spent with
+  nothing found, it says so instead of answering from the model's own knowledge
+- sources are the documents the answer cited by number, and the map layers a
+  figure was measured from, with the agency and year
+
+Measured on the 100 test questions (`pipelines/eval_answers.py`, results in
+`data/eval/results/`):
+
+| | before | now |
+|---|---|---|
+| answered | 64 | 100 |
+| relevance (0–2) | 1.86 | 1.67 |
+| grounding (0–2) | 1.96 | 1.87 |
+| median seconds | 2.0 | 3.4 |
+
+On the 64 both answered, quality is level. The averages fall because the 36 the
+old path declined are now answered, often in part.
+
+### Faults found in this period
+
+| Fault | What it did | Cause and fix |
+|---|---|---|
+| **Concurrent questions crashed the server** | Three questions at once and the process died | The embedding model is not safe across threads; 12 threads crashed it 3 times in 3. Encodes now take turns, ms each. A test runs 12 at once. |
+| **An answer with no evidence was released** | Named three schools and their grades that no tool returned | The last round was not checked. Now a run with nothing found says so. |
+| **Layer codes in answers** | `gis-123` and table names shown to readers | Stripped before the text leaves the server. |
+| **A measurement could hold a connection for 3 minutes** | Four slow questions would have stopped the map for everyone (pool of 4) | Real measurements take ~1 s. All use the 20 s limit; one that hits it is told to the model as too slow. |
+| **A false "not in a flood zone"** | A clicked point was answered as if it were the whole municipio (Mayagüez is 41% flood zone) | Clicked-point facts are labelled as that point only. |
+| **The model's thinking step** | Median 7.7 s an answer | Turned off: same quality on the 100 questions, 3.4 s. `LLM_THINKING_BUDGET` to change. |
+
+### Removed
+
+The baked-tiles pipeline and its one 14 MB file (correction to section 12: it was
+never wired in, and the live tile server is fast enough), the old database setup
+(`db/schema.sql`, `docker-compose.yml`, replaced by the Alembic migrations), the
+early demo data files, and the four planning documents above.
+
+### Open, as of 8 October
+
+1. **Production release** — staging is live with all of the above; merge to main,
+   then `./scripts/release.sh production`.
+2. **GitHub deploys** — needs a deploy account from the climateiq admins; until
+   then releases run from a laptop.
+3. **Rate limit for workshops** — 15 a minute per address; a room on one network
+   shares it. Raise if La Maraña plans sessions.
+4. **Map and assistant share 4 database connections** — fine at today's traffic.
+5. **Questions with La Maraña** — `QUESTIONS_FOR_LAMARANA.md`, including the
+   empty data-dictionaries folder and who writes the English layer names.
+6. **OCR, inventory sync, document–layer links** — still open from section 12.

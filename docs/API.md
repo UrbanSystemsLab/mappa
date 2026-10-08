@@ -72,8 +72,10 @@ Same request. Returns the whole answer at once, as one JSON object with `answer`
 `citations`, `steps`, `suggested_layers`, `municipio`, `focus` and `disclaimer`. Use it
 for scripts, tests and anything that does not show text as it arrives.
 
-**Citations** are the documents the answer cites: `{id, title, year, doc_id}`, where
-`doc_id` is La Maraña's inventory reference (e.g. `POT-012`) when there is one.
+**Citations** are the answer's sources: `{kind, id, title, year, source, doc_id}`.
+`kind` is `"document"` for a document passage the answer cited, or `"layer"` for a map
+layer a figure was measured from (then `source` is the agency that made the data).
+`doc_id` is La Maraña's inventory reference (e.g. `POT-012`, `GIS-328`) when there is one.
 **Steps** are the lookups behind the answer, `{tool, arguments, summary}`, for showing
 how it was worked out.
 

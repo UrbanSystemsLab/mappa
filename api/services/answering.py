@@ -21,6 +21,7 @@ from ..repositories.places import Place
 from ..tools import Session
 
 MAX_SOURCES = 5
+MAX_LAYER_SOURCES = 4
 
 UNAVAILABLE = {
     "en": "The assistant could not answer just now. Please try again in a moment.",
@@ -91,21 +92,41 @@ def _map(session: Session) -> dict[str, Any]:
 def _finish(text: str, session: Session) -> dict[str, Any]:
     """The cleaned answer, its sources and the steps behind it.
 
-    A source is a document whose passage the answer cited by number - and only
-    that. Documents that were searched but not cited are not listed: an answer
-    that says the documents do not cover a question has no sources.
+    Sources are the documents whose passages the answer cited by number, then
+    the map layers a figure was measured from. Documents searched but not cited
+    are not listed: an answer that says the documents do not cover a question
+    has no document sources.
     """
     numbers = assistant.cited_numbers(text)
     passages = [session.passages[n - 1] for n in numbers if 0 < n <= len(session.passages)]
-    citations, seen = [], set()
+    documents, seen = [], set()
     for p in passages:
         key = (p.title.lower(), p.year)
         if key in seen:
             continue
         seen.add(key)
-        citations.append({"id": p.doc_id, "title": p.title, "year": p.year, "doc_id": p.reference})
+        documents.append(
+            {
+                "kind": "document",
+                "id": p.doc_id,
+                "title": p.title,
+                "year": p.year,
+                "doc_id": p.reference,
+            }
+        )
+    layers = [
+        {
+            "kind": "layer",
+            "id": layer.id,
+            "title": layer.name(session.lang),
+            "year": layer.year,
+            "source": layer.agency or "",
+            "doc_id": layer.reference or "",
+        }
+        for layer in session.measured_layers
+    ]
     return {
         "answer": assistant.clean(text),
-        "citations": citations[:MAX_SOURCES],
+        "citations": documents[:MAX_SOURCES] + layers[:MAX_LAYER_SOURCES],
         "steps": session.steps,
     }
