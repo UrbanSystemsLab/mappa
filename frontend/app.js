@@ -1,46 +1,877 @@
-const map = new maplibregl.Map({
-  container: 'map',
-  style: 'https://demotiles.maplibre.org/style.json',
-  center: [-66.4, 18.22],
-  zoom: 8.2,
-});
-map.addControl(new maplibregl.NavigationControl());
+// ---------------------------------------------------------------------------
+// Basemap. A vector style rather than raster tiles: real cartographic hierarchy,
+// labels that stay sharp at every zoom, and a muted ground that lets data layers
+// read on top of it. OpenFreeMap serves OpenMapTiles-schema vector tiles with no
+// key and no per-view billing, which matters for a tool La Marana inherits.
+// Falls back to OSM raster if the vector style cannot be reached, so the map
+// always draws something.
+// ---------------------------------------------------------------------------
+// One background map, the full-colour street style. There was a choice of four,
+// then two, and nobody needed the choice. A grey base was tried as the only one
+// on 6 Oct and the colour one was preferred; data layers are drawn beneath its
+// place names, so they stay readable. The raster style below is only a fallback.
+const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+const RASTER_FALLBACK = {
+  version: 8,
+  sources: {
+    basemap: {
+      type: 'raster',
+      tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256, maxzoom: 19,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{
+    id: 'basemap', type: 'raster', source: 'basemap',
+    paint: { 'raster-saturation': -0.35, 'raster-contrast': -0.05, 'raster-opacity': 0.94 },
+  }],
+};
+
+// Where the API is. Empty means this same site. A frontend hosted somewhere
+// else sets window.MAPPA_API_ORIGIN before this script, e.g.
+// "https://app.mappealo.org", and everything below follows it.
+const API_ORIGIN = String(window.MAPPA_API_ORIGIN || '').replace(/\/$/, '');
+const API = API_ORIGIN + '/api/v1';
+
+let map = null;
+let usingFallback = false;
+try {
+  map = new maplibregl.Map({
+    container: 'map',
+    style: BASEMAP_STYLE,
+    center: [-66.25, 18.22],
+    zoom: 8.3,
+    attributionControl: { compact: true },
+  });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+  map.addControl(new maplibregl.ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-left');
+
+  // If the vector style never arrives, swap to raster once and re-apply any layers
+  // the user had turned on.
+  map.on('error', (ev) => {
+    const failedStyle = ev && ev.error && /style|sprite|glyph/i.test(String(ev.error.message || ''));
+    if (usingFallback || !failedStyle || map.isStyleLoaded()) return;
+    usingFallback = true;
+    map.setStyle(RASTER_FALLBACK);
+    map.once('styledata', () => {
+      const ids = [...ACTIVE.keys()];
+      ACTIVE.clear();
+      ids.forEach(addLayer);
+    });
+  });
+} catch (err) {
+  const el = document.getElementById('map');
+  if (el) el.innerHTML = '<div style="padding:20px;color:#68746e;font-size:13px">' +
+    'El mapa no está disponible en este navegador. / Map unavailable in this browser.</div>';
+}
 
 const q = document.getElementById('q');
 const out = document.getElementById('out');
 const disc = document.getElementById('disc');
 const btn = document.getElementById('go');
+const clearBtn = document.getElementById('clear');
+
+// The conversation persists here until the page is refreshed.
+let conversation = [];
+// When set (by clicking a town on the map), questions are scoped to this municipio,
+// and the clicked point's map facts (flood/landslide) are sent as context.
+let activeLocation = null;
+let activeSpatial = null;
+const locEl = document.getElementById('loc');
+
+// --- Language (in-app toggle; not browser translate) ---
+let LANG = 'es';
+// The disclaimer for the last answer, in both languages, so switching language
+// switches it too instead of leaving the previous language's text on screen.
+const lastDisclaimer = {};
+const I18N = {
+  es: { tagline: 'Asistente de planificación y riesgos de Puerto Rico',
+        ph: 'Escribe tu pregunta… o haz clic en el mapa', clear: 'Nueva conversación',
+        // '¡Aló!' is how the brand greets people - the same word in both languages,
+        // so the welcome reads as Puerto Rican rather than as a translated label.
+        sources: 'Fuentes', layersTitle: 'Capas del mapa', emptyT: '¡Aló!',
+        emptyB: 'Pregúntale a Mappa sobre uso de terrenos, riesgo de inundación o deslizamiento, permisos y planificación en Puerto Rico. También puedes hacer clic en el mapa para preguntar sobre un lugar. Puedes preguntar en español o en inglés.',
+        title: 'Mappa — Asistente Geoespacial de Puerto Rico', ask: 'Preguntar',
+        chatToggle: 'Mostrar/ocultar chat', layerSearch: 'Buscar capas…',
+        loading: 'Cargando capas…', removeFilter: 'Quitar filtro',
+        samples: [['Zona inundable', '¿Puedo construir en una zona inundable?'],
+                  ['Permisos', '¿Qué regula el Reglamento Conjunto?'],
+                  ['Escuelas', '¿Cuántas escuelas hay en Adjuntas?'],
+                  ['Deslizamientos', '¿Dónde hay riesgo de deslizamiento?']] },
+  en: { tagline: 'Planning & hazard assistant for Puerto Rico',
+        ph: 'Type your question… or click the map', clear: 'New conversation',
+        sources: 'Sources', layersTitle: 'Map layers', emptyT: '¡Aló!',
+        emptyB: 'Ask Mappa about land use, flood or landslide risk, permits, and planning in Puerto Rico. You can also click the map to ask about a place. Ask questions in Spanish or English.',
+        title: 'Mappa — Geospatial Assistant for Puerto Rico', ask: 'Ask',
+        chatToggle: 'Show/hide chat', layerSearch: 'Search layers…',
+        loading: 'Loading layers…', removeFilter: 'Remove filter',
+        samples: [['Flood zone', 'Can I build in a flood zone?'],
+                  ['Permits', 'What does the Reglamento Conjunto regulate?'],
+                  ['Schools', 'How many schools are in Adjuntas?'],
+                  ['Landslides', 'Where is there landslide risk?']] },
+};
+const t = k => I18N[LANG][k];
+// Category headings in the layer panel. Only six were translated, so ten of the
+// sixteen headings stayed Spanish in English mode. Where La Maraña's own
+// prioritization matrix names a category in English - Hazards, Conservation,
+// Geology, Hydrography, Recreation, Infrastructure, Soil Use - their word is used.
+const CATS = {
+  Riesgos: { es: 'Riesgos', en: 'Hazards' },
+  'Conservación': { es: 'Conservación', en: 'Conservation' },
+  'Geología': { es: 'Geología', en: 'Geology' },
+  'Hidrografía': { es: 'Hidrografía', en: 'Hydrography' },
+  Recreacion: { es: 'Recreación', en: 'Recreation' },
+  Infraestructura: { es: 'Infraestructura', en: 'Infrastructure' },
+  'Uso Suelo': { es: 'Uso de suelo', en: 'Soil Use' },
+  Ambiente: { es: 'Ambiente', en: 'Environment' },
+  'Desarrollo Económico': { es: 'Desarrollo Económico', en: 'Economic Development' },
+  Electricidad: { es: 'Electricidad', en: 'Electricity' },
+  'Límites': { es: 'Límites', en: 'Boundaries' },
+  'Límites geográficos': { es: 'Límites geográficos', en: 'Geographic Boundaries' },
+  'Planificación': { es: 'Planificación', en: 'Planning' },
+  Servicios: { es: 'Servicios', en: 'Services' },
+  Transportacion: { es: 'Transportación', en: 'Transportation' },
+  'Otras capas': { es: 'Otras capas', en: 'Other layers' },
+  Otros: { es: 'Otros', en: 'Other' },
+};
+const catLabel = c => (CATS[c] ? CATS[c][LANG] : c);
+function applyLang() {
+  const tag = document.querySelector('.topbar .tag');
+  if (tag) tag.textContent = t('tagline');
+  q.placeholder = t('ph');
+  if (clearBtn) clearBtn.textContent = t('clear');
+  const pqel = document.getElementById('placeq');
+  if (pqel) pqel.placeholder = LANG === 'es'
+    ? 'Buscar municipio o barrio…' : 'Search municipality or barrio…';
+  const es = document.getElementById('lang-es'), en = document.getElementById('lang-en');
+  if (es) es.classList.toggle('on', LANG === 'es');
+  if (en) en.classList.toggle('on', LANG === 'en');
+  // The heading's text only. Setting textContent on the whole header used to
+  // delete the basemap selector that sits beside it on every language switch.
+  const h = document.querySelector('#layerctl .h > span');
+  if (h) h.textContent = t('layersTitle');
+  document.title = t('title');
+  const go = document.getElementById('go'); if (go) go.title = t('ask');
+  const ct = document.getElementById('chattoggle'); if (ct) ct.title = t('chatToggle');
+  const lq = document.getElementById('lyrq'); if (lq) lq.placeholder = t('layerSearch');
+  // The suggested questions were fixed Spanish text in the page.
+  const samples = document.querySelectorAll('.samples a');
+  t('samples').forEach(([label, question], i) => {
+    if (samples[i]) { samples[i].textContent = label; samples[i].dataset.q = question; }
+  });
+  // An open popup or layer info box is in the previous language; close it.
+  if (openPopup) openPopup.remove();
+  const info = document.getElementById('layerinfo'); if (info) info.style.display = 'none';
+  // The disclaimer came back with the last answer, in that answer's language.
+  if (lastDisclaimer[LANG]) disc.textContent = lastDisclaimer[LANG];
+  renderLoc();
+  // Layer names are resolved server-side per language, so re-fetch rather than
+  // relabel in place. Active layers are keyed by id and survive the reload.
+  loadCatalog();
+  render();
+}
+
+function renderLoc() {
+  if (!locEl) return;
+  if (activeLocation) {
+    locEl.style.display = 'inline-block';
+    locEl.innerHTML = `📍 ${esc(activeLocation)} <span class="x" title="${t('removeFilter')}">✕</span>`;
+    locEl.querySelector('.x').onclick = () => { activeLocation = null; activeSpatial = null; renderLoc(); };
+  } else {
+    locEl.style.display = 'none';
+    locEl.innerHTML = '';
+  }
+}
 
 document.querySelectorAll('.samples a').forEach(a => {
   a.onclick = () => { q.value = a.dataset.q; ask(); };
 });
-
 btn.onclick = ask;
+q.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) ask();
+});
+if (clearBtn) clearBtn.onclick = () => {
+  conversation = []; disc.textContent = '';
+  delete lastDisclaimer.es; delete lastDisclaimer.en; render();
+};
+{
+  const es = document.getElementById('lang-es'), en = document.getElementById('lang-en');
+  if (es) es.onclick = () => { LANG = 'es'; applyLang(); };
+  if (en) en.onclick = () => { LANG = 'en'; applyLang(); };
+}
+
+// The answer as a reader should see it. While it streams, the raw text still
+// carries the model's "[1, 2]" citation numbers - the server removes them from
+// the finished answer, and this removes them as it arrives. "**Natural
+// Hazards:**" was shown with its asterisks; it is now bold.
+function answerHtml(text) {
+  return esc(String(text || '').replace(/\s*\[\s*\d+(?:\s*[,;–-]\s*\d+)*\s*\]/g, ''))
+    .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+}
+
+function render() {
+  if (!conversation.length) {
+    const hint = LANG === 'es'
+      ? '<b>Cada respuesta cita su fuente.</b> Si los documentos cargados no lo dicen, Mappa lo dirá en vez de inventarlo.'
+      : '<b>Every answer cites its source.</b> If the loaded documents do not say it, Mappa will say so rather than fill the gap.';
+    out.innerHTML = `<div class="empty">
+      <div class="icon"><img src="/static/logo.png" alt="" width="76" height="76"></div>
+      <h3 translate="no">${t('emptyT')}</h3>
+      <p>${t('emptyB')}</p>
+      <div class="hint">${hint}</div>
+    </div>`;
+    return;
+  }
+  out.innerHTML = conversation.map(m => {
+    // A document the answer cited, or a map layer a figure was measured from.
+    const cites = (m.citations || []).map(c =>
+      `<div class="cite">${c.kind === 'layer' ? '🗺️' : '📄'} <span class="ct">${esc(c.title)}</span>${
+        c.source ? ` · ${esc(c.source)}` : ''}${
+        c.year && !String(c.title).includes(String(c.year)) ? ` · ${c.year}` : ''}${
+        c.doc_id ? ` · <span class="cid">${esc(c.doc_id)}</span>` : ''}</div>`
+    ).join('');
+    const thinking = m.answer === '…';
+    return `
+      <div class="row user"><div class="bubble">${esc(m.question)}</div></div>
+      <div class="row bot"><div class="bubble">
+        <div class="who">Mappa</div>
+        <div class="answer${thinking ? ' typing' : ''}">${thinking ? (LANG === 'es' ? 'Consultando…' : 'Thinking…') : answerHtml(m.answer)}</div>
+        ${cites ? `<div class="cites"><div class="cites-h">${t('sources')}</div>${cites}</div>` : ''}
+      </div></div>`;
+  }).join('');
+  out.scrollTop = out.scrollHeight;
+}
 
 async function ask() {
   const question = q.value.trim();
   if (!question) return;
-  btn.disabled = true; out.innerHTML = '<p>Consultando…</p>';
+  btn.disabled = true;
+  const turn = { question, answer: '', citations: [], suggested_layers: [] };
+  conversation.push(turn);
+  render();
+  q.value = '';
+
+  // A request with no deadline is how the panel came to sit on "Thinking…" for
+  // ten minutes: fetch waits forever, so a stalled connection never resolves and
+  // never errors either.
+  const ctl = new AbortController();
+  const deadline = setTimeout(() => ctl.abort(), 90000);
+
   try {
-    const r = await fetch('/ask', {
+    const r = await fetch(API + '/ask/stream', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({question}),
+      headers: { 'Content-Type': 'application/json' },
+      signal: ctl.signal,
+      body: JSON.stringify({
+        question,
+        history: conversation.slice(0, -1).map(t => ({ question: t.question, answer: t.answer })),
+        location: activeLocation,
+        spatial: activeSpatial,
+        lang: LANG,
+        active_layers: [...ACTIVE.values()].map(l => ({
+          id: l.id, name: l.name, theme: l.theme,
+          year: l.source && l.source.year, agency: l.source && l.source.agency,
+        })),
+      }),
     });
-    const d = await r.json();
-    const layers = (d.suggested_layers || []).map(l => `<span class="tag">${l}</span>`).join('');
-    const cites = (d.citations || []).map(c =>
-      `<div class="cite">• <a href="${c.url}" target="_blank">${c.title}</a> (${c.year})</div>`
-    ).join('');
-    out.innerHTML = `
-      <div class="answer">${escape(d.answer_es)}</div>
-      <div class="meta">Confianza: <b>${d.confidence}</b> ${layers}</div>
-      <h4>Fuentes</h4>${cites || '<i>Sin fuentes</i>'}`;
-    disc.textContent = d.disclaimer;
+    // Too many questions too fast. The server says how long to wait, and saying
+    // so is the difference between a limit and the app looking broken.
+    if (r.status === 429) {
+      const d = await r.json().catch(() => ({}));
+      const s = d.retry_after;
+      turn.answer = LANG === 'es'
+        ? `Demasiadas preguntas a la vez. ${s ? `Espere ${s} segundos.` : 'Espere un momento.'}`
+        : `Too many questions at once. ${s ? `Please wait ${s} seconds.` : 'Please wait a moment.'}`;
+      render();
+      return;
+    }
+    if (!r.ok || !r.body) throw new Error('HTTP ' + r.status);
+
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      // Events are separated by a blank line; whatever follows the last one is a
+      // partial event and stays in the buffer.
+      const chunks = buf.split('\n\n');
+      buf = chunks.pop();
+      for (const chunk of chunks) {
+        const ev = /^event: (\w+)/m.exec(chunk);
+        const dl = /^data: (.*)$/m.exec(chunk);
+        if (!ev || !dl) continue;
+        let d; try { d = JSON.parse(dl[1]); } catch (err) { continue; }
+        if (ev[1] === 'meta') {
+          // The map moves before the first word is written.
+          if (d.disclaimers) Object.assign(lastDisclaimer, d.disclaimers);
+          disc.textContent = (d.disclaimers && d.disclaimers[LANG]) || d.disclaimer || '';
+          turn.suggested_layers = d.suggested_layers || [];
+          autoShowLayers(turn.suggested_layers);
+          if (d.focus) focusBBox(d.focus);
+        } else if (ev[1] === 'delta') {
+          turn.answer += d.text || '';
+          render();
+        } else if (ev[1] === 'done') {
+          turn.citations = d.citations || [];
+          // The streamed text is raw. The server's cleaned version removes
+          // stray URLs and the model's references to the computed-facts block,
+          // so it replaces what was shown.
+          if (d.answer) turn.answer = d.answer;
+          render();
+        }
+      }
+    }
+    if (!turn.answer) throw new Error('empty response');
   } catch (e) {
-    out.innerHTML = `<p style="color:red">Error: ${e.message}</p>`;
+    turn.answer = e.name === 'AbortError'
+      ? (LANG === 'es' ? 'La respuesta tardó demasiado. Inténtalo de nuevo.'
+                       : 'That took too long to answer. Please try again.')
+      : 'Error: ' + e.message;
+    render();
   } finally {
+    clearTimeout(deadline);
     btn.disabled = false;
+    q.focus();
   }
 }
-function escape(s) { return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function esc(s) { return (s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+
+// ---------------------------------------------------------------------------
+// Map layers: toggle the PostGIS layers on/off, styled by theme + geometry.
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Layers: catalog-driven (server search/facets) + vector tiles.
+// Nothing about a layer is hardcoded here any more - names, colours, categories
+// and provenance all come from /catalog, which is what makes 600 layers workable
+// and lets La Marana add layers without a frontend deploy.
+// ---------------------------------------------------------------------------
+const ACTIVE = new Map();        // layerId -> catalog row (+ opacity)
+const EXPANDED = new Set();      // categories the user has opened
+let CATEGORIES = [];             // [{category, count}]
+let RESULTS = [];                // current catalog page
+let RESULT_TOTAL = 0;
+let layerQuery = '';
+let searchTimer = null;
+
+const SRC = id => 'src_' + id;
+const LYR = id => 'lyr_' + id;
+const paintKey = type => (type === 'fill' ? 'fill-opacity'
+                        : type === 'line' ? 'line-opacity' : 'circle-opacity');
+
+async function loadCatalog() {
+  try {
+    CATEGORIES = await (await fetch(`${API}/catalog/categories?lang=${LANG}&available_only=true`)).json();
+    await fetchLayers();
+  } catch (e) {
+    document.getElementById('layerlist').textContent =
+      LANG === 'es' ? 'No se pudieron cargar las capas.' : 'Could not load layers.';
+  }
+}
+
+async function fetchLayers() {
+  const p = new URLSearchParams({ lang: LANG, limit: '700', available_only: 'true' });
+  if (layerQuery) p.set('q', layerQuery);
+  const d = await (await fetch(API + '/catalog/layers?' + p)).json();
+  RESULTS = d.layers || [];
+  RESULT_TOTAL = d.total || 0;
+  // Layers already on the map hold their catalogue row in the previous
+  // language. Refresh it, keeping opacity and order.
+  const fresh = new Map(RESULTS.map(l => [l.id, l]));
+  await Promise.all([...ACTIVE.keys()].map(async id => {
+    let l = fresh.get(id);
+    if (!l) {
+      try { l = await (await fetch(`${API}/catalog/layers/${id}?lang=${LANG}`)).json(); } catch (e) { return; }
+    }
+    const rec = ACTIVE.get(id);
+    if (l && rec) Object.assign(rec, { name: l.name, description: l.description, category: l.category });
+  }));
+  // Collapsed groups are the right default for a large catalog, but pointless when
+  // there are only a few layers - open everything while the catalog is small, and
+  // while searching, so matches are visible without extra clicks.
+  if (layerQuery || RESULT_TOTAL <= 25) RESULTS.forEach(l => EXPANDED.add(l.category));
+  renderLayerPanel();
+}
+
+// A rating exists only where La Maraña's team gave one, in their reconstructed
+// metadata, using their own four words: Confirmed, Inferred, Reconstructed,
+// Unknown. Translated literally and nothing more.
+function statusChip(st) {
+  const L = {
+    confirmed:     { es: 'confirmado', en: 'confirmed', c: 'ok' },
+    inferred:      { es: 'inferido', en: 'inferred', c: 'mid' },
+    reconstructed: { es: 'reconstruido', en: 'reconstructed', c: 'mid' },
+    unknown:       { es: 'desconocido', en: 'unknown', c: 'low' },
+  }[st] || { es: st, en: st, c: 'low' };
+  return `<span class="mstat ${L.c}">${esc(L[LANG] || st)}</span>`;
+}
+
+function layerRow(l, isActive) {
+  const yr = l.source && l.source.year ? ` · ${l.source.year}` : '';
+  const sw = `<span class="sw" style="background:${isActive ? colourOf(l) : '#c3cbd3'}"></span>`;
+  const info = `<button class="ic info" data-act="info" data-id="${l.id}" title="${
+    LANG === 'es' ? 'Sobre esta capa' : 'About this layer'}">i</button>`;
+  if (isActive) {
+    return `<div class="lrow on" data-id="${l.id}">
+      ${sw}<span class="nm">${esc(l.name)}</span>
+      <button class="ic up" data-act="raise" data-id="${l.id}" title="${
+        LANG === 'es' ? 'Traer al frente' : 'Bring to front'}">&#8593;</button>
+      ${info}
+      <button class="ic rm" data-act="remove" data-id="${l.id}" title="${
+        LANG === 'es' ? 'Quitar' : 'Remove'}">&times;</button></div>`;
+  }
+  if (l.available === false) {
+    return `<div class="lrow off" data-id="${l.id}">
+      ${sw}<span class="nm">${esc(l.name)}<span class="yr">${yr}</span></span>
+      <span class="pend">${LANG === 'es' ? 'sin cargar' : 'not loaded'}</span>
+      ${info}</div>`;
+  }
+  return `<div class="lrow" data-act="add" data-id="${l.id}">
+    ${sw}<span class="nm">${esc(l.name)}<span class="yr">${yr}</span></span>
+    ${info}<button class="ic add" data-act="add" data-id="${l.id}">+</button></div>`;
+}
+
+function renderLayerPanel() {
+  const el = document.getElementById('layerlist');
+  const active = [...ACTIVE.values()];
+  const activeIds = new Set(ACTIVE.keys());
+  let html = '';
+
+  // Active layers pinned to the top - as more layers load, the ones in use stay
+  // reachable without scrolling (La Marana's feedback).
+  if (active.length) {
+    html += `<div class="lsec"><div class="lsec-h">
+        <span>${LANG === 'es' ? 'Activas' : 'Active'} (${active.length})</span>
+        <a data-act="clear">${LANG === 'es' ? 'Quitar todas' : 'Clear all'}</a>
+      </div>${active.map(l => layerRow(l, true)).join('')}</div>`;
+  }
+
+  const shown = RESULTS.filter(l => !activeIds.has(l.id));
+  const byCat = {};
+  shown.forEach(l => (byCat[l.category] = byCat[l.category] || []).push(l));
+  const cats = CATEGORIES.length
+    ? CATEGORIES.map(c => c.category).filter(c => byCat[c])
+    : Object.keys(byCat);
+
+  cats.forEach(c => {
+    const rows = byCat[c] || [];
+    const open = EXPANDED.has(c);
+    html += `<div class="lsec">
+      <div class="lsec-h clickable" data-act="cat" data-cat="${esc(c)}">
+        <span>${open ? '&#9662;' : '&#9656;'} ${esc(catLabel(c))}</span><span class="cnt">${
+          rows.filter(r => r.available !== false).length} / ${rows.length}</span>
+      </div>${open ? rows.map(l => layerRow(l, false)).join('') : ''}</div>`;
+  });
+
+  if (!shown.length && !active.length) {
+    html += `<div class="lempty">${LANG === 'es' ? 'Sin resultados' : 'No results'}</div>`;
+  }
+  if (RESULT_TOTAL > RESULTS.length) {
+    html += `<div class="lmore">${LANG === 'es' ? 'Mostrando' : 'Showing'} ${RESULTS.length} / ${RESULT_TOTAL}</div>`;
+  }
+  el.innerHTML = html;
+  renderLegend();
+}
+
+function renderLegend() {
+  const el = document.getElementById('legend');
+  if (!el) return;
+  const active = [...ACTIVE.values()];
+  if (!active.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const block = l => `<div class="lg-r"><span class="lg-k" style="background:${
+    colourOf(l)}"></span><span>${esc(l.name)}</span></div>`;
+  el.innerHTML = `<div class="lg-h">${LANG === 'es' ? 'Leyenda' : 'Legend'}</div>` +
+    active.map(block).join('') +
+    // Every source on screen, once - it named only the first layer's source,
+    // whatever else was turned on.
+    (() => {
+      const srcs = [...new Set(active.map(l => l.source && l.source.inventory).filter(Boolean))];
+      return srcs.length ? `<div class="lg-src">${LANG === 'es' ? 'Fuente' : 'Source'}: ${
+        srcs.map(esc).join(' · ')}</div>` : '';
+    })();
+}
+
+// --- one delegated handler for the whole panel ---
+document.getElementById('layerlist').addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act, id = el.dataset.id;
+  if (act === 'add') addLayer(id);
+  else if (act === 'remove') removeLayer(id);
+  else if (act === 'info') showLayerInfo(id);
+  else if (act === 'raise') raiseLayer(id);
+  else if (act === 'clear') [...ACTIVE.keys()].forEach(removeLayer);
+  else if (act === 'cat') {
+    const c = el.dataset.cat;
+    EXPANDED.has(c) ? EXPANDED.delete(c) : EXPANDED.add(c);
+    renderLayerPanel();
+  }
+});
+document.getElementById('lyrq').addEventListener('input', (e) => {
+  layerQuery = e.target.value.trim();
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(fetchLayers, 250);   // debounce: search runs server-side
+});
+
+// --- map wiring: vector tiles, not whole-layer GeoJSON ---
+// Every layer you turn on gets its own colour from this list, the first one not
+// already on the map, so layers shown together never share a colour.
+const LAYER_COLOURS = ['#d62728', '#1f77b4', '#2ca02c', '#ff7f0e', '#9467bd',
+                       '#8c564b', '#e377c2', '#17becf', '#bcbd22', '#7f7f7f'];
+function nextColour() {
+  const used = new Set([...ACTIVE.values()].map(r => r.colour));
+  return LAYER_COLOURS.find(c => !used.has(c)) || LAYER_COLOURS[ACTIVE.size % LAYER_COLOURS.length];
+}
+const colourOf = l => (ACTIVE.get(l.id) && ACTIVE.get(l.id).colour) || (l.style && l.style.color) || '#09814A';
+
+// Data layers are drawn beneath the background map's place names. They were
+// drawn on top of everything, so a filled layer covered every label under it.
+function labelAnchor() {
+  const layers = (map && map.getStyle() && map.getStyle().layers) || [];
+  const first = layers.find(x => x.type === 'symbol');
+  return first ? first.id : undefined;
+}
+
+function addLayer(id) {
+  if (!map) return;
+  if (ACTIVE.has(id)) return;
+  const l = RESULTS.find(x => x.id === id);
+  if (!l) return;
+  if (!mapReady) { if (!pendingAdds.includes(id)) pendingAdds.push(id); return; }
+  const srcId = SRC(id), base = LYR(id);
+  if (!map.getSource(srcId)) {
+    map.addSource(srcId, {
+      type: 'vector',
+      tiles: [(API_ORIGIN || location.origin) + l.tiles_url],
+      minzoom: l.min_zoom != null ? l.min_zoom : 0,
+      maxzoom: l.max_zoom != null ? l.max_zoom : 14,
+    });
+  }
+  // One colour per layer, distinct from the others on screen. Colouring by
+  // category was tried on 3 Oct and made the map harder to read.
+  const color = nextColour();
+  const g = (l.geometry_type || '').toLowerCase();
+  const common = { source: srcId, 'source-layer': 'layer' };
+  if (g.includes('polygon')) {
+    const fillOp = l.style && l.style.fillOpacity != null ? l.style.fillOpacity : 0.35;
+    const under = labelAnchor();
+    if (fillOp > 0) map.addLayer({ id: base, type: 'fill', ...common,
+      paint: { 'fill-color': color, 'fill-opacity': fillOp } }, under);
+    map.addLayer({ id: base + '_ln', type: 'line', ...common,
+      paint: { 'line-color': color,
+               'line-width': (l.style && l.style.lineWidth) || 0.8 } }, under);
+  } else if (g.includes('line')) {
+    map.addLayer({ id: base, type: 'line', ...common,
+      paint: { 'line-color': color, 'line-width': 1.4 } }, labelAnchor());
+  } else {
+    // Points stay above the labels: a hospital is small, and hiding it under a
+    // town name would lose it.
+    map.addLayer({ id: base, type: 'circle', ...common,
+      paint: { 'circle-radius': 5, 'circle-color': color,
+               'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
+  }
+  // Cursor feedback only — the click itself is handled once at map level, so
+  // overlapping layers report together instead of each replacing the other's popup.
+  [base, base + '_ln'].forEach(lid => {
+    if (!map.getLayer(lid)) return;
+    map.on('mouseenter', lid, () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', lid, () => { map.getCanvas().style.cursor = ''; });
+  });
+  ACTIVE.set(id, { ...l, colour: color });
+  restyle();
+  renderLayerPanel();
+}
+
+function removeLayer(id) {
+  if (!map) { ACTIVE.delete(id); renderLayerPanel(); return; }
+  [LYR(id), LYR(id) + '_ln'].forEach(x => { if (map.getLayer(x)) map.removeLayer(x); });
+  if (map.getSource(SRC(id))) map.removeSource(SRC(id));
+  ACTIVE.delete(id);
+  restyle();
+  renderLayerPanel();
+}
+
+// Stacking rules. Two flat 35% fills make mud and three are unreadable, so only the
+// topmost polygon layer is filled - everything under it keeps its outline and reads
+// as a boundary. Draw order follows meaning rather than the order things were
+// clicked: boundaries sit under hazards, hazards under facilities.
+const STACK_ORDER = { political: 0, uso_de_terrenos: 1, inundacion: 2, deslizamiento: 3,
+                      vias: 4, refugios: 5, educacion: 6, salud: 7 };
+
+function restyle() {
+  if (!map) return;
+  const actives = [...ACTIVE.values()];
+  // Sort by meaning, then by the order the user added them.
+  const ordered = actives
+    .map((l, i) => ({ l, i }))
+    .sort((a, b) => (STACK_ORDER[a.l.theme] ?? 2) - (STACK_ORDER[b.l.theme] ?? 2) || a.i - b.i)
+    .map(x => x.l);
+
+  const polys = ordered.filter(l => (l.geometry_type || '').toLowerCase().includes('polygon'));
+  const topPoly = polys.length ? polys[polys.length - 1].id : null;
+
+  ordered.forEach(l => {
+    const fillId = LYR(l.id);
+    if (map.getLayer(fillId) && map.getLayer(fillId).type === 'fill') {
+      const target = l.id === topPoly
+        ? (l.style && l.style.fillOpacity != null ? l.style.fillOpacity : 0.4)
+        : 0;                                  // underneath: outline only
+      map.setPaintProperty(fillId, 'fill-opacity', target);
+    }
+    // Outlines get heavier when a layer is not the filled one, so it still reads.
+    const lnId = fillId + '_ln';
+    if (map.getLayer(lnId)) {
+      map.setPaintProperty(lnId, 'line-width', l.id === topPoly ? 0.7 : 1.3);
+      map.setPaintProperty(lnId, 'line-opacity', l.id === topPoly ? 0.55 : 0.95);
+    }
+    // Re-assert draw order - still beneath the place names, except points.
+    const isPoint = map.getLayer(fillId) && map.getLayer(fillId).type === 'circle';
+    const under = isPoint ? undefined : labelAnchor();
+    [fillId, lnId].forEach(x => { if (map.getLayer(x)) map.moveLayer(x, under); });
+  });
+}
+
+// Bring a layer to the front: it becomes the filled one.
+function raiseLayer(id) {
+  const rec = ACTIVE.get(id);
+  if (!rec) return;
+  ACTIVE.delete(id);
+  ACTIVE.set(id, rec);     // re-insert last = most recently raised
+  restyle();
+  renderLayerPanel();
+}
+
+// Per-layer provenance card - what the layer is, where it came from, and how
+// confident that metadata is.
+async function showLayerInfo(id) {
+  try {
+    const l = await (await fetch(`${API}/catalog/layers/${id}?lang=${LANG}`)).json();
+    const s = l.source || {};
+    const box = document.getElementById('layerinfo');
+    box.innerHTML = `<div class="li-h"><b>${esc(l.name)}</b>
+        <button class="ic" data-close="1">&times;</button></div>
+      ${l.description ? `<p>${esc(l.description)}</p>` : ''}
+      <dl>
+        <dt>${LANG === 'es' ? 'Agencia' : 'Agency'}</dt><dd>${esc(s.agency || '—')}</dd>
+        <dt>${LANG === 'es' ? 'Año' : 'Year'}</dt><dd>${s.year || '—'}</dd>
+        <dt>${LANG === 'es' ? 'Elementos' : 'Features'}</dt><dd>${(l.feature_count || 0).toLocaleString()}</dd>
+        <dt>${LANG === 'es' ? 'Procedencia' : 'Provenance'}</dt><dd>${esc(s.inventory || '—')}</dd>
+        ${s.metadata_status ? `<dt>${LANG === 'es' ? 'Evaluación de La Maraña' : 'La Maraña rating'}</dt><dd>${statusChip(s.metadata_status)}</dd>` : ''}
+      </dl>`;
+    box.style.display = 'block';
+    box.querySelector('[data-close]').onclick = () => { box.style.display = 'none'; };
+  } catch (e) { /* non-fatal */ }
+}
+
+// Label a field and a value using the registry, never the raw column name.
+function fieldLabel(rec, key) {
+  const m = (rec && rec.property_labels) || {};
+  const l = m[key] || m[key.toLowerCase()];
+  return l ? (l[LANG] || l.en || key) : key.replace(/_/g, ' ');
+}
+function valueLabel(rec, val) {
+  const m = (rec && rec.value_labels) || {};
+  const l = m[String(val)] || m[String(val).toUpperCase()];
+  return l ? (l[LANG] || l.en || val) : val;
+}
+
+// One card per layer present at the clicked point.
+// -9999 is the code GIS data uses for "no value here" - FEMA's flood layers use
+// it wherever a depth or base flood elevation was never computed, which in the
+// 2018 0.2% flood layer is 2,104 of 2,109 areas. It was shown as though it were a
+// real depth of minus 9,999 metres.
+const NO_VALUE = new Set(['-9999', '-9999.0', '-99999', '-999', '-999.0']);
+const isEmpty = v => v === null || v === undefined || String(v).trim() === '' ||
+  NO_VALUE.has(String(v).trim());
+
+function featureCard(rec, props) {
+  const shown = (rec && rec.tile_properties_order) || Object.keys(props);
+  const rows = shown
+    .filter(k => k !== 'id' && !isEmpty(props[k]))
+    .slice(0, 6)
+    .map(k => `<tr><th>${esc(fieldLabel(rec, k))}</th><td>${esc(String(valueLabel(rec, props[k])))}</td></tr>`)
+    .join('');
+  const sw = `<span class="fp-sw" style="background:${rec ? colourOf(rec) : '#09814A'}"></span>`;
+  const yr = rec && rec.source && rec.source.year ? ` · ${rec.source.year}` : '';
+  return `<div class="fp-card">
+      <div class="fp-h">${sw}${esc(rec ? rec.name : 'Capa')}${yr}</div>
+      ${rows ? `<table class="fp">${rows}</table>`
+             : `<div class="fp-none">${LANG === 'es' ? 'Sin atributos' : 'No attributes'}</div>`}
+    </div>`;
+}
+
+// Turn on layers the answer referenced, by matching catalog keywords.
+function autoShowLayers(wanted) {
+  if (!wanted || !wanted.length) return;
+  // The server resolves a question to real catalog IDs. Matching those directly
+  // is what makes "is my house in a flood zone" turn the flood layer on; the old
+  // match was on a theme field that almost every loaded layer leaves empty.
+  const alias = { zonificacion: 'uso_de_terrenos' };
+  const want = new Set(wanted.map(x => alias[x] || x));
+  let shown = 0;
+  RESULTS.forEach(l => {
+    if (ACTIVE.has(l.id) || shown >= 3) return;      // three at once stays readable
+    if (want.has(l.id) || want.has(l.theme) || (l.keywords || []).some(k => want.has(k))) {
+      addLayer(l.id); shown++;
+    }
+  });
+}
+
+// The layer catalog is just data, so it loads independently of the map. If WebGL
+// is slow or unavailable the panel still works, and anything the user turns on
+// before the map is ready is queued and applied on load.
+let mapReady = false;
+const pendingAdds = [];
+if (map) map.on('load', () => {
+  mapReady = true;
+  const queued = pendingAdds.splice(0);
+  queued.forEach(addLayer);
+});
+loadCatalog();
+
+// --- panel toggles: give the map more room (La Marana's feedback) ---
+{
+  const ct = document.getElementById('chattoggle');
+  if (ct) ct.onclick = () => {
+    document.querySelector('main').classList.toggle('chat-hidden');
+    setTimeout(() => { if (map) map.resize(); }, 210);   // let the grid settle, then re-measure
+  };
+  // --- location search: find a municipio or barrio and fly there ---
+  const pq = document.getElementById('placeq');
+  const pr = document.getElementById('placeres');
+  if (pq && pr) {
+    let ptimer = null;
+    const close = () => { pr.classList.remove('on'); pr.innerHTML = ''; };
+    pq.addEventListener('input', () => {
+      clearTimeout(ptimer);
+      const term = pq.value.trim();
+      if (term.length < 2) return close();
+      ptimer = setTimeout(async () => {
+        try {
+          const rows = await (await fetch(API + '/places?q=' + encodeURIComponent(term))).json();
+          if (!rows.length) return close();
+          pr.innerHTML = rows.map(r =>
+            `<button data-bbox="${r.bbox.join(',')}" data-name="${esc(r.label || r.name)}">
+               <span>${esc(r.name)}${r.parent && r.type !== 'municipio'
+                 ? `<span class="sub">, ${esc(r.parent)}</span>` : ''}</span>
+               <span class="kind">${r.type === 'municipio'
+                 ? (LANG === 'es' ? 'Municipio' : 'Municipality')
+                 : (r.type === 'comunidad'
+                     ? (LANG === 'es' ? 'Comunidad' : 'Community') : 'Barrio')}</span>
+             </button>`).join('');
+          pr.classList.add('on');
+        } catch (e) { close(); }
+      }, 220);
+    });
+    pr.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-bbox]');
+      if (!b) return;
+      focusBBox(b.dataset.bbox.split(',').map(Number));
+      // Searching for a place also scopes the conversation to it, so the next
+      // question is about there without having to say so.
+      activeLocation = b.dataset.name;
+      renderLoc();
+      pq.value = b.dataset.name;
+      close();
+    });
+    pq.addEventListener('blur', () => setTimeout(close, 160));
+    pq.addEventListener('keydown', (e) => { if (e.key === 'Escape') { pq.value = ''; close(); } });
+  }
+
+  const lt = document.getElementById('lyrtoggle');
+  if (lt) lt.onclick = () => {
+    document.querySelector('main').classList.toggle('layers-hidden');
+    setTimeout(() => { if (map) map.resize(); }, 210);
+  };
+}
+
+// Fly/zoom the map to a bbox [w,s,e,n] the chat is answering about.
+function focusBBox(bbox) {
+  if (!map || !bbox || bbox.length !== 4) return;
+  map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 1600, maxZoom: 11 });
+}
+
+// ---------------------------------------------------------------------------
+// Click the map -> which municipio + hazards apply here, and ask about it.
+// ---------------------------------------------------------------------------
+let locMarker = null;
+let pending = null;
+// Exactly one popup on the map at a time.
+let openPopup = null;
+function showPopup(lngLat, html) {
+  if (openPopup) openPopup.remove();
+  openPopup = new maplibregl.Popup({ closeOnClick: true, maxWidth: '290px' })
+    .setLngLat(lngLat).setHTML(html).addTo(map);
+  openPopup.on('close', () => { openPopup = null; });
+  return openPopup;
+}
+
+if (map) map.on('click', async (e) => {
+  // One handler for every active layer: one popup listing everything under
+  // the click.
+  const ids = [];
+  ACTIVE.forEach((rec, id) => { [LYR(id), LYR(id) + '_ln'].forEach(x => {
+    if (map.getLayer(x)) ids.push(x); }); });
+  const hits = ids.length ? map.queryRenderedFeatures(e.point, { layers: ids }) : [];
+
+  // Collapse to one card per layer — a click often lands on both a polygon and its
+  // own outline, which is the same feature twice.
+  const byLayer = new Map();
+  hits.forEach(f => {
+    const lid = (f.layer && f.layer.id || '').replace(/^lyr_/, '').replace(/_ln$/, '');
+    if (!byLayer.has(lid)) byLayer.set(lid, f.properties || {});
+  });
+
+  const cards = [...byLayer.entries()]
+    .map(([lid, props]) => featureCard(ACTIVE.get(lid), props)).join('');
+
+  // Always include where this is and what the hazard layers say, so a click is
+  // useful even on empty ground.
+  const { lng, lat } = e.lngLat;
+  let info;
+  try { info = await (await fetch(`${API}/locate?lng=${lng}&lat=${lat}`)).json(); }
+  catch (err) { info = { municipio: null, hazards: [] }; }
+
+  if (locMarker) locMarker.remove();
+  locMarker = new maplibregl.Marker({ color: '#09814A' }).setLngLat([lng, lat]).addTo(map);
+
+  const muni = info.municipio;
+  // What the server checked at this spot, each named as its layer is - the
+  // list of layers comes from the layer roles, not from this page.
+  const checks = Array.isArray(info.hazards) ? info.hazards : [];
+  const es = LANG === 'es';
+  const yn = b => b ? `<b class="yes">${es ? 'Sí' : 'Yes'}</b>` : `<span class="no">No</span>`;
+  pending = muni ? { municipio: muni, spatial: info } : null;
+
+  const place = `<div class="fp-card fp-place">
+      <div class="fp-h">📍 ${esc(muni || (es ? 'Fuera de Puerto Rico' : 'Outside Puerto Rico'))}</div>
+      <table class="fp">
+        ${checks.map(c => `<tr><th>${esc((es ? c.name_es : c.name_en) || c.key)}</th><td>${
+          yn(c.inside)}</td></tr>`).join('')}
+      </table>
+      <button class="askbtn" onclick="askHere()"${muni ? '' : ' disabled'}>${
+        es ? 'Preguntar sobre este lugar' : 'Ask about this place'}</button>
+    </div>`;
+
+  showPopup([lng, lat], place + cards);
+});
+
+// Global so the popup button's onclick works with no DOM-timing issues.
+function askHere() {
+  if (!pending) return;
+  activeLocation = pending.municipio;
+  activeSpatial = pending.spatial;
+  renderLoc();
+  q.value = LANG === 'es'
+    ? `¿Qué debo saber sobre ${pending.municipio}: riesgos naturales, uso de terrenos y reglas de planificación?`
+    : `What should I know about ${pending.municipio}: natural hazards, land use, and planning rules?`;
+  ask();
+}
+
+// initial paint (welcome state) + language labels
+applyLang();

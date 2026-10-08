@@ -1,0 +1,16 @@
+role,table_name,words,countable,checked_on_click,name_col,muni_col
+schools,layer_dotacional_educacion_escuelas_2021,escuela|escuelas|school|schools|colegio|plantel,yes,no,escuela,municipio
+hospitals,layer_hospitales,hospital|hospitals|cdt|salud|health|clinica|clínica,yes,no,nombre,muni
+shelters,layer_refugios_2023,refugio|refugios|shelter|shelters|evacuacion|evacuación,yes,no,instalacio,municipio
+flood,layer_g23_riesgo_inundacion_fema_firms_2009,inundacion|inundación|inundable|inundables|flood|flooding|flood zone|zona inundable,no,yes,,
+flood_02,layer_g23_riesgo_inundacion_floodzone_0_2pct_seamless_2018,"0.2|0,2|500 year|500-year",no,yes,,
+landslide,layer_landsl_monroe_plus_slop50pct,deslizamiento|deslizamientos|landslide|landslides|derrumbe,no,yes,,
+tsunami,layer_zonas_desalojo_all_project,tsunami|maremoto,no,no,,
+rivers,layer_mapa_base_crim_ogp_hidrografia_2006,rio|río|rios|ríos|river|rivers|quebrada|quebradas|stream|streams|cuerpo de agua,no,no,,
+wetlands,layer_g23_humedales_prvi_wetlands_fws_2010,humedal|humedales|wetland|wetlands|mangle|manglar,no,no,,
+protected,layer_pacat_2018_areas_protegidas_terrestres,area protegida|área protegida|areas protegidas|áreas protegidas|protected|reserva|reservas|reserve|area natural|área natural|areas naturales|áreas naturales|natural area,no,no,,
+agricultural_valleys,layer_g13_conserv_valles_agricolas_regla_5_2014,valle agricola|valle agrícola|valles agricolas|valles agrícolas|agricultural valley|reserva agricola|reserva agrícola|agricultural reserve,no,no,,
+agricultural_corridor,layer_corredor_agricola_de_project_exportfeatures,corredor agricola|corredor agrícola|agricultural corridor|terreno agricola|terreno agrícola|agricultural land|suelo agricola|suelo agrícola,no,no,,
+roads,layer_carreteras_estatales_segmentadas_agosto_2021,carretera|carreteras|road|roads|highway|vial,no,no,,
+coastal_zone,layer_g27_conserv_zona_costanera_2010,costanera|costa|coastal|coastline|litoral,no,no,,
+land_use_plan,layer_plan_uso_terrenos_2015,plan de uso de terrenos|land use plan|put|clasificacion de suelo|clasificación de suelo|zonificacion|zonificación|zoning|uso de suelo|uso del suelo|land use,no,no,,

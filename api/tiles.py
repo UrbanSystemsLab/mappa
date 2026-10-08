@@ -1,0 +1,213 @@
+"""Vector tile service — serve spatial layers as Mapbox Vector Tiles from PostGIS.
+
+Replaces whole-layer GeoJSON. Instead of sending an entire layer to the browser,
+the client requests only the tiles covering its viewport at the current zoom, and
+PostGIS generates each tile with ST_AsMVT.
+
+Two consequences that matter:
+
+  * No feature cap. Whole-layer GeoJSON forced a _MAX_FEATURES limit (features past
+    the cap were silently dropped). Tiles carry every feature; geometry is
+    *generalized* per zoom instead — detail the screen cannot resolve is dropped,
+    never the feature itself.
+  * Payload scales with the view, not the dataset. An island-wide view of a layer
+    is a handful of small tiles regardless of how many features the layer holds.
+
+Tiles are immutable for a given (layer, dataset_version, z, x, y), so they are safe
+to cache indefinitely at a CDN.
+"""
+
+from __future__ import annotations
+
+import logging
+import math
+import re
+import threading
+from collections import OrderedDict
+from typing import Any
+
+from core import TILE_MAX_ZOOM as MAX_ZOOM
+from core import settings
+
+from . import db
+
+log = logging.getLogger(__name__)
+
+# Registry-supplied column names are still validated before interpolation.
+_SAFE_COL = re.compile(r"^[a-z_][a-z0-9_]*$", re.I)
+
+# Short on purpose: a slow tile should give up quickly and return empty rather than
+# hold a pooled connection while the map waits on it.
+TILE_TIMEOUT_MS = settings.tile_timeout_ms
+# Zoomed-out tiles cover far more ground and legitimately take longer to build.
+# There are only a handful of them per layer and they are cached below, so giving
+# them room is cheap — and a timeout here means a blank half of the island.
+TILE_TIMEOUT_LOWZOOM_MS = settings.tile_timeout_lowzoom_ms
+
+# Small in-process cache. Tiles are immutable for a layer version, and the few
+# low-zoom tiles are both the most expensive to build and the most requested, so
+# caching them turns a repeated multi-second query into a dictionary lookup. A CDN
+# does this properly in front; this keeps a single instance sane without one.
+_CACHE: OrderedDict[str, bytes] = OrderedDict()
+_CACHE_MAX = settings.tile_cache_entries
+_CACHE_LOCK = threading.Lock()
+
+# A single map view requests many tiles at once. Without a gate they all try to
+# borrow a connection at the same moment and drain the pool, which then fails
+# unrelated requests including /ask. Cap in-flight tile queries below the pool size
+# so there is always a connection left for everything else.
+_TILE_GATE = threading.Semaphore(settings.tile_concurrency)
+
+
+def tile_bounds_4326(z: int, x: int, y: int) -> tuple[float, float, float, float]:
+    """Lon/lat bounds of a Web Mercator tile, computed here rather than in SQL.
+
+    This matters for performance: ST_Transform is STABLE, not IMMUTABLE, so a
+    WHERE clause like `geom && ST_Transform(ST_TileEnvelope(z,x,y), 4326)` is not
+    folded into a constant — the planner cannot use the GiST index and falls back
+    to a full scan, reprojecting every row. Passing plain numbers into
+    ST_MakeEnvelope keeps the bbox test index-backed.
+    """
+    n = 2.0**z
+    lon1 = x / n * 360.0 - 180.0
+    lon2 = (x + 1) / n * 360.0 - 180.0
+    lat1 = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / n))))
+    lat2 = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (y + 1) / n))))
+    return lon1, min(lat1, lat2), lon2, max(lat1, lat2)
+
+
+# MVT extent in tile-local units. 4096 is the de-facto standard (Mapbox/MapLibre).
+_EXTENT = 4096
+# Buffer in tile units, so shapes crossing a tile edge render without seams.
+_BUFFER = 64
+
+_LAYER_META: dict[str, dict[str, Any]] = {}
+
+
+def layer_meta(name: str) -> dict[str, Any] | None:
+    """Look up a layer in the catalog. Doubles as the whitelist check before the
+    layer name is interpolated into SQL."""
+    if name in _LAYER_META:
+        return _LAYER_META[name]
+    with db.connection() as conn:
+        cur = conn.cursor()
+        # layer_registry is the list of every layer, so any catalogued layer can
+        # be drawn.
+        cur.execute(
+            """SELECT table_name, geometry_type, feature_count,
+                      coalesce(tile_properties, '{}'), simplified
+               FROM layer_registry
+               WHERE table_name = %s AND status = 'published'""",
+            (name,),
+        )
+        row = cur.fetchone()
+    if row is None:
+        return None
+    meta = {
+        "layer_name": row[0],
+        "geometry_type": row[1],
+        "feature_count": row[2],
+        "tile_properties": list(row[3] or []),
+        "simplified": bool(row[4]),
+    }
+    _LAYER_META[name] = meta
+    return meta
+
+
+def tile(name: str, z: int, x: int, y: int) -> bytes | None:
+    """Return one MVT tile for `name`, or None if the layer is unknown.
+
+    Returns empty bytes when the tile covers no features — a valid, cacheable
+    "nothing here" response.
+    """
+    meta = layer_meta(name)
+    if meta is None:
+        return None
+    if not (0 <= z <= 22) or not (0 <= x < 2**z) or not (0 <= y < 2**z):
+        return None
+
+    # Attributes to carry into the tile, from layer_registry. Every property is
+    # repeated per feature per tile, so the registry keeps this list deliberately
+    # short rather than shipping the whole row.
+    props = [c for c in (meta.get("tile_properties") or []) if _SAFE_COL.match(c)]
+    select_extra = ", " + ", ".join(f'l."{c}"' for c in props) if props else ""
+
+    w, s, e, n = tile_bounds_4326(z, x, y)
+
+    # Heavy layers carry a pre-simplified copy built at ingest. Zoomed out, detail
+    # finer than a pixel is invisible anyway, so reading the cheap column there is
+    # the difference between a tile that renders and one that times out.
+    if meta.get("simplified"):
+        # Pick the pyramid level the zoom can actually resolve. Full precision is
+        # only worth reading once the viewer is close enough to see it.
+        geom_col = "l.geom_coarse" if z < 10 else ("l.geom_simple" if z < 14 else "l.geom")
+    else:
+        geom_col = "l.geom"
+
+    # Drop features too small to see at this zoom — sub-pixel shapes cost bytes and
+    # render nothing. Area compared in degrees² against the tile's own area, so no
+    # per-row reprojection is needed.
+    area_filter = ""
+    tile_area = max((e - w) * (n - s), 1e-12)
+    # Case-insensitive: geometry types are stored as both "MultiPolygon" and
+    # "MULTIPOLYGON".
+    if "polygon" in (meta["geometry_type"] or "").lower() and z < 11:
+        # A tile is drawn at 256 px a side, so a feature smaller than tile_area
+        # / 256² covers less than one pixel and cannot be seen.
+        area_filter = f" AND ST_Area(l.geom) > {tile_area / 65_536.0:.12g}"
+
+    # `name` is checked against layer_registry above; bounds are bound parameters.
+    sql = f"""
+        SELECT ST_AsMVT(t, 'layer', {_EXTENT}, 'geom') FROM (
+            SELECT
+                ST_AsMVTGeom(
+                    ST_Transform({geom_col}, 3857),
+                    ST_TileEnvelope(%(z)s, %(x)s, %(y)s), {_EXTENT}, {_BUFFER}, true
+                ) AS geom
+                {select_extra}
+            FROM "{name}" AS l
+            WHERE l.geom IS NOT NULL
+              AND l.geom && ST_MakeEnvelope(%(w)s, %(s)s, %(e)s, %(n)s, 4326)
+              {area_filter}
+        ) AS t WHERE t.geom IS NOT NULL
+    """
+    key = f"{name}/{z}/{x}/{y}"
+    with _CACHE_LOCK:
+        hit = _CACHE.get(key)
+        if hit is not None:
+            _CACHE.move_to_end(key)
+            return hit
+
+    timeout = TILE_TIMEOUT_LOWZOOM_MS if z < 10 else TILE_TIMEOUT_MS
+    with _TILE_GATE, db.connection() as conn:
+        cur = conn.cursor()
+        cur.execute(f"SET LOCAL statement_timeout = '{timeout}ms'")
+        cur.execute(sql, {"z": z, "x": x, "y": y, "w": w, "s": s, "e": e, "n": n})
+        row = cur.fetchone()
+    data = bytes(row[0]) if row and row[0] else b""
+
+    with _CACHE_LOCK:
+        _CACHE[key] = data
+        while len(_CACHE) > _CACHE_MAX:
+            _CACHE.popitem(last=False)
+    return data
+
+
+def tilejson(name: str, base_url: str) -> dict[str, Any] | None:
+    """TileJSON descriptor so MapLibre can add the layer as a vector source."""
+    meta = layer_meta(name)
+    if meta is None:
+        return None
+    return {
+        "tilejson": "3.0.0",
+        "name": name,
+        "tiles": [f"{base_url}{settings.api_prefix}/tiles/{name}/{{z}}/{{x}}/{{y}}.mvt"],
+        "minzoom": 0,
+        "maxzoom": MAX_ZOOM,
+        "bounds": [-67.3, 17.85, -65.2, 18.55],  # Puerto Rico
+        # What a style can refer to: every tile has one source-layer, "layer",
+        # carrying these properties.
+        "vector_layers": [
+            {"id": "layer", "fields": {c: "String" for c in meta.get("tile_properties") or []}}
+        ],
+    }

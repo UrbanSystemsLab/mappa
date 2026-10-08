@@ -1,0 +1,55 @@
+# Release to staging, then promote to production - the same steps as
+# scripts/release.sh, for when GitHub is allowed to deploy.
+#
+# NOT ACTIVE YET. GitHub cannot sign in to Google Cloud until a project admin
+# creates a deploy service account and a Workload Identity Federation link
+# (see docs/RELEASING.md). Until then it only runs if started by hand, and will
+# fail at "Sign in to Google Cloud". Releases run from scripts/release.sh.
+#
+# Once active:
+#   push to main            -> tests -> staging
+#   "Run workflow" by hand  -> production (approval required), same build
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: staging or production
+        required: true
+        default: staging
+        type: choice
+        options: [staging, production]
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}     # production requires a reviewer's approval
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign in to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: pip }
+      - run: python -m venv venv && ./venv/bin/pip install -q -r requirements-api.txt pytest ruff alembic
+      - name: Database connection
+        run: |
+          curl -sSLo cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.0/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
+          ./cloud-sql-proxy mappa-lamarana-aecc:us-central1:mappa-pg --port 5432 &
+          gcloud secrets versions access latest --secret mappa-db-password > .mappa_db_pw
+          sleep 5
+      - name: Release
+        run: yes production | ./scripts/release.sh ${{ inputs.target }}

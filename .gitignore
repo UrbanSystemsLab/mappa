@@ -29,13 +29,9 @@ Thumbs.db
 *.pem
 *.key
 
-# Raw partner data (too large / redistribution unclear)
-data/raw/*.gpkg
-data/raw/*.gdb
-data/raw/*.ppkx
-data/raw/*.zip
-data/raw/*.tif
-data/raw/*.tiff
+# Raw partner data (too large / redistribution unclear) — ignore the whole folder,
+# including downloaded PDFs and the GeoPackage. Regenerate locally from source.
+data/raw/
 
 # Docker volumes (if bind-mounted)
 mappa-db-data/
@@ -44,3 +40,11 @@ mappa-db-data/
 data/generated/
 data/inventory/
 logs/
+.mappa_db_pw
+
+# Extracted document text produced by pipelines/fetch_parse_local.py (derived, large)
+data/corpus_*.json
+
+# La Maraña's master inventory workbook (partner data, pulled from their Drive)
+data/raw/lamarana_master_inventory.xlsx
+data/raw/lamarana_docs/
