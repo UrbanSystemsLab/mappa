@@ -1,0 +1,26 @@
+# Deploy by hand: Actions -> Deploy -> Run workflow. For redeploying a commit, or
+# releasing when a push did not (for instance before deploys were switched on).
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to deploy
+        required: true
+        default: staging
+        type: choice
+        options: [staging, production]
+      ref:
+        description: Commit to deploy (default - the head of the branch this is run from)
+        required: false
+        default: ''
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: ${{ inputs.environment }}
+      ref: ${{ inputs.ref }}
+    secrets: inherit

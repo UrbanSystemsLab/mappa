@@ -1,15 +1,17 @@
-# Tests run on every push and every pull request, and the deploy workflow waits
-# for this one. Before it existed, a bad commit reached production unimpeded -
-# an edit that deleted eighteen functions shipped, and the page still rendered,
-# because nothing checked that the page still worked.
+# Tests on every pull request and push. A passing push to main deploys to
+# staging; a passing push to release deploys the same build to production.
+# `ci-ok` is the one check to require in branch protection.
+#
+# Deploys need a deploy key in the GitHub environment (docs/RELEASING.md) and
+# the repository variable DEPLOY_ENABLED=true. Until then they are skipped and
+# releases run from scripts/release.sh on a laptop.
 
-name: Tests
+name: CI
 
 on:
   push:
-    branches: [main, 'feature/**']
+    branches: [main, release]
   pull_request:
-  workflow_call:          # so deploy.yml can require it
 
 jobs:
   lint:
@@ -21,8 +23,6 @@ jobs:
         with: { python-version: '3.12' }
       - run: pip install ruff
       # Unused imports, shadowed names, mutable defaults, silent zip truncation.
-      # A variable shadowing a function is what once froze the chat on
-      # "Consultando…" with no error anywhere.
       - run: ruff check api pipelines tests core
       - run: ruff format --check api pipelines tests core
 
@@ -87,13 +87,39 @@ jobs:
       - name: JavaScript parses
         run: node --check frontend/app.js
       - name: Every expected function still exists
-        # An edit bounded by the wrong landmark deleted eighteen of these, and the
-        # page still rendered because the welcome screen comes from HTML.
+        # The page renders its welcome screen from HTML even when these are gone,
+        # so their absence would not show without this check.
         run: |
           missing=0
           for fn in ask askHere render renderLayerPanel addLayer removeLayer \
                     restyle autoShowLayers focusBBox fetchLayers layerRow \
-                    renderLegend showPopup featureCard applyLang; do
+                    renderLegend showPopup featureCard applyLang showFound; do
             grep -q "function $fn" frontend/app.js || { echo "MISSING: $fn"; missing=1; }
           done
           exit $missing
+
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [lint, unit, schema, frontend-shape]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every check passed
+        run: |
+          echo '${{ toJSON(needs) }}' | jq -e 'all(.[]; .result == "success")' >/dev/null
+
+  deploy-staging:
+    needs: ci-ok
+    if: github.event_name == 'push' && github.ref_name == 'main' && vars.DEPLOY_ENABLED == 'true'
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: staging
+    secrets: inherit
+
+  deploy-production:
+    needs: ci-ok
+    if: github.event_name == 'push' && github.ref_name == 'release' && vars.DEPLOY_ENABLED == 'true'
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: production
+    secrets: inherit

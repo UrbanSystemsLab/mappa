@@ -3,22 +3,23 @@
 #
 #   ./scripts/release.sh staging      test copy  -> https://mappa-staging-...run.app
 #   ./scripts/release.sh production   live site  -> https://app.mappealo.org
+#   add --yes to skip the typed confirmation (GitHub, after its own approval)
 #
 # Every change, code or data, takes the same path:
 #
 #   commit -> tests -> STAGING (database + site) -> someone looks -> PRODUCTION
 #
 # Production only ever receives the exact build staging is already running, and
-# only from main. It cannot be released to directly, and nothing here changes
-# the live database unless "production" is typed to confirm.
+# only from main or release. Nothing here changes the live database unless
+# "production" is typed to confirm, or GitHub's production approval was given.
 #
-# This runs from a laptop because the project does not yet let GitHub deploy
-# (that needs a Google Cloud admin). The steps are the same ones GitHub will run
-# once it can; see .github/workflows/release.yml.
+# GitHub runs this same script (.github/workflows/_deploy.yml); a laptop runs it
+# when GitHub deploys are not switched on.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 TARGET="${1:-}"
+YES=""; [ "${2:-}" = --yes ] && YES=1
 PROJECT=mappa-lamarana-aecc
 REGION=us-central1
 INSTANCE="$PROJECT:$REGION:mappa-pg"
@@ -37,14 +38,15 @@ fail() { printf '\n\033[31mSTOPPED: %s\033[0m\n' "$*"; exit 1; }
 # --- what is being released ---------------------------------------------------
 [ -z "$(git status --porcelain)" ] || fail "there are uncommitted changes. Commit them first, so what is released is a commit anyone can find."
 SHA=$(git rev-parse --short HEAD)
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
+# GitHub checks out the commit itself, so the branch comes from its own variable.
+BRANCH=${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD)}
 nc -z 127.0.0.1 5432 2>/dev/null || fail "the Cloud SQL proxy is not running on port 5432."
 DB_URL="postgresql://mappa:$(cat .mappa_db_pw)@127.0.0.1:5432/$DB"
 
 if [ "$TARGET" = production ]; then
-  [ "$BRANCH" = main ] || fail "production is released from main only (this is $BRANCH)."
-  git fetch -q origin main
-  [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || fail "main here is not the same as main on GitHub. Push or pull first."
+  case "$BRANCH" in main | release) ;; *) fail "production is released from main or release only (this is $BRANCH)." ;; esac
+  git fetch -q origin "$BRANCH"
+  [ "$(git rev-parse HEAD)" = "$(git rev-parse "origin/$BRANCH")" ] || fail "$BRANCH here is not the same as $BRANCH on GitHub. Push or pull first."
   STAGED_SHA=$(gcloud run services describe mappa-staging --region $REGION --project $PROJECT \
                  --format='value(spec.template.metadata.labels.git-sha)' 2>/dev/null || true)
   [ "$STAGED_SHA" = "$SHA" ] || fail "staging is running ${STAGED_SHA:-nothing}, not $SHA. Release this to staging and check it there first."
@@ -54,8 +56,10 @@ if [ "$TARGET" = production ]; then
             --format='value(status.imageDigest)')
   echo "Releasing $SHA to PRODUCTION (app.mappealo.org) - the build staging runs:"
   echo "  $IMAGE"
-  read -r -p "Type 'production' to continue: " ok
-  [ "$ok" = production ] || fail "not confirmed."
+  if [ -z "$YES" ]; then
+    read -r -p "Type 'production' to continue: " ok
+    [ "$ok" = production ] || fail "not confirmed."
+  fi
 fi
 
 # --- 1. tests that need no database --------------------------------------------
