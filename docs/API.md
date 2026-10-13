@@ -35,12 +35,13 @@ point the user clicked, plus that point's `lng` and `lat`, so questions like "th
 nearest shelter" or "what is within 1 km of here" can be answered. `history` holds
 earlier turns; the last six are used.
 
-The response is server-sent events, in this order:
+The response is server-sent events, in this order. The text comes first; the map
+instructions follow as soon as the answer's layers are chosen:
 
 | Event | Data | Use it to |
 |---|---|---|
-| `meta` (once) | `municipio`, `focus` (bbox `[w, s, e, n]`: the features found, or else the place), `suggested_layers` (ids of the layers the answer measured), `found` (features to highlight: `{layer_id, name, lng, lat}`), `disclaimer`, `disclaimers` (`{es, en}`) | move the map, turn on layers, highlight what was found |
 | `delta` (one or more) | `text` | append to the answer on screen |
+| `meta` (once) | `municipio`, `focus` (bbox `[w, s, e, n]`: the features found, or else the place), `suggested_layers` (ids of the layers the answer measured), `found` (features to highlight: `{layer_id, name, lng, lat}`), `disclaimer`, `disclaimers` (`{es, en}`) | move the map, turn on layers, highlight what was found |
 | `done` (once) | `answer` (final cleaned text), `citations`, `steps` | replace the streamed text with `answer`, list sources |
 
 Each event arrives as `event: <name>\ndata: <json>\n\n`. Browsers' `EventSource` only

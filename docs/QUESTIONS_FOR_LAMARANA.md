@@ -281,6 +281,14 @@ all kinds, source "por verificar"). In Arecibo one says 40 and the other 289.
 Mappa now prefers the published layer and names it as the source. Is that the
 right default, and are there topics where a different layer should be standard?
 
+### 18. Should more layers be published to the map?
+
+Only the 82 layers you published can be drawn on the map; 521 more have data the
+assistant can measure but not show. Two of them are standard layers for common
+questions: **rivers** (Base Map CRIM OGP Hydrography 2006) and **tsunami
+evacuation zones** (Evacuation Zones ALL). A question about rivers can be answered
+from them, but the map cannot show them. Should these two, or others, be published?
+
 ---
 
 ## How to use this file

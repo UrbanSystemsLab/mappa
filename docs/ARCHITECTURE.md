@@ -66,7 +66,10 @@ come only from layers La Maraña published, through a name column chosen by
 **The map follows the answer.** With the answer, `answering.py` tells the map which
 layers to turn on (the ones a figure came from), where to fly (the features found,
 or else the place) and which features to highlight. A layer the previous answer
-turned on is turned off again; one the user turned on is left alone.
+turned on is turned off again; one the user turned on is left alone. An answer from
+documents alone measured nothing, so after its text is settled the assistant makes
+one short choice (`show_on_map`) among the drawable layers closest to the question -
+flood zones beside what a plan says about building near rivers - or chooses none.
 
 A question about rules ("What does the Reglamento Conjunto say about building near a
 river?") follows the same path but uses `search_documents`. That embeds the question and

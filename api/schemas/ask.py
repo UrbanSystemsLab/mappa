@@ -85,8 +85,8 @@ class Step(BaseModel):
 
 # Server-sent events from POST /api/v1/ask/stream, in this order:
 #
-#   event: meta    once, when the lookups are done: where to fly, what to show
-#   event: delta   many times, each a piece of the answer text
+#   event: delta   one or more times, each a piece of the answer text
+#   event: meta    once, after the text: where to fly, what to turn on and highlight
 #   event: done    once, with the cleaned final text, citations and steps
 #
 # Each event's `data:` line is one JSON object with the fields below.

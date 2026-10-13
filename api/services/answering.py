@@ -1,8 +1,8 @@
 """One question, from arrival to finished answer.
 
     1. the assistant reads the question and calls the tools it needs
-    2. as soon as it starts answering, the map is told where to go and what to show
-    3. the answer streams as it is written
+    2. the answer streams as it is written
+    3. the map is told where to go, what to turn on and what to highlight
     4. the finished answer is cleaned, and its sources are the passages it cited
 
 Both routes - the streaming one and the plain one - use this, so they cannot
@@ -47,7 +47,8 @@ class Ask:
 
 
 def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
-    """("meta" | "delta" | "done", payload) events, in that order."""
+    """("delta"..., "meta", "done", payload) events: the text as it is written,
+    then what the map should do, then the finished answer and its sources."""
     session = Session(lang=ask.lang, question=ask.question)
     session.place = places.from_selection(ask.location)
     session.point = _clicked_point(ask.spatial)
@@ -56,19 +57,16 @@ def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
         active_layers=[str(x.get("name")) for x in ask.active_layers if x.get("name")],
         history=[(t.question, t.answer) for t in ask.history],
     )
-    sent_meta, written = False, []
+    written = []
     try:
         for piece in assistant.answer(ask.question, session, context):
-            if not sent_meta:
-                yield "meta", _map(session)
-                sent_meta = True
             written.append(piece)
             yield "delta", {"text": piece}
     except assistant.AssistantUnavailable:
         written = [UNAVAILABLE[ask.lang]]
         yield "delta", {"text": written[0]}
-    if not sent_meta:
-        yield "meta", _map(session)
+    # After the text: by now the map's layers are chosen as well as measured.
+    yield "meta", _map(session)
     yield "done", _finish("".join(written), session)
 
 
@@ -102,6 +100,7 @@ def _map(session: Session) -> dict[str, Any]:
     order = [
         *(x for x in session.measured_layers if x.id in holding),
         *session.measured_layers,
+        *session.shown_layers,
         *session.layers_used,
     ]
     shown: list[str] = []

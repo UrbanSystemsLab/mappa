@@ -132,3 +132,28 @@ def test_dropping_a_sentence_keeps_the_bullets():
     s.results.append('{"count": 3}')
     text = "There are 3 shelters. One has 99 beds.\n• Shelter A\n• Shelter B"
     assert assistant._drop_unsupported(text, s) == "There are 3 shelters.\n• Shelter A\n• Shelter B"
+
+
+def test_an_answer_with_nothing_on_the_map_gets_a_layer_chosen(monkeypatch):
+    from types import SimpleNamespace
+
+    from api.repositories.layers import Layer
+    from api.tools import Session
+
+    flood = Layer("flood", "t", "Inundación", "Flood zones", "MULTIPOLYGON", 1, "published")
+    monkeypatch.setattr("api.repositories.layers.search", lambda *a, **k: [(flood, 0.7)])
+    monkeypatch.setattr("api.tools.layers.get", {"flood": flood}.get)
+    pick = SimpleNamespace(name="show_on_map", args={"layer_ids": "flood"})
+    chunk = SimpleNamespace(
+        candidates=[
+            SimpleNamespace(
+                finish_reason=None,
+                content=SimpleNamespace(parts=[SimpleNamespace(function_call=pick, text=None)]),
+            )
+        ]
+    )
+    client = SimpleNamespace(models=SimpleNamespace(generate_content_stream=lambda **kw: [chunk]))
+    config = SimpleNamespace(model_copy=lambda update: None)
+    s = Session(question="building near rivers")
+    assistant._illustrate(client, config, "Flood rules apply.", s)
+    assert [x.id for x in s.shown_layers] == ["flood"]

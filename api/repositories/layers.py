@@ -96,13 +96,14 @@ def get(layer_id: str) -> Layer | None:
     return _row(row) if row else None
 
 
-def search(topic: str, limit: int = 8) -> list[tuple[Layer, float]]:
+def search(topic: str, limit: int = 8, on_map: bool = False) -> list[tuple[Layer, float]]:
     """Layers closest to the topic, by meaning and by the words themselves.
 
     Meaning alone confuses neighbours - "rivers" lands on an irrigation canal -
     and a single word is a thin thing to embed. So a layer also scores for each
     of the topic's words found in its own text (names, description, what it
     holds), accents and plurals aside, and a published layer has a small edge.
+    on_map keeps only layers the map can draw.
     """
     lit = vector(topic)
     words = _words(topic)
@@ -117,6 +118,7 @@ def search(topic: str, limit: int = 8) -> list[tuple[Layer, float]]:
                                       / greatest(cardinality(%(words)s::text[]), 1)
                               + CASE WHEN status = 'published' THEN %(pub)s ELSE 0 END AS score
                     FROM layer_registry WHERE embedding IS NOT NULL AND {_LIVE}
+                          {"AND status = 'published'" if on_map else ""}
                 ) s ORDER BY score DESC LIMIT %(n)s""",
             {"v": lit, "w": WORD_WEIGHT, "pub": PUBLISHED_WEIGHT, "words": words, "n": limit},
         )

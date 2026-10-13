@@ -194,3 +194,17 @@ def test_the_map_turns_on_the_found_layer_and_flies_to_what_was_found():
     assert m["suggested_layers"][:2] == ["hosp", "flood"]
     w, so, e, n = m["focus"]
     assert w < -66.1 and e > -66.0 and so < 18.4 and n > 18.5
+
+
+def test_show_on_map_shows_only_drawable_layers(monkeypatch):
+    monkeypatch.setattr(tools.layers, "get", {"flood": FLOOD, "farms": UNPUBLISHED}.get)
+    s = tools.Session()
+    out = tools.call(s, "show_on_map", {"layer_ids": "flood, farms"})
+    assert [x.id for x in s.shown_layers] == ["flood"]
+    assert "Farms" in out["note"]
+    assert not s.has_evidence  # showing a layer finds nothing
+
+
+def test_show_on_map_can_show_nothing():
+    s = tools.Session()
+    assert tools.call(s, "show_on_map", {"layer_ids": ""})["shown"] == []

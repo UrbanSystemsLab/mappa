@@ -44,6 +44,7 @@ class Session:
     point: tuple[float, float] | None = None  # (lng, lat) the user clicked
     question: str = ""  # its own numbers ("within 2 km") are not invented
     found: list[dict[str, Any]] = field(default_factory=list)  # features to show on the map
+    shown_layers: list[Layer] = field(default_factory=list)  # chosen to illustrate the answer
     steps: list[dict[str, Any]] = field(default_factory=list)
     results: list[str] = field(default_factory=list)  # every tool result, as text
     measured: bool = False  # a map tool computed something
@@ -161,6 +162,7 @@ def find_layers(session: Session, topic: str) -> dict:
                 "geometry": layer.geometry.lower(),
                 "features": layer.features,
                 "standard_for": layers.role_of(layer),
+                "on_map": layer.on_map,
                 "relevance": round(score, 2),
             }
             for layer, score in layers.search(topic)
@@ -302,6 +304,24 @@ def list_features(
     }
 
 
+def show_on_map(session: Session, layer_ids: str = "") -> dict:
+    shown, skipped = [], []
+    for layer_id in [x.strip() for x in layer_ids.split(",") if x.strip()][:3]:
+        layer = layers.get(layer_id)
+        if layer is None:
+            raise ToolError(f"unknown layer_id {layer_id!r}; call find_layers first")
+        if not layer.on_map:
+            skipped.append(layer.name(session.lang))
+            continue
+        if all(x.id != layer.id for x in session.shown_layers):
+            session.shown_layers.append(layer)
+        shown.append(layer.name(session.lang))
+    return {
+        "shown": shown,
+        "note": f"Not drawable on the map: {', '.join(skipped)}." if skipped else "",
+    }
+
+
 # ---------------------------------------------------------------- the catalogue
 
 
@@ -439,6 +459,20 @@ TOOLS += [
         ),
         list_features,
         lambda r: f"{r['count']} {r['layer']} in {r['place']}",
+    ),
+    Tool(
+        "show_on_map",
+        "Put up to three layers on the map to illustrate the answer, when you did not measure "
+        "them - e.g. flood zones for a question about what a plan says on building near rivers. "
+        "Only layers with on_map true can be shown. Not evidence: it finds nothing.",
+        _p(
+            layer_ids=(
+                "string?",
+                "One to three layer_ids from find_layers, separated by commas; empty for none.",
+            )
+        ),
+        show_on_map,
+        lambda r: ", ".join(r["shown"]) or "nothing shown",
     ),
 ]
 

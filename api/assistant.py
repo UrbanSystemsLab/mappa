@@ -44,6 +44,9 @@ Answer only from what your tools return. Never use your own knowledge, even if y
 - For which ones, or what they are called: list_features. For the nearest or closest to where the
   user clicked: nearest. For "here" or "around this point": list_features with
   around_clicked_point_metres. Name what they return; never name a feature a tool did not.
+- When the answer is about something the map can show - flood zones, rivers, protected areas,
+  land use - and you did not measure it, call find_layers and then show_on_map with the one or two
+  layers that best illustrate it.
 - Call several tools when the question needs both documents and map data.
 
 Write in English. Start with one sentence that answers directly. Then up to six '• ' bullets or one
@@ -63,6 +66,9 @@ Responde solo con lo que devuelven tus herramientas. Nunca uses conocimiento pro
 - Para cuáles, o cómo se llaman: list_features. Para lo más cercano al punto que marcó el usuario:
   nearest. Para "aquí" o "alrededor de este punto": list_features con around_clicked_point_metres.
   Nombra lo que devuelvan; nunca nombres algo que una herramienta no devolvió.
+- Si la respuesta trata de algo que el mapa puede mostrar - zonas inundables, ríos, áreas
+  protegidas, uso de terrenos - y no lo mediste, llama a find_layers y luego a show_on_map con la
+  capa o las dos capas que mejor lo ilustren.
 - Llama varias herramientas cuando la pregunta necesite documentos y datos del mapa.
 
 Escribe en español. Empieza con una oración que responda directamente. Luego hasta seis viñetas '• '
@@ -265,9 +271,62 @@ def answer(question: str, session: Session, context: Context) -> Iterator[str]:
             contents.append(types.Content(role="model", parts=[types.Part.from_text(text=text)]))
             contents.append(types.Content(role="user", parts=[types.Part.from_text(text=problem)]))
             continue
-        yield _drop_unsupported(text, session)
+        final = _drop_unsupported(text, session)
+        yield final  # the reader has the answer; what the map shows is chosen after
+        if session.has_evidence and not (session.measured_layers or session.shown_layers):
+            _illustrate(client, config, final, session)
         return
     raise AssistantUnavailable("no answer within the round limit")
+
+
+ILLUSTRATE = {
+    "en": "Choose what the map shows beside this answer: call show_on_map with the one or two "
+    "layers that best illustrate it, from these or the standard layers - or with an empty "
+    "layer_ids if none fits. Do not rewrite the answer.\nLayers the map can show:\n",
+    "es": "Elige qué muestra el mapa junto a esta respuesta: llama a show_on_map con la capa o "
+    "las dos capas que mejor la ilustren, de estas o de las capas estándar - o con layer_ids "
+    "vacío si ninguna sirve. No reescribas la respuesta.\nCapas que el mapa puede mostrar:\n",
+}
+
+
+def _illustrate(client, config, answer_text: str, session: Session) -> None:
+    """Let the model pick layers for an answer that put nothing on the map - a
+    question about what a plan says on building near rivers shows flood zones.
+
+    One small request: the question, the answer and the drawable layers closest
+    to the question, limited to show_on_map. The answer is already with the
+    reader; a failure here only means no layer is shown.
+    """
+    from google.genai import types
+
+    from .repositories import layers
+
+    try:
+        candidates = layers.search(session.question, limit=8, on_map=True)
+        listed = "\n".join(f"- {x.name(session.lang)} - layer_id {x.id}" for x, _ in candidates)
+        prompt = (
+            f"Question: {session.question}\n\nAnswer: {answer_text}\n\n"
+            f"{ILLUSTRATE[session.lang]}{listed}"
+        )
+        only = config.model_copy(
+            update={
+                "tool_config": types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(
+                        mode="ANY", allowed_function_names=["show_on_map"]
+                    )
+                )
+            }
+        )
+        contents = [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])]
+        for chunk in client.models.generate_content_stream(
+            model=MODEL, contents=contents, config=only
+        ):
+            for part in _parts(chunk):
+                if part.function_call and part.function_call.name == "show_on_map":
+                    call(session, "show_on_map", dict(part.function_call.args or {}))
+                    return
+    except Exception as exc:  # the answer stands without a map layer
+        log.warning("choosing layers to show failed: %s", exc)
 
 
 _NUMBER = re.compile(r"(?<![\w.-])\d[\d,]*(?:\.\d+)?")
