@@ -88,9 +88,18 @@ PERSONAL = re.compile(
     re.I,
 )
 
+# Column names that say they hold what a feature is called. Asked first; a column
+# that is merely mostly unique (a street address, a record number) is a fallback.
+NAME_WORDS = re.compile(
+    r"^(nombre.*|nom_.*|name|names|.*_name|.*_nombre|escuela|instalacio.*|facility|"
+    r"hospital|centro|comunidad|reserva|area_name|sitio|site)$",
+    re.I,
+)
+
 MAX_SHOWN = 6  # every property is repeated per feature per tile
 MAX_KINDS = 20  # beyond this a legend stops being readable
 SAMPLE = 5000
+KIND_SAMPLE = 50_000
 
 # A qualitative palette: distinguishable from one another, readable on a light
 # basemap, and none of them the blue the map uses for water.
@@ -159,6 +168,7 @@ def profile(cur, table: str, cols: list[tuple[str, str]]) -> list[dict]:
                 "text": dtype in ("text", "character varying", "character"),
                 "fill": len(values) / len(rows),
                 "distinct": len(distinct),
+                "unique": len(distinct) / len(values) if values else 0,
                 "avg_len": (sum(len(str(v)) for v in values) / len(values)) if values else 0,
             }
         )
@@ -168,9 +178,12 @@ def profile(cur, table: str, cols: list[tuple[str, str]]) -> list[dict]:
 def kinds(cur, table: str, column: str, features: int) -> list[tuple[str, int]] | None:
     """Every value of a candidate column across the whole layer, or None if it
     is not a column that sorts features into a few kinds."""
+    # From a large sample, not the whole table: land cover alone is millions of
+    # shapes, and the kinds - not their exact counts - are what is used.
     cur.execute(
-        f'SELECT trim("{column}"::text), count(*) FROM "{table}" '
-        f'WHERE "{column}" IS NOT NULL GROUP BY 1 ORDER BY 2 DESC LIMIT {MAX_KINDS + 1}'
+        f'SELECT trim(v::text), count(*) FROM (SELECT "{column}" AS v FROM "{table}" '
+        f"LIMIT {KIND_SAMPLE}) s "
+        f"WHERE v IS NOT NULL GROUP BY 1 ORDER BY 2 DESC LIMIT {MAX_KINDS + 1}"
     )
     found = [(v, n) for v, n in cur.fetchall() if not empty(v)]
     if not (2 <= len(found) <= MAX_KINDS):
@@ -186,7 +199,69 @@ def kinds(cur, table: str, column: str, features: int) -> list[tuple[str, int]] 
     return found
 
 
-def decide(cur, table: str, features: int) -> tuple[list[str], dict | None]:
+# A heading that only says "name" does not say whose. On the farm-permit layers
+# it holds the farmers; on a few others, private owners. Words that mark a value
+# as an institution or a place rather than a person.
+GENERIC_NAME = re.compile(r"^(name|names|nombre|nombres|full_name|t_nombre)$", re.I)
+INSTITUTION = re.compile(
+    r"\b(hosp\w*|esc\w*|escuela|school|centro|center|cdt|health|salud|reserva|bosque|"
+    r"playa|balneario|hacienda|finca|corp\w*|inc|llc|co|area|área|zona|sector|parcelas|"
+    r"barrio|plant\w*|planta|station|estaci\w+|tc|unit|edificio|building|iglesia|parque|"
+    r"park|refugio|club|hotel|aeropuerto|airport|heliport|base|puerto|museo|"
+    r"universidad|colegio|academia|biblioteca|cementerio|cemetery|memorial|"
+    # Places in the landscape: rivers, creeks, bays, hills, keys.
+    r"r[ií]o|quebrada|arroyo|caño|cano|lago|laguna|embalse|represa|bah[ií]a|ensenada|"
+    r"cerro|monte|loma|sierra|punta|cabo|isla|islote|cayo|arrecife|manglar|ciénaga|"
+    r"cienaga|charca|canal|river|creek|lake|bay|"
+    r"\w*[0-9]\w*)\b",
+    re.I,
+)
+PERSONLIKE = re.compile(r"^[A-Za-zÀ-ÿ.'\-]+(\s+[A-Za-zÀ-ÿ.'\-]+){1,3}$")
+
+
+def looks_like_people(values: list[str]) -> bool:
+    """Whether most values read as a person's name: two to four plain words,
+    with nothing marking an institution or a place."""
+    vals = [v.strip() for v in values if v and v.strip()]
+    if not vals:
+        return False
+    people = sum(1 for v in vals if PERSONLIKE.match(v) and not INSTITUTION.search(v))
+    return people / len(vals) > 0.4
+
+
+def name_column(cur, table: str, prof: list[dict]) -> str | None:
+    """The column that says what each feature is called - "Escuela José de Diego",
+    "Río Grande de Loíza" - so an answer can name what it found.
+
+    A text column whose heading says it is a name, holding many different names.
+    Never a person: personal and address columns are excluded by heading, and a
+    generic "name" column whose values read as people's names is not used at all.
+    """
+    candidates = [
+        p
+        for p in prof
+        if p["text"]
+        # Long features are split into segments that repeat a name, and many
+        # small ones have none: a river is hundreds of pieces, a fifth named.
+        and p["fill"] >= 0.15
+        and (p["unique"] >= 0.5 or p["distinct"] >= 30)
+        and 3 <= p["avg_len"] <= 80
+        and NAME_WORDS.match(p["name"])
+        and not PERSONAL.match(p["name"])
+    ]
+    for p in sorted(candidates, key=lambda p: (-p["unique"], -p["fill"])):
+        if GENERIC_NAME.match(p["name"]):
+            cur.execute(
+                f'SELECT "{p["name"]}"::text FROM "{table}" '
+                f'WHERE "{p["name"]}" IS NOT NULL LIMIT 400'
+            )
+            if looks_like_people([r[0] for r in cur.fetchall()]):
+                continue
+        return p["name"]
+    return None
+
+
+def decide(cur, table: str, features: int) -> tuple[list[str], dict | None, str | None, str | None]:
     cols = columns(cur, table)
     prof = profile(cur, table, cols)
     useful = [p for p in prof if p["fill"] >= 0.2 and (p["distinct"] > 1 or len(prof) == 1)]
@@ -238,21 +313,48 @@ def decide(cur, table: str, features: int) -> tuple[list[str], dict | None]:
             continue  # a person's details, not an organisation's
         if p["name"] not in shown:
             shown.append(p["name"])
-    return shown, by
+    label = name_column(cur, table, prof)
+    return shown, by, label, summary(cur, table, by, label)
+
+
+def summary(cur, table: str, by: dict | None, label: str | None) -> str | None:
+    """What the layer holds, in its own words: its main categories and a sample
+    of what its features are called. Searched with the layer, so "rivers" finds
+    the hydrography layer by the Río Grande de Loíza inside it."""
+    parts = []
+    if by:
+        parts.append(", ".join(c["value"] for c in by["categories"][:12]))
+    if label:
+        cur.execute(
+            f'SELECT DISTINCT trim(v::text) FROM (SELECT "{label}" AS v FROM "{table}" '
+            f'WHERE "{label}" IS NOT NULL LIMIT {KIND_SAMPLE}) s LIMIT 15'
+        )
+        names = [r[0] for r in cur.fetchall() if not empty(r[0])]
+        if names:
+            parts.append(", ".join(names))
+    return " · ".join(parts) or None
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--commit", action="store_true")
     ap.add_argument("--table")
+    ap.add_argument("--after", help="resume: only tables named after this one")
     args = ap.parse_args()
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
         raise SystemExit("DATABASE_URL not set")
 
-    conn = psycopg2.connect(dsn)
-    cur = conn.cursor()
-    cur.execute("SET statement_timeout='120s'")
+    def connect():
+        # Keepalives so a quiet minute on a long run does not end the connection.
+        c = psycopg2.connect(
+            dsn, keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5
+        )
+        k = c.cursor()
+        k.execute("SET statement_timeout='120s'")
+        return c, k
+
+    conn, cur = connect()
     where = "AND table_name = %s" if args.table else ""
     cur.execute(
         f"""SELECT id, table_name, coalesce(feature_count, 0), coalesce(tile_properties, '{{}}'),
@@ -264,33 +366,52 @@ def main() -> None:
     )
     layers = cur.fetchall()
 
-    coloured = clickable = nothing = failed = 0
-    for rid, table, features, _old, style in layers:
-        try:
-            shown, by = decide(cur, table, features)
-        except Exception as exc:
-            conn.rollback()
-            cur.execute("SET statement_timeout='120s'")
+    if args.after:
+        layers = [row for row in layers if row[1] > args.after]
+
+    coloured = clickable = nothing = failed = named = 0
+    for i, (rid, table, features, _old, style) in enumerate(layers, 1):
+        # Saved every few layers, so a dropped connection loses only those.
+        if args.commit and i % 10 == 0:
+            conn.commit()
+            print(f"[profile] {i}/{len(layers)} saved, up to {table}", flush=True)
+        for attempt in (1, 2):
+            try:
+                cur.execute("SAVEPOINT layer")
+                shown, by, label, about = decide(cur, table, features)
+                style = dict(style or {})
+                style.pop("by", None)
+                style.pop("categories", None)
+                cur.execute(
+                    "UPDATE layer_registry SET tile_properties = %s, style = %s, "
+                    "label_column = %s, content_summary = %s WHERE id = %s",
+                    (shown, json.dumps(style), label, about, rid),
+                )
+                break
+            except (psycopg2.InterfaceError, psycopg2.OperationalError) as exc:
+                # The batch since the last save is lost with the connection;
+                # rerun with --after to pick up from the last saved layer.
+                print(f"    connection lost at {table} ({str(exc).splitlines()[0][:60]})")
+                conn, cur = connect()
+                if attempt == 2:
+                    raise
+            except Exception as exc:
+                cur.execute("ROLLBACK TO SAVEPOINT layer")  # this layer only
+                print(f"    could not read {table}: {str(exc).splitlines()[0][:80]}")
+                shown = None
+                break
+        if shown is None:
             failed += 1
-            print(f"    could not read {table}: {str(exc).splitlines()[0][:80]}")
             continue
-        style = dict(style or {})
-        style.pop("by", None)
-        style.pop("categories", None)
         # Colouring by category was tried on 3 Oct and made the map harder to
         # read. The choice is still worked out and reported, but not written.
-        if by:
-            coloured += 1
-        if shown:
-            clickable += 1
-        else:
-            nothing += 1
-        cur.execute(
-            "UPDATE layer_registry SET tile_properties = %s, style = %s WHERE id = %s",
-            (shown, json.dumps(style), rid),
-        )
+        coloured += bool(by)
+        clickable += bool(shown)
+        nothing += not shown
+        named += bool(label)
         if args.table:
-            print(f"  {table}\n    click shows: {shown}")
+            print(f"  {table}\n    click shows: {shown}\n    features are called by: {label}")
+            print(f"    holds: {about}")
             if by:
                 print(f"    coloured by: {by['by']}")
                 for c in by["categories"]:
@@ -298,6 +419,7 @@ def main() -> None:
 
     print(f"\n[profile] {len(layers)} layers with data")
     print(f"    {clickable:>4}  now show their information when clicked")
+    print(f"    {named:>4}  name their features (an answer can say which)")
     print(f"    {coloured:>4}  could be coloured by category (not applied)")
     print(f"    {nothing:>4}  hold nothing beyond their shape")
     if failed:

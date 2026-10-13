@@ -273,6 +273,14 @@ the date for that transfer.
 
 ### 16. What should support look like after handover, and for how long?
 
+### 17. Which layer is standard when two cover the same thing?
+
+Some topics have more than one layer. Wells, for example: "Pozo" (published, 526
+public water-supply wells, PRASA/AAA) and "pozos" (not published, 4,900 wells of
+all kinds, source "por verificar"). In Arecibo one says 40 and the other 289.
+Mappa now prefers the published layer and names it as the source. Is that the
+right default, and are there topics where a different layer should be standard?
+
 ---
 
 ## How to use this file

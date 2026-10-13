@@ -1,19 +1,12 @@
 """Give every layer an embedding, so questions find layers by meaning.
 
-The assistant could reach fifteen layers, because fifteen were listed in a
-hand-written dictionary mapping words to tables. There are now 601 layers with
-data. Writing 601 dictionary entries would not work either: La Maraña's catalogue
-changes, their names are inconsistent, and nobody would keep it current.
+A layer is described in the same 384-dimension space the questions live in: its
+names in both languages, description, category, agency and year, the columns it
+has, and what profile_layers found inside it - its main categories and a sample
+of its feature names. "Where are the rivers?" then finds the hydrography layer by
+the Río Grande de Loíza in it, though its name never says river.
 
-So a layer gets the same treatment as a document. Its name, description,
-category, source agency and the metadata their team reconstructed are embedded
-into the same 384-dimension space the questions live in. "Where are the wells?"
-then finds Pozo without anyone having written down that a pozo is a well.
-
-The alias table stays, but shrinks to what it should always have been: overrides
-for the handful of cases where meaning alone picks the wrong layer.
-
-Run:
+Run after profile_layers, so the content summaries are current:
     python -m pipelines.embed_layers --commit
 """
 
@@ -32,21 +25,25 @@ from core import EMBEDDING_MODEL as MODEL
 def describe(row: dict) -> str:
     """The text that represents a layer.
 
-    Everything a person might say when looking for it: what it is called in both
-    languages, what it holds, who made it, and the words their inventory files it
-    under. Repeating the name is deliberate - it is the strongest signal and the
-    one most likely to appear in a question.
+    Everything a person might say when looking for it, and only what came from
+    La Maraña or from the layer itself. The name is repeated deliberately - it is
+    the strongest signal and the one most likely to appear in a question.
     """
+    columns = " ".join(c.replace("_", " ") for c in (row.get("tile_properties") or []))
     parts = [
         row.get("name_es"),
         row.get("name_es"),
         row.get("name_en"),
         row.get("description_es"),
+        row.get("description_en"),
         row.get("purpose"),
         row.get("category"),
         row.get("subcategory"),
         row.get("source_agency"),
+        str(row["vintage_year"]) if row.get("vintage_year") else None,
         " ".join(row.get("keywords") or []),
+        row.get("content_summary"),
+        columns,
     ]
     return " · ".join(p for p in parts if p)
 
@@ -73,8 +70,9 @@ def main() -> None:
     conn.commit()
 
     cur.execute("""
-        SELECT id, name_es, name_en, description_es, purpose, category,
-               subcategory, source_agency, keywords
+        SELECT id, name_es, name_en, description_es, description_en, purpose, category,
+               subcategory, source_agency, vintage_year, keywords, content_summary,
+               tile_properties
         FROM layer_registry ORDER BY id
     """)
     cols = [d[0] for d in cur.description]
@@ -98,8 +96,7 @@ def main() -> None:
         page_size=100,
     )
 
-    # An index is only worth it above a few thousand rows; at 700 a scan is
-    # faster than maintaining a graph, and exact beats approximate here.
+    # No index: at ~700 rows an exact scan is fast and beats an approximate one.
     print(f"[embed] embedded {len(payload)} layers")
     if args.commit:
         conn.commit()

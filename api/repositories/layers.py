@@ -11,6 +11,7 @@ map click checks.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from .. import db
@@ -20,6 +21,12 @@ from ..embeddings import vector
 # Candidates below this are not about the topic at all. The model chooses among
 # the rest from their names, so this is a floor, not a judgement.
 MIN_LAYER_SCORE = 0.30
+# How much the topic's words appearing in a layer's own text count, against
+# meaning (0-1). Every word found adds its share of this.
+WORD_WEIGHT = 0.25
+# A small edge for the layers La Maraña published: reviewed, and the ones the
+# map can draw, so an answer built on one can also be shown.
+PUBLISHED_WEIGHT = 0.08
 
 _COLUMNS = (
     "id, table_name, name_es, coalesce(name_en, name_es), geometry_type, feature_count, status, "
@@ -79,18 +86,83 @@ def get(layer_id: str) -> Layer | None:
 
 
 def search(topic: str, limit: int = 8) -> list[tuple[Layer, float]]:
-    """Layers whose name and description are closest in meaning to the topic."""
+    """Layers closest to the topic, by meaning and by the words themselves.
+
+    Meaning alone confuses neighbours - "rivers" lands on an irrigation canal -
+    and a single word is a thin thing to embed. So a layer also scores for each
+    of the topic's words found in its own text (names, description, what it
+    holds), accents and plurals aside, and a published layer has a small edge.
+    """
     lit = vector(topic)
+    words = _words(topic)
     with db.connection() as conn:
         cur = conn.cursor()
         cur.execute(
-            f"SELECT {_COLUMNS}, 1 - (embedding <=> %s::vector) FROM layer_registry "
-            f"WHERE embedding IS NOT NULL AND {_LIVE} "
-            f"ORDER BY embedding <=> %s::vector LIMIT %s",
-            (lit, lit, limit),
+            f"""SELECT {_COLUMNS}, score FROM (
+                    SELECT *, 1 - (embedding <=> %(v)s::vector)
+                              + %(w)s * (SELECT count(*) FROM unnest(%(words)s::text[]) k
+                                         WHERE unaccent_fallback(lower(coalesce(embed_text, '')))
+                                               LIKE '%%' || k || '%%')
+                                      / greatest(cardinality(%(words)s::text[]), 1)
+                              + CASE WHEN status = 'published' THEN %(pub)s ELSE 0 END AS score
+                    FROM layer_registry WHERE embedding IS NOT NULL AND {_LIVE}
+                ) s ORDER BY score DESC LIMIT %(n)s""",
+            {"v": lit, "w": WORD_WEIGHT, "pub": PUBLISHED_WEIGHT, "words": words, "n": limit},
         )
         rows = [(_row(r[:_N]), float(r[_N])) for r in cur.fetchall()]
     return [(layer, s) for layer, s in rows if s >= MIN_LAYER_SCORE]
+
+
+_STOP = frozenset(
+    [
+        "the",
+        "and",
+        "for",
+        "with",
+        "near",
+        "del",
+        "los",
+        "las",
+        "por",
+        "con",
+        "que",
+        "una",
+        "uno",
+        "sobre",
+        "para",
+        "cerca",
+        "zona",
+        "zonas",
+        "area",
+        "areas",
+        "map",
+        "maps",
+        "mapa",
+        "mapas",
+        "layer",
+        "layers",
+        "capa",
+        "capas",
+    ]
+)
+
+
+def _words(topic: str) -> list[str]:
+    """The topic's words as they are matched: lower case, no accents, no plural."""
+    out = []
+    for w in re.findall(r"[a-z0-9áéíóúñü]+", topic.lower()):
+        w = w.translate(_PLAIN)
+        if len(w) < 3 or w in _STOP:
+            continue
+        if len(w) > 4 and w.endswith("es"):
+            w = w[:-2]
+        elif len(w) > 3 and w.endswith("s"):
+            w = w[:-1]
+        out.append(w)
+    return out
+
+
+_PLAIN = str.maketrans("áéíóúñü", "aeiounu")
 
 
 @dataclass(frozen=True, slots=True)

@@ -16,7 +16,9 @@ pytestmark = pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="need
 
 CASES = [
     ("How many schools are in Cataño?", "en", "count_features", r"\b5\b"),
-    ("¿Cuántos pozos hay en Arecibo?", "es", "count_features", r"\b289\b"),
+    # Two well layers: "Pozo" (published, public supply wells - 40 in Arecibo) and
+    # "pozos" (all wells, not published - 289). Either is a true count of its layer.
+    ("¿Cuántos pozos hay en Arecibo?", "es", "count_features", r"\b(40|289)\b"),
     (
         "How many public schools in Carolina are in a FEMA flood zone?",
         "en",
