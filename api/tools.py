@@ -45,6 +45,7 @@ class Session:
     question: str = ""  # its own numbers ("within 2 km") are not invented
     found: list[dict[str, Any]] = field(default_factory=list)  # features to show on the map
     shown_layers: list[Layer] = field(default_factory=list)  # chosen to illustrate the answer
+    choosing: Any = None  # a Future: the layers being chosen while the answer is written
     steps: list[dict[str, Any]] = field(default_factory=list)
     results: list[str] = field(default_factory=list)  # every tool result, as text
     measured: bool = False  # a map tool computed something
@@ -154,8 +155,12 @@ def search_documents(session: Session, query: str, place_id: str | None = None) 
 
 
 def find_layers(session: Session, topic: str) -> dict:
-    return {
-        "layers": [
+    """Candidate layers for each topic; several topics, separated by semicolons,
+    are looked up at once so the model needs one turn, not one per topic."""
+    topics = [t.strip() for t in topic.split(";") if t.strip()][:4] or [topic]
+    out = {}
+    for t in topics:
+        out[t] = [
             {
                 "layer_id": layer.id,
                 "name": layer.name(session.lang),
@@ -165,9 +170,11 @@ def find_layers(session: Session, topic: str) -> dict:
                 "on_map": layer.on_map,
                 "relevance": round(score, 2),
             }
-            for layer, score in layers.search(topic)
+            for layer, score in layers.search(t, limit=6 if len(topics) > 1 else 8)
         ]
-    }
+    if len(topics) == 1:
+        return {"layers": out[topics[0]]}
+    return {"layers_by_topic": out}
 
 
 def count_features(session: Session, layer_id: str, place_id: str | None = None) -> dict:
@@ -375,12 +382,22 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         "find_layers",
-        "Find map data layers about a topic - schools, wells, flood zones, roads, protected areas, "
-        "land use. Returns candidate layer_ids, closest first; choose the one that fits. The "
-        "standard layers listed in your instructions can be used without calling this.",
-        _p(topic=("string", "The kind of thing, e.g. 'public schools' or 'flood zones'.")),
+        "Find map data layers about a topic - wells, roads, land use, beaches. Returns candidate "
+        "layer_ids, closest first; choose the one that fits. Do not call it for the standard "
+        "layers listed in your instructions: use their layer_id directly. For several topics, "
+        "pass them together separated by semicolons, e.g. 'wells; rivers'.",
+        _p(topic=("string", "The kind of thing, e.g. 'public wells', or 'wells; rivers'.")),
         find_layers,
-        lambda r: ", ".join(x["name"] for x in r["layers"][:3]) or "none",
+        lambda r: (
+            ", ".join(
+                x["name"]
+                for x in (
+                    r.get("layers")
+                    or [y for v in r.get("layers_by_topic", {}).values() for y in v[:1]]
+                )[:3]
+            )
+            or "none"
+        ),
     ),
     Tool(
         "count_features",

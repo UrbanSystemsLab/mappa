@@ -47,12 +47,17 @@ class Ask:
 
 
 def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
-    """("delta"..., "meta", "done", payload) events: the text as it is written,
-    then what the map should do, then the finished answer and its sources."""
+    """("delta"..., "meta", "done", ["map"]) events: the text as it is written, what
+    the map should do, the finished answer and its sources - and, when layers
+    were chosen to illustrate the answer, a later map update."""
     session = Session(lang=ask.lang, question=ask.question)
     session.place = places.from_selection(ask.location)
     session.point = _clicked_point(ask.spatial)
+    named = [] if session.place else places.mentioned(ask.question)
+    if len(named) == 1:
+        session.place = named[0]
     context = assistant.Context(
+        places=named,
         clicked=ask.spatial,
         active_layers=[str(x.get("name")) for x in ask.active_layers if x.get("name")],
         history=[(t.question, t.answer) for t in ask.history],
@@ -65,9 +70,11 @@ def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
     except assistant.AssistantUnavailable:
         written = [UNAVAILABLE[ask.lang]]
         yield "delta", {"text": written[0]}
-    # After the text: by now the map's layers are chosen as well as measured.
     yield "meta", _map(session)
     yield "done", _finish("".join(written), session)
+    # The reader has everything; layers picked beside the answer arrive after.
+    if assistant.chosen_layers(session):
+        yield "map", _map(session)
 
 
 def _clicked_point(spatial: dict[str, Any] | None) -> tuple[float, float] | None:
@@ -84,7 +91,7 @@ def answer(ask: Ask) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for kind, payload in stream(ask):
         if kind != "delta":
-            out.update(payload)
+            out.update(payload)  # a later map event replaces the first
     return out
 
 

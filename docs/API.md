@@ -43,6 +43,7 @@ instructions follow as soon as the answer's layers are chosen:
 | `delta` (one or more) | `text` | append to the answer on screen |
 | `meta` (once) | `municipio`, `focus` (bbox `[w, s, e, n]`: the features found, or else the place), `suggested_layers` (ids of the layers the answer measured), `found` (features to highlight: `{layer_id, name, lng, lat}`), `disclaimer`, `disclaimers` (`{es, en}`) | move the map, turn on layers, highlight what was found |
 | `done` (once) | `answer` (final cleaned text), `citations`, `steps` | replace the streamed text with `answer`, list sources |
+| `map` (sometimes, last) | the same fields as `meta` | layers chosen to illustrate an answer from documents; apply it as you did `meta` |
 
 Each event arrives as `event: <name>\ndata: <json>\n\n`. Browsers' `EventSource` only
 does GET, so read the stream with `fetch` and split on blank lines:

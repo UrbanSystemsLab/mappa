@@ -88,6 +88,8 @@ class Step(BaseModel):
 #   event: delta   one or more times, each a piece of the answer text
 #   event: meta    once, after the text: where to fly, what to turn on and highlight
 #   event: done    once, with the cleaned final text, citations and steps
+#   event: map     sometimes, after done: layers chosen to illustrate the answer.
+#                  Same fields as meta; it replaces it.
 #
 # Each event's `data:` line is one JSON object with the fields below.
 

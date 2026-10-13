@@ -305,8 +305,9 @@ async function ask() {
         const dl = /^data: (.*)$/m.exec(chunk);
         if (!ev || !dl) continue;
         let d; try { d = JSON.parse(dl[1]); } catch (err) { continue; }
-        if (ev[1] === 'meta') {
-          // The map moves before the first word is written.
+        if (ev[1] === 'meta' || ev[1] === 'map') {
+          // What the map should do. A later 'map' event, for layers chosen to
+          // illustrate the answer, replaces the first.
           if (d.disclaimers) Object.assign(lastDisclaimer, d.disclaimers);
           disc.textContent = (d.disclaimers && d.disclaimers[LANG]) || d.disclaimer || '';
           turn.suggested_layers = d.suggested_layers || [];

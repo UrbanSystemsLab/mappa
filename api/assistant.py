@@ -17,12 +17,14 @@ import logging
 import re
 import time
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
 
 from core import settings
 
 from .cache import cached
+from .repositories.places import Place
 from .tools import TOOLS, Session, call
 
 log = logging.getLogger("mappa.assistant")
@@ -31,26 +33,34 @@ log = logging.getLogger("mappa.assistant")
 # result. flash is a few seconds slower and costs about $0.002 a question.
 MODEL = settings.llm_model
 MAX_ROUNDS = 6  # tool rounds before the model must answer with what it has
+# Rounds spent finding nothing before saying so. A question about data that is
+# not there - "the parcel I selected", income in a drawn area - otherwise searches
+# for layers round after round.
+GIVE_UP_AFTER = 3
 
 INSTRUCTIONS = {
     "en": """You are Mappa, a planning and hazard assistant for Puerto Rico communities, built for La Maraña.
 
 Answer only from what your tools return. Never use your own knowledge, even if you know the answer.
-- For every place the question names, call find_place first and use its place_id.
+- Places already identified are given to you with their place_id; use them. For any other place the
+  question names, call find_place first and use its place_id.
 - For rules, permits, plans, laws or what a document says: call search_documents.
-- For how many, where, what share, inside or near: call find_layers, then count_features,
+- For how many, where, what share, inside or near: use a standard layer's layer_id directly, or call
+  find_layers for anything else, then count_features,
   count_inside, count_within_distance or area_share. Every number you state must come from one of
-  these tools; never take a figure from a passage as a count.
+  these tools; never take a figure from a passage as a count. Write every number in digits (8,
+  not eight), so it can be checked.
 - For which ones, or what they are called: list_features. For the nearest or closest to where the
   user clicked: nearest. For "here" or "around this point": list_features with
   around_clicked_point_metres. Name what they return; never name a feature a tool did not.
 - When the answer is about something the map can show - flood zones, rivers, protected areas,
   land use - and you did not measure it, call find_layers and then show_on_map with the one or two
   layers that best illustrate it.
-- Call several tools when the question needs both documents and map data.
+- Call tools that do not depend on each other together, in the same turn - e.g. search_documents and
+  a measurement - so the answer comes sooner.
 
-Write in English. Start with one sentence that answers directly. Then up to six '• ' bullets or one
-to three sentences. Cite document passages by their number, like [2], after the claim they support.
+Write in English. Start with one sentence that answers directly. Then at most four short '• '
+bullets, or one or two sentences. Keep it brief: people read this beside a map. Cite document passages by their number, like [2], after the claim they support.
 Mention the year of a layer or document you rely on. If the tools found nothing that answers the
 question, say plainly what is missing and point to the Junta de Planificación, OGPe, DRNA or the
 municipio. If they answer it in part, give that part first, then say what is not covered.
@@ -58,21 +68,25 @@ Never show layer_id or place_id values to the reader. No links. This is guidance
     "es": """Eres Mappa, un asistente de planificación y riesgos para comunidades de Puerto Rico, creado para La Maraña.
 
 Responde solo con lo que devuelven tus herramientas. Nunca uses conocimiento propio, aunque sepas la respuesta.
-- Por cada lugar que nombre la pregunta, llama primero a find_place y usa su place_id.
+- Los lugares ya identificados se te dan con su place_id; úsalos. Por cualquier otro lugar que nombre
+  la pregunta, llama primero a find_place y usa su place_id.
 - Para reglas, permisos, planes, leyes o lo que dice un documento: llama a search_documents.
-- Para cuántos, dónde, qué porcentaje, dentro o cerca: llama a find_layers y luego a count_features,
+- Para cuántos, dónde, qué porcentaje, dentro o cerca: usa directamente el layer_id de una capa
+  estándar, o llama a find_layers para lo demás, y luego a count_features,
   count_inside, count_within_distance o area_share. Toda cifra que digas debe venir de una de esas
-  herramientas; nunca tomes una cifra de un pasaje como conteo.
+  herramientas; nunca tomes una cifra de un pasaje como conteo. Escribe toda cifra con dígitos
+  (8, no ocho), para que pueda verificarse.
 - Para cuáles, o cómo se llaman: list_features. Para lo más cercano al punto que marcó el usuario:
   nearest. Para "aquí" o "alrededor de este punto": list_features con around_clicked_point_metres.
   Nombra lo que devuelvan; nunca nombres algo que una herramienta no devolvió.
 - Si la respuesta trata de algo que el mapa puede mostrar - zonas inundables, ríos, áreas
   protegidas, uso de terrenos - y no lo mediste, llama a find_layers y luego a show_on_map con la
   capa o las dos capas que mejor lo ilustren.
-- Llama varias herramientas cuando la pregunta necesite documentos y datos del mapa.
+- Llama juntas, en el mismo turno, las herramientas que no dependen una de otra - p. ej.
+  search_documents y una medición - para que la respuesta llegue antes.
 
-Escribe en español. Empieza con una oración que responda directamente. Luego hasta seis viñetas '• '
-o de una a tres oraciones. Cita los pasajes por su número, como [2], después de lo que apoyan.
+Escribe en español. Empieza con una oración que responda directamente. Luego como máximo cuatro
+viñetas '• ' breves, o una o dos oraciones. Sé breve: se lee junto a un mapa. Cita los pasajes por su número, como [2], después de lo que apoyan.
 Menciona el año de la capa o documento que uses. Si las herramientas no encontraron nada que
 responda, di claramente qué falta y remite a la Junta de Planificación, la OGPe, el DRNA o el
 municipio. Si responden en parte, da esa parte primero y luego di qué no cubren.
@@ -98,6 +112,7 @@ class Context:
 
     clicked: dict[str, Any] | None = None
     active_layers: list[str] = field(default_factory=list)
+    places: list[Place] = field(default_factory=list)  # named in the question, already found
     history: list[tuple[str, str]] = field(default_factory=list)
 
     def note(self, lang: str) -> str:
@@ -113,6 +128,14 @@ class Context:
                 f"The user clicked a point in {self.clicked['municipio']}. At that exact point only - "
                 f"not the whole municipio: {facts or 'no layers checked'}. For questions about this "
                 f"point, use nearest or list_features with around_clicked_point_metres."
+            )
+        if self.places:
+            lines.append(
+                "Places already identified: "
+                + "; ".join(
+                    f"{p.label} (place_id {p.unit_code}, {p.unit_type})" for p in self.places
+                )
+                + "."
             )
         if self.active_layers:
             lines.append("Layers the user has on the map: " + ", ".join(self.active_layers) + ".")
@@ -200,7 +223,7 @@ def answer(question: str, session: Session, context: Context) -> Iterator[str]:
     sent_back = retried = False
     for round_ in range(MAX_ROUNDS + 2):
         last = round_ >= MAX_ROUNDS
-        if last and not session.has_evidence:
+        if (last or round_ >= GIVE_UP_AFTER) and not session.has_evidence:
             # Every round was spent and nothing was found. Whatever the model
             # wrote now would come from its own knowledge.
             log.info("no evidence after %d rounds", round_)
@@ -254,6 +277,10 @@ def answer(question: str, session: Session, context: Context) -> Iterator[str]:
                     ],
                 )
             )
+            if session.choosing is None and session.has_evidence and not _on_map(session):
+                session.choosing = _POOL.submit(
+                    _choose_layers, client, config, session.question, session.lang
+                )
             continue
 
         if not text.strip():
@@ -271,62 +298,78 @@ def answer(question: str, session: Session, context: Context) -> Iterator[str]:
             contents.append(types.Content(role="model", parts=[types.Part.from_text(text=text)]))
             contents.append(types.Content(role="user", parts=[types.Part.from_text(text=problem)]))
             continue
-        final = _drop_unsupported(text, session)
-        yield final  # the reader has the answer; what the map shows is chosen after
-        if session.has_evidence and not (session.measured_layers or session.shown_layers):
-            _illustrate(client, config, final, session)
+        yield _drop_unsupported(text, session)
         return
     raise AssistantUnavailable("no answer within the round limit")
 
 
 ILLUSTRATE = {
-    "en": "Choose what the map shows beside this answer: call show_on_map with the one or two "
-    "layers that best illustrate it, from these or the standard layers - or with an empty "
-    "layer_ids if none fits. Do not rewrite the answer.\nLayers the map can show:\n",
-    "es": "Elige qué muestra el mapa junto a esta respuesta: llama a show_on_map con la capa o "
-    "las dos capas que mejor la ilustren, de estas o de las capas estándar - o con layer_ids "
-    "vacío si ninguna sirve. No reescribas la respuesta.\nCapas que el mapa puede mostrar:\n",
+    "en": "Choose what the map shows beside the answer to this question: call show_on_map with the "
+    "one or two layers that best illustrate it, from these or the standard layers - or with an "
+    "empty layer_ids if none fits.\nLayers the map can show:\n",
+    "es": "Elige qué muestra el mapa junto a la respuesta a esta pregunta: llama a show_on_map con la "
+    "capa o las dos capas que mejor la ilustren, de estas o de las capas estándar - o con "
+    "layer_ids vacío si ninguna sirve.\nCapas que el mapa puede mostrar:\n",
 }
 
 
-def _illustrate(client, config, answer_text: str, session: Session) -> None:
-    """Let the model pick layers for an answer that put nothing on the map - a
-    question about what a plan says on building near rivers shows flood zones.
+def _on_map(session: Session) -> bool:
+    return bool(session.measured_layers or session.shown_layers)
 
-    One small request: the question, the answer and the drawable layers closest
-    to the question, limited to show_on_map. The answer is already with the
-    reader; a failure here only means no layer is shown.
+
+# Layer choices run beside the answer; a few at once is plenty for one container.
+_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="choose-layers")
+CHOOSE_WAIT = 15.0  # how long a map update may follow the answer
+
+
+def chosen_layers(session: Session) -> bool:
+    """Apply the layers chosen beside the answer, once that choice is in. True if
+    the map gained a layer. Called after the answer has gone to the reader."""
+    if session.choosing is None or _on_map(session):
+        return False
+    try:
+        picked = session.choosing.result(timeout=CHOOSE_WAIT)
+    except Exception as exc:  # the answer stands without a map layer
+        log.warning("choosing layers to show failed: %r", exc)
+        return False
+    if picked is None:
+        return False
+    call(session, "show_on_map", picked)
+    return bool(session.shown_layers)
+
+
+def _choose_layers(client, config, question: str, lang: str) -> dict | None:
+    """Which layers illustrate an answer that put nothing on the map - flood zones
+    beside what a plan says about building near rivers.
+
+    Runs while the answer is being written: one small request, the question and
+    the drawable layers closest to it, limited to show_on_map. Returns that call's
+    arguments, applied by the caller, or None.
     """
     from google.genai import types
 
     from .repositories import layers
 
-    try:
-        candidates = layers.search(session.question, limit=8, on_map=True)
-        listed = "\n".join(f"- {x.name(session.lang)} - layer_id {x.id}" for x, _ in candidates)
-        prompt = (
-            f"Question: {session.question}\n\nAnswer: {answer_text}\n\n"
-            f"{ILLUSTRATE[session.lang]}{listed}"
-        )
-        only = config.model_copy(
-            update={
-                "tool_config": types.ToolConfig(
-                    function_calling_config=types.FunctionCallingConfig(
-                        mode="ANY", allowed_function_names=["show_on_map"]
-                    )
+    candidates = layers.search(question, limit=8, on_map=True)
+    if not candidates:
+        return None
+    listed = "\n".join(f"- {x.name(lang)} - layer_id {x.id}" for x, _ in candidates)
+    only = config.model_copy(
+        update={
+            "tool_config": types.ToolConfig(
+                function_calling_config=types.FunctionCallingConfig(
+                    mode="ANY", allowed_function_names=["show_on_map"]
                 )
-            }
-        )
-        contents = [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])]
-        for chunk in client.models.generate_content_stream(
-            model=MODEL, contents=contents, config=only
-        ):
-            for part in _parts(chunk):
-                if part.function_call and part.function_call.name == "show_on_map":
-                    call(session, "show_on_map", dict(part.function_call.args or {}))
-                    return
-    except Exception as exc:  # the answer stands without a map layer
-        log.warning("choosing layers to show failed: %s", exc)
+            )
+        }
+    )
+    prompt = f"Question: {question}\n\n{ILLUSTRATE[lang]}{listed}"
+    contents = [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])]
+    for chunk in client.models.generate_content_stream(model=MODEL, contents=contents, config=only):
+        for part in _parts(chunk):
+            if part.function_call and part.function_call.name == "show_on_map":
+                return dict(part.function_call.args or {})
+    return None
 
 
 _NUMBER = re.compile(r"(?<![\w.-])\d[\d,]*(?:\.\d+)?")

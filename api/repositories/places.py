@@ -7,6 +7,7 @@ the municipio level, the municipio it sits in. A place is identified by its
 
 from __future__ import annotations
 
+import re
 import unicodedata
 from dataclasses import dataclass
 from typing import Any
@@ -65,6 +66,26 @@ def lookup(name: str, municipio: str | None = None) -> list[Place]:
     if within:
         found = [p for p in found if plain(p.municipio) == within]
     return sorted(found, key=lambda p: (p.unit_type != "municipio", p.label))
+
+
+def mentioned(text: str) -> list[Place]:
+    """The municipios a question names outright: "schools in Carolina", "Loíza".
+
+    Whole names only, accents and case aside, longest first so "Juana Díaz" is
+    not read as something shorter. Barrios and comunidades are left to the
+    assistant's find_place - many share names, and some are ordinary words.
+    """
+    plain_text = f" {re.sub(r'[^a-z0-9]+', ' ', plain(text))} "
+    found: list[Place] = []
+    taken = plain_text
+    for p in sorted((p for p in _all() if p.unit_type == "municipio"), key=lambda p: -len(p.name)):
+        key = f" {re.sub(r'[^a-z0-9]+', ' ', plain(p.name))} "
+        if key in taken:
+            found.append(p)
+            taken = taken.replace(key, " ")
+    return sorted(
+        found, key=lambda p: plain_text.find(f" {re.sub(r'[^a-z0-9]+', ' ', plain(p.name))} ")
+    )
 
 
 def by_code(unit_code: str) -> Place | None:
