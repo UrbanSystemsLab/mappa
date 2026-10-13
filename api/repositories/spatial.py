@@ -92,6 +92,105 @@ def area_share(area: Layer, place: Place) -> tuple[float, float]:
 
 
 @dataclass(frozen=True, slots=True)
+class Feature:
+    """One feature an answer found: what it is called (when the layer may say),
+    where it is, and how far, when measured from a point."""
+
+    name: str | None
+    lng: float
+    lat: float
+    metres: float | None = None
+
+
+def _name(layer: Layer) -> str:
+    return f"nullif(trim(f.\"{layer.label}\"::text), '')" if layer.names_shown else "NULL"
+
+
+def nearest(layer: Layer, lng: float, lat: float, n: int = 3) -> list[Feature]:
+    """The n features of a layer closest to a point, with their distance on the
+    earth. Uses the spatial index to find candidates, then measures exactly."""
+    with db.connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f"""SELECT name, ST_X(p), ST_Y(p), ST_Distance(g::geography, pt::geography)
+                FROM (SELECT {_name(layer)} AS name, ST_PointOnSurface(f.geom) AS p,
+                             f.geom AS g, {_POINT} AS pt
+                      FROM "{layer.table}" f WHERE f.geom IS NOT NULL
+                      ORDER BY f.geom <-> {_POINT} LIMIT %s) s
+                ORDER BY 4""",
+            (lng, lat, lng, lat, n),
+        )
+        return [Feature(r[0], float(r[1]), float(r[2]), float(r[3])) for r in cur.fetchall()]
+
+
+def features(
+    layer: Layer,
+    place: Place | None = None,
+    inside: Layer | None = None,
+    near: tuple[Layer, int] | None = None,
+    around: tuple[float, float, int] | None = None,
+    limit: int = 25,
+) -> tuple[int, list[Feature]]:
+    """A layer's features that meet every condition given, and how many there are.
+
+    inside  inside another layer's areas
+    near    within so many metres of another layer
+    around  within so many metres of a point (lng, lat, metres)
+
+    The count is of features; the list holds one entry per name when the layer
+    names its features (a river is many segments of one name), nearest a point
+    first when there is one.
+    """
+    where, params = scope(place)
+    if inside is not None:
+        where += (
+            f' AND EXISTS (SELECT 1 FROM "{inside.table}" a WHERE ST_Intersects(a.geom, f.geom))'
+        )
+    if near is not None:
+        other, metres = near
+        where += (
+            f' AND EXISTS (SELECT 1 FROM "{other.table}" o WHERE o.geom && ST_Expand(f.geom, %s) '
+            f"AND ST_DWithin(o.geom::geography, f.geom::geography, %s))"
+        )
+        params += [metres / _METRES_PER_DEGREE, metres]
+    order = "1"
+    if around is not None:
+        lng, lat, metres = around
+        where += (
+            f" AND f.geom && ST_Expand({_POINT}, %s) "
+            f"AND ST_DWithin(f.geom::geography, {_POINT}::geography, %s)"
+        )
+        params += [lng, lat, metres / _METRES_PER_DEGREE, lng, lat, metres]
+    with db.connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f'SELECT count(*) FROM "{layer.table}" f WHERE f.geom IS NOT NULL{where}', params
+        )
+        total = cur.fetchone()[0]
+        distance = "NULL"
+        if around is not None:
+            distance = f"ST_Distance(f.geom::geography, {_POINT}::geography)"
+            order = "4"
+        cur.execute(
+            f"""SELECT * FROM (
+                    SELECT DISTINCT ON (coalesce(name, id::text)) name, x, y, metres FROM (
+                        SELECT {_name(layer)} AS name, ST_X(ST_PointOnSurface(f.geom)) AS x,
+                               ST_Y(ST_PointOnSurface(f.geom)) AS y, {distance} AS metres,
+                               row_number() OVER () AS id
+                        FROM "{layer.table}" f WHERE f.geom IS NOT NULL{where}
+                        LIMIT 2000) f
+                    ORDER BY coalesce(name, id::text), metres) d
+                ORDER BY {order} LIMIT %s""",
+            ([lng, lat] if around is not None else []) + params + [limit],
+        )
+        found = [
+            Feature(r[0], float(r[1]), float(r[2]), float(r[3]) if r[3] is not None else None)
+            for r in cur.fetchall()
+        ]
+    return total, found
+
+
+@dataclass(frozen=True, slots=True)
 class PointCheck:
     key: str
     name_es: str

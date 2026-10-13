@@ -13,7 +13,7 @@
    api/services/     answering.py: one question from arrival to finished answer.
                     |
    api/assistant.py  Gemini, and the loop that lets it call tools.
-   api/tools.py      the seven tools it may call.
+   api/tools.py      the tools it may call.
                     |
    api/repositories/ every SQL query, grouped by what it is about:
                      places, documents, layers, spatial.
@@ -37,7 +37,7 @@ Take "How many schools in Carolina are in a flood zone?"
 2. **`services/answering.py`** opens a `Session`, which records everything found while
    answering, and asks `assistant.answer()` for the text.
 3. **`assistant.py`** sends Gemini the question, its instructions, the list of standard
-   layers (from the `layer_roles` table) and the seven tools. Gemini decides which tools
+   layers (from the `layer_roles` table) and the tools. Gemini decides which tools
    it needs:
    - `find_place("Carolina")` → `repositories/places.lookup` → the place id
    - `find_layers("public schools")` → `repositories/layers.search` (vector search over
@@ -55,6 +55,18 @@ Take "How many schools in Carolina are in a flood zone?"
 6. **`answering.py`** streams `meta` (where to move the map, which layers to show), then
    the text, then `done` with the sources. A source is only a document whose passage the
    answer actually cited.
+
+Questions about *which* features or about a spot use two more tools.
+`list_features` returns the features that meet the conditions, by name: in a place,
+inside another layer, near another layer, or around the point the user clicked.
+`nearest` returns the closest features to the clicked point, with distances. Names
+come only from layers La Maraña published, through a name column chosen by
+`pipelines/profile_layers`, never a person's name.
+
+**The map follows the answer.** With the answer, `answering.py` tells the map which
+layers to turn on (the ones a figure came from), where to fly (the features found,
+or else the place) and which features to highlight. A layer the previous answer
+turned on is turned off again; one the user turned on is left alone.
 
 A question about rules ("What does the Reglamento Conjunto say about building near a
 river?") follows the same path but uses `search_documents`. That embeds the question and

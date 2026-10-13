@@ -22,6 +22,7 @@ from ..tools import Session
 
 MAX_SOURCES = 5
 MAX_LAYER_SOURCES = 4
+MAX_LAYERS_SHOWN = 3  # more at once and the map stops being readable
 
 UNAVAILABLE = {
     "en": "The assistant could not answer just now. Please try again in a moment.",
@@ -47,8 +48,9 @@ class Ask:
 
 def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
     """("meta" | "delta" | "done", payload) events, in that order."""
-    session = Session(lang=ask.lang)
+    session = Session(lang=ask.lang, question=ask.question)
     session.place = places.from_selection(ask.location)
+    session.point = _clicked_point(ask.spatial)
     context = assistant.Context(
         clicked=ask.spatial,
         active_layers=[str(x.get("name")) for x in ask.active_layers if x.get("name")],
@@ -70,6 +72,15 @@ def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
     yield "done", _finish("".join(written), session)
 
 
+def _clicked_point(spatial: dict[str, Any] | None) -> tuple[float, float] | None:
+    """The (lng, lat) the user clicked, when the request carries one inside Puerto Rico."""
+    try:
+        lng, lat = float(spatial["lng"]), float(spatial["lat"])  # type: ignore[index]
+    except (TypeError, KeyError, ValueError):
+        return None
+    return (lng, lat) if -68.5 <= lng <= -64.5 and 17.5 <= lat <= 19.0 else None
+
+
 def answer(ask: Ask) -> dict[str, Any]:
     """The whole answer at once - the streaming events, gathered."""
     out: dict[str, Any] = {}
@@ -80,13 +91,38 @@ def answer(ask: Ask) -> dict[str, Any]:
 
 
 def _map(session: Session) -> dict[str, Any]:
-    """Where the map should go and what it should show."""
+    """What the map should do with this answer.
+
+    Turn on the layers the answer measured - the ones holding what it found
+    first - and fly to what it found, or else to the place. Only layers the map
+    can draw are named.
+    """
     place: Place | None = session.place
+    holding = {f["layer_id"] for f in session.found}
+    order = [
+        *(x for x in session.measured_layers if x.id in holding),
+        *session.measured_layers,
+        *session.layers_used,
+    ]
+    shown: list[str] = []
+    for layer in order:
+        if layer.on_map and layer.id not in shown:
+            shown.append(layer.id)
     return {
         "municipio": place.label if place else None,
-        "focus": places.bbox(place),
-        "suggested_layers": [layer.id for layer in session.layers_used if layer.on_map][:3],
+        "focus": _around(session.found) or places.bbox(place),
+        "suggested_layers": shown[:MAX_LAYERS_SHOWN],
+        "found": session.found,
     }
+
+
+def _around(found: list[dict[str, Any]]) -> list[float] | None:
+    """The box around the features found, with a margin, or None."""
+    if not found:
+        return None
+    lngs, lats = [f["lng"] for f in found], [f["lat"] for f in found]
+    pad = 0.004 if len(found) > 1 else 0.008  # about 400 m; more for a single feature
+    return [min(lngs) - pad, min(lats) - pad, max(lngs) + pad, max(lats) + pad]
 
 
 def _finish(text: str, session: Session) -> dict[str, Any]:

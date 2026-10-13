@@ -55,6 +55,7 @@ def ask(req: AskRequest) -> AskResponse:
         suggested_layers=out["suggested_layers"],
         municipio=out["municipio"],
         focus=out["focus"],
+        found=out["found"],
         disclaimer=DISCLAIMERS[a.lang],
     )
 

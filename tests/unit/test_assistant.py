@@ -123,3 +123,12 @@ def test_nothing_found_after_every_round_is_said_plainly(monkeypatch):
     )
     assert out == assistant.NOTHING_FOUND["en"]
     assert len(asked) == assistant.MAX_ROUNDS
+
+
+def test_dropping_a_sentence_keeps_the_bullets():
+    from api.tools import Session
+
+    s = Session()
+    s.results.append('{"count": 3}')
+    text = "There are 3 shelters. One has 99 beds.\n• Shelter A\n• Shelter B"
+    assert assistant._drop_unsupported(text, s) == "There are 3 shelters.\n• Shelter A\n• Shelter B"

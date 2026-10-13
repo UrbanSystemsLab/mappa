@@ -30,9 +30,9 @@ PUBLISHED_WEIGHT = 0.08
 
 _COLUMNS = (
     "id, table_name, name_es, coalesce(name_en, name_es), geometry_type, feature_count, status, "
-    "source_agency, vintage_year, gis_id"
+    "source_agency, vintage_year, gis_id, label_column"
 )
-_N = 10  # columns in _COLUMNS
+_N = 11  # columns in _COLUMNS
 _LIVE = "status IN ('published', 'loaded') AND table_name IS NOT NULL"
 
 
@@ -48,6 +48,7 @@ class Layer:
     agency: str | None = None  # who made the data, as their inventory records it
     year: int | None = None
     reference: str | None = None  # their GIS inventory ID, e.g. GIS-328
+    label: str | None = None  # the column naming each feature (profile_layers)
 
     @property
     def is_area(self) -> bool:
@@ -56,6 +57,15 @@ class Layer:
     @property
     def on_map(self) -> bool:
         return self.status == "published"
+
+    @property
+    def names_shown(self) -> bool:
+        """Whether an answer may say what this layer's features are called.
+
+        Only on layers La Maraña published, and only through a name column that
+        profile_layers chose - which is never a person's name or address.
+        """
+        return self.on_map and bool(self.label)
 
     def name(self, lang: str) -> str:
         return self.name_es if lang == "es" else self.name_en
@@ -73,6 +83,7 @@ def _row(r: tuple) -> Layer:
         r[7] or None,
         int(r[8]) if r[8] else None,
         r[9] or None,
+        r[10] or None,
     )
 
 
@@ -183,7 +194,7 @@ def roles() -> dict[str, Role]:
             """SELECT r.role, r.checked_on_click, r.words,
                       g.id, g.table_name, g.name_es, coalesce(g.name_en, g.name_es),
                       g.geometry_type, g.feature_count, g.status,
-                      g.source_agency, g.vintage_year, g.gis_id
+                      g.source_agency, g.vintage_year, g.gis_id, g.label_column
                FROM layer_roles r JOIN layer_registry g ON g.id = r.layer_id
                WHERE g.status IN ('published', 'loaded') AND g.table_name IS NOT NULL"""
         )

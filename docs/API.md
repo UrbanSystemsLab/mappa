@@ -31,13 +31,15 @@ Request body:
 
 Only `question` is required (3–1000 characters). `lang` is `"es"` or `"en"`.
 `location` is a place label from `/places`. `spatial` is what `/locate` returned for a
-point the user clicked. `history` holds earlier turns; the last six are used.
+point the user clicked, plus that point's `lng` and `lat`, so questions like "the
+nearest shelter" or "what is within 1 km of here" can be answered. `history` holds
+earlier turns; the last six are used.
 
 The response is server-sent events, in this order:
 
 | Event | Data | Use it to |
 |---|---|---|
-| `meta` (once) | `municipio`, `focus` (bbox `[w, s, e, n]` or null), `suggested_layers` (layer ids), `disclaimer`, `disclaimers` (`{es, en}`) | move the map, turn on layers |
+| `meta` (once) | `municipio`, `focus` (bbox `[w, s, e, n]`: the features found, or else the place), `suggested_layers` (ids of the layers the answer measured), `found` (features to highlight: `{layer_id, name, lng, lat}`), `disclaimer`, `disclaimers` (`{es, en}`) | move the map, turn on layers, highlight what was found |
 | `delta` (one or more) | `text` | append to the answer on screen |
 | `done` (once) | `answer` (final cleaned text), `citations`, `steps` | replace the streamed text with `answer`, list sources |
 
@@ -69,7 +71,7 @@ for (;;) {
 ### `POST /api/v1/ask`
 
 Same request. Returns the whole answer at once, as one JSON object with `answer`,
-`citations`, `steps`, `suggested_layers`, `municipio`, `focus` and `disclaimer`. Use it
+`citations`, `steps`, `suggested_layers`, `municipio`, `focus`, `found` and `disclaimer`. Use it
 for scripts, tests and anything that does not show text as it arrives.
 
 **Citations** are the answer's sources: `{kind, id, title, year, source, doc_id}`.

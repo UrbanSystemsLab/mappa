@@ -310,8 +310,10 @@ async function ask() {
           if (d.disclaimers) Object.assign(lastDisclaimer, d.disclaimers);
           disc.textContent = (d.disclaimers && d.disclaimers[LANG]) || d.disclaimer || '';
           turn.suggested_layers = d.suggested_layers || [];
-          autoShowLayers(turn.suggested_layers);
-          if (d.focus) focusBBox(d.focus);
+          const found = d.found || [];
+          if (openPopup) openPopup.remove();  // the click's card would cover the result
+          autoShowLayers(turn.suggested_layers).then(() => showFound(found));
+          if (d.focus) focusBBox(d.focus, found.length ? 15 : 11);
         } else if (ev[1] === 'delta') {
           turn.answer += d.text || '';
           render();
@@ -501,8 +503,9 @@ document.getElementById('layerlist').addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
   if (!el) return;
   const act = el.dataset.act, id = el.dataset.id;
-  if (act === 'add') addLayer(id);
-  else if (act === 'remove') removeLayer(id);
+  // A layer the user turns on or off is theirs: answers leave it alone.
+  if (act === 'add') { AUTO.delete(id); addLayer(id); }
+  else if (act === 'remove') { AUTO.delete(id); removeLayer(id); }
   else if (act === 'info') showLayerInfo(id);
   else if (act === 'raise') raiseLayer(id);
   else if (act === 'clear') [...ACTIVE.keys()].forEach(removeLayer);
@@ -706,20 +709,50 @@ function featureCard(rec, props) {
 }
 
 // Turn on layers the answer referenced, by matching catalog keywords.
-function autoShowLayers(wanted) {
-  if (!wanted || !wanted.length) return;
-  // The server resolves a question to real catalog IDs. Matching those directly
-  // is what makes "is my house in a flood zone" turn the flood layer on; the old
-  // match was on a theme field that almost every loaded layer leaves empty.
-  const alias = { zonificacion: 'uso_de_terrenos' };
-  const want = new Set(wanted.map(x => alias[x] || x));
-  let shown = 0;
-  RESULTS.forEach(l => {
-    if (ACTIVE.has(l.id) || shown >= 3) return;      // three at once stays readable
-    if (want.has(l.id) || want.has(l.theme) || (l.keywords || []).some(k => want.has(k))) {
-      addLayer(l.id); shown++;
+// Turn on the layers the answer measured, and off the ones the previous answer
+// turned on that this one does not use - never a layer the user chose. The
+// server names layers by id; one not in the panel's current list (a layer
+// search may be filtering it) is fetched.
+const AUTO = new Set();
+async function autoShowLayers(wanted) {
+  wanted = (wanted || []).slice(0, 3);
+  [...AUTO].filter(id => !wanted.includes(id)).forEach(id => { AUTO.delete(id); removeLayer(id); });
+  for (const id of wanted) {
+    if (ACTIVE.has(id)) continue;
+    AUTO.add(id);
+    if (!RESULTS.some(l => l.id === id)) {
+      try {
+        const l = await (await fetch(`${API}/catalog/layers/${id}?lang=${LANG}`)).json();
+        if (l && l.tiles_url) RESULTS.push(l); else continue;
+      } catch (e) { continue; }
     }
-  });
+    addLayer(id);
+  }
+}
+
+// The features an answer found - the schools in the flood zone, the nearest
+// shelters - drawn above every layer, with their names. Each answer replaces
+// the last answer's.
+function showFound(found) {
+  if (!map) return;
+  const data = { type: 'FeatureCollection', features: (found || []).map(f => ({
+    type: 'Feature', geometry: { type: 'Point', coordinates: [f.lng, f.lat] },
+    properties: { name: f.name || '' } })) };
+  const apply = () => {
+    if (map.getSource('found')) map.getSource('found').setData(data);
+    else {
+      map.addSource('found', { type: 'geojson', data });
+      map.addLayer({ id: 'found', type: 'circle', source: 'found', paint: {
+        'circle-radius': 7, 'circle-color': '#ffd400',
+        'circle-stroke-color': '#1a1a1a', 'circle-stroke-width': 2 } });
+      map.addLayer({ id: 'found_label', type: 'symbol', source: 'found', layout: {
+        'text-field': ['get', 'name'], 'text-size': 12, 'text-offset': [0, 1.1],
+        'text-anchor': 'top', 'text-font': ['Noto Sans Regular'] },
+        paint: { 'text-color': '#1a1a1a', 'text-halo-color': '#fff', 'text-halo-width': 1.5 } });
+    }
+    map.moveLayer('found'); map.moveLayer('found_label');  // above layers just added
+  };
+  mapReady ? apply() : map.once('load', apply);
 }
 
 // The layer catalog is just data, so it loads independently of the map. If WebGL
@@ -791,9 +824,11 @@ loadCatalog();
 }
 
 // Fly/zoom the map to a bbox [w,s,e,n] the chat is answering about.
-function focusBBox(bbox) {
+// Fly to a box. A place stays at municipio scale; features found can be shown
+// close up.
+function focusBBox(bbox, maxZoom = 11) {
   if (!map || !bbox || bbox.length !== 4) return;
-  map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 1600, maxZoom: 11 });
+  map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 1600, maxZoom });
 }
 
 // ---------------------------------------------------------------------------
@@ -846,7 +881,7 @@ if (map) map.on('click', async (e) => {
   const checks = Array.isArray(info.hazards) ? info.hazards : [];
   const es = LANG === 'es';
   const yn = b => b ? `<b class="yes">${es ? 'Sí' : 'Yes'}</b>` : `<span class="no">No</span>`;
-  pending = muni ? { municipio: muni, spatial: info } : null;
+  pending = muni ? { municipio: muni, spatial: { ...info, lng, lat } } : null;
 
   const place = `<div class="fp-card fp-place">
       <div class="fp-h">📍 ${esc(muni || (es ? 'Fuera de Puerto Rico' : 'Outside Puerto Rico'))}</div>

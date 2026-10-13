@@ -41,6 +41,9 @@ Answer only from what your tools return. Never use your own knowledge, even if y
 - For how many, where, what share, inside or near: call find_layers, then count_features,
   count_inside, count_within_distance or area_share. Every number you state must come from one of
   these tools; never take a figure from a passage as a count.
+- For which ones, or what they are called: list_features. For the nearest or closest to where the
+  user clicked: nearest. For "here" or "around this point": list_features with
+  around_clicked_point_metres. Name what they return; never name a feature a tool did not.
 - Call several tools when the question needs both documents and map data.
 
 Write in English. Start with one sentence that answers directly. Then up to six '• ' bullets or one
@@ -57,6 +60,9 @@ Responde solo con lo que devuelven tus herramientas. Nunca uses conocimiento pro
 - Para cuántos, dónde, qué porcentaje, dentro o cerca: llama a find_layers y luego a count_features,
   count_inside, count_within_distance o area_share. Toda cifra que digas debe venir de una de esas
   herramientas; nunca tomes una cifra de un pasaje como conteo.
+- Para cuáles, o cómo se llaman: list_features. Para lo más cercano al punto que marcó el usuario:
+  nearest. Para "aquí" o "alrededor de este punto": list_features con around_clicked_point_metres.
+  Nombra lo que devuelvan; nunca nombres algo que una herramienta no devolvió.
 - Llama varias herramientas cuando la pregunta necesite documentos y datos del mapa.
 
 Escribe en español. Empieza con una oración que responda directamente. Luego hasta seis viñetas '• '
@@ -99,7 +105,8 @@ class Context:
             )
             lines.append(
                 f"The user clicked a point in {self.clicked['municipio']}. At that exact point only - "
-                f"not the whole municipio: {facts or 'no layers checked'}."
+                f"not the whole municipio: {facts or 'no layers checked'}. For questions about this "
+                f"point, use nearest or list_features with around_clicked_point_metres."
             )
         if self.active_layers:
             lines.append("Layers the user has on the map: " + ", ".join(self.active_layers) + ".")
@@ -296,15 +303,20 @@ def _check(text: str, session: Session) -> str | None:
 
 
 def _drop_unsupported(text: str, session: Session) -> str:
-    """The answer without any sentence stating a number no tool returned."""
+    """The answer without any sentence stating a number no tool returned.
+    Lines - the bullets - keep their place."""
     known = session.known_numbers()
-    kept = []
-    for sentence in re.split(r"(?<=[.!?])\s+|\n+", text):
-        if _numbers(sentence) - known:
-            log.warning("dropped an unsupported figure: %s", sentence[:120])
-            continue
-        kept.append(sentence)
-    return " ".join(kept) if len(kept) != len(re.split(r"(?<=[.!?])\s+|\n+", text)) else text
+    lines = []
+    for line in text.split("\n"):
+        kept = []
+        for sentence in re.split(r"(?<=[.!?])\s+", line):
+            if _numbers(sentence) - known:
+                log.warning("dropped an unsupported figure: %s", sentence[:120])
+                continue
+            kept.append(sentence)
+        if kept or not line.strip():
+            lines.append(" ".join(kept))
+    return "\n".join(lines)
 
 
 def _must_call(config):
