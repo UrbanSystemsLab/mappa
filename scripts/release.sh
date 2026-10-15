@@ -95,7 +95,7 @@ if [ "$TARGET" = staging ]; then
     --service-account "$RUNTIME_SA" --add-cloudsql-instances "$INSTANCE" \
     --set-secrets "DATABASE_URL=mappa-database-url:latest" \
     --set-env-vars "APP_ENV=staging,DATABASE_NAME=$DB,GCP_PROJECT=$PROJECT,VERTEX_LOCATION=$REGION" \
-    --cpu 2 --memory 4Gi --concurrency 4 --min-instances 0 --max-instances 3 \
+    --cpu 2 --memory 4Gi --concurrency 4 --min-instances 0 --max-instances 3 --cpu-boost \
     --no-invoker-iam-check --quiet
   # Public the same way production is: the invoker check is off, because NYU's
   # policy refuses an allUsers grant. The tag marks it as an approved public site.
@@ -104,7 +104,7 @@ if [ "$TARGET" = staging ]; then
     >/dev/null 2>&1 || true   # already tagged on later deploys
 else
   # Not rebuilt: the exact image staging was checked on.
-  gcloud run deploy "$SERVICE" --image "$IMAGE" "${COMMON[@]}" --quiet
+  gcloud run deploy "$SERVICE" --image "$IMAGE" "${COMMON[@]}" --cpu-boost --quiet
 fi
 URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT" --format='value(status.url)')
 [ "$TARGET" = production ] && URL=https://app.mappealo.org
