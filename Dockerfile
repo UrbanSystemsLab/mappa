@@ -8,21 +8,18 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 COPY requirements-api.txt .
-RUN pip install -r requirements-api.txt
+# PyTorch for CPU only. The default Linux wheel brings the NVIDIA GPU libraries,
+# several gigabytes this service never uses, and a larger image starts slower.
+RUN pip install torch --index-url https://download.pytorch.org/whl/cpu \
+ && pip install -r requirements-api.txt
 
-# Pre-download the multilingual embedding model so cold starts don't wait on it.
+# The multilingual embedding model, baked into the image.
 RUN python -c "from sentence_transformers import SentenceTransformer; \
     SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')"
 
-# The model being in the image was not enough. At runtime the library still asked
-# huggingface.co whether its copy was current, and on 2026-10-03 Hugging Face
-# answered 429 to our unauthenticated request. The retry policy is to sleep 222
-# seconds, so a question sat unanswered for the best part of four minutes while
-# the model it needed was already on disk a few inches away.
-#
-# Offline mode uses the baked cache and never opens a socket. The model is
-# pinned by the image, which is where a dependency of this kind belongs: the
-# assistant must not stop working because a third party is having a busy day.
+# Offline mode: the model is read from the copy baked in above, and the library
+# never asks huggingface.co whether it is current - so the assistant does not
+# depend on a third party being reachable, or on its rate limits.
 ENV HF_HUB_OFFLINE=1 \
     TRANSFORMERS_OFFLINE=1
 

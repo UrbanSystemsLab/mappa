@@ -126,3 +126,85 @@ def test_map_layers_are_listed_as_sources_after_documents():
             "doc_id": "",
         }
     ]
+
+
+NAMED = Layer(
+    "hosp", "layer_hosp", "Hospitales", "Hospitals", "POINT", 60, "published", label="nombre"
+)
+UNPUBLISHED = Layer(
+    "farms", "layer_farms", "Fincas", "Farms", "POINT", 90, "loaded", label="nombre"
+)
+
+
+def test_nearest_needs_a_click():
+    out = tools.call(tools.Session(), "nearest", {"layer_id": "schools"})
+    assert "clicked" in out["error"]
+
+
+def test_nearest_names_and_highlights(monkeypatch):
+    from api.repositories.spatial import Feature
+
+    monkeypatch.setattr(tools.layers, "get", {"hosp": NAMED}.get)
+    monkeypatch.setattr(
+        tools.spatial, "nearest", lambda layer, lng, lat, n: [Feature("HOSP A", -66.1, 18.4, 512.4)]
+    )
+    s = tools.Session(point=(-66.0, 18.4))
+    out = tools.call(s, "nearest", {"layer_id": "hosp"})
+    assert out["nearest"] == [{"name": "HOSP A", "metres": 512}]
+    assert s.found == [{"layer_id": "hosp", "name": "HOSP A", "lng": -66.1, "lat": 18.4}]
+
+
+def test_an_unpublished_layer_never_names_or_highlights(monkeypatch):
+    from api.repositories.spatial import Feature
+
+    monkeypatch.setattr(tools.layers, "get", {"farms": UNPUBLISHED}.get)
+    monkeypatch.setattr(
+        tools.spatial, "features", lambda *a, **k: (2, [Feature(None, -66.1, 18.4)])
+    )
+    s = tools.Session()
+    out = tools.call(s, "list_features", {"layer_id": "farms"})
+    assert out["count"] == 2 and out["features"] == [] and s.found == []
+
+
+def test_the_same_feature_is_highlighted_once():
+    from api.repositories.spatial import Feature
+
+    s = tools.Session()
+    s.show(NAMED, [Feature("HOSP A", -66.1, 18.4)])
+    s.show(NAMED, [Feature("HOSP A", -66.1, 18.4)])
+    assert len(s.found) == 1
+
+
+def test_numbers_in_the_question_and_tool_distances_are_known():
+    s = tools.Session(question="shelters within 2 km of here")
+    s.steps.append({"tool": "list_features", "arguments": {"around_clicked_point_metres": 2000}})
+    assert {"2", "2000"} <= s.known_numbers()
+
+
+def test_the_map_turns_on_the_found_layer_and_flies_to_what_was_found():
+    from api.services import answering
+
+    s = tools.Session()
+    s.measured_with(FLOOD, NAMED)
+    s.found = [
+        {"layer_id": "hosp", "name": "A", "lng": -66.1, "lat": 18.4},
+        {"layer_id": "hosp", "name": "B", "lng": -66.0, "lat": 18.5},
+    ]
+    m = answering._map(s)
+    assert m["suggested_layers"][:2] == ["hosp", "flood"]
+    w, so, e, n = m["focus"]
+    assert w < -66.1 and e > -66.0 and so < 18.4 and n > 18.5
+
+
+def test_show_on_map_shows_only_drawable_layers(monkeypatch):
+    monkeypatch.setattr(tools.layers, "get", {"flood": FLOOD, "farms": UNPUBLISHED}.get)
+    s = tools.Session()
+    out = tools.call(s, "show_on_map", {"layer_ids": "flood, farms"})
+    assert [x.id for x in s.shown_layers] == ["flood"]
+    assert "Farms" in out["note"]
+    assert not s.has_evidence  # showing a layer finds nothing
+
+
+def test_show_on_map_can_show_nothing():
+    s = tools.Session()
+    assert tools.call(s, "show_on_map", {"layer_ids": ""})["shown"] == []

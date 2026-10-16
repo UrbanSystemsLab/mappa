@@ -68,7 +68,7 @@
         },
         "responses": {
           "200": {
-            "description": "meta, delta..., done",
+            "description": "delta..., meta, done",
             "content": {
               "text/event-stream": {}
             }
@@ -661,6 +661,14 @@
             ],
             "title": "Focus"
           },
+          "found": {
+            "items": {
+              "$ref": "#/components/schemas/FoundFeature"
+            },
+            "type": "array",
+            "title": "Found",
+            "description": "Features to highlight."
+          },
           "steps": {
             "items": {
               "$ref": "#/components/schemas/Step"
@@ -753,6 +761,42 @@
           "title"
         ],
         "title": "Citation"
+      },
+      "FoundFeature": {
+        "properties": {
+          "layer_id": {
+            "type": "string",
+            "title": "Layer Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "What it is called, where the layer says."
+          },
+          "lng": {
+            "type": "number",
+            "title": "Lng"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "layer_id",
+          "lng",
+          "lat"
+        ],
+        "title": "FoundFeature",
+        "description": "A feature the answer found, for the map to highlight."
       },
       "HTTPValidationError": {
         "properties": {

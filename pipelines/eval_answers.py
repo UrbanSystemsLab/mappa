@@ -10,7 +10,8 @@ Recorded for each question:
     sources       citations shown, and how many distinct documents
     place         whether the place in the question was recognised
     figure        whether a computed number from the map data was used
-    seconds       how long the answer took
+    seconds       until the finished answer and its sources arrived
+    map_seconds   until the last map update arrived
 
 Graded, 0-2 each, by a model reading the question, the answer and the sources:
     relevant      does it answer what was asked
@@ -62,17 +63,42 @@ Return JSON: {{"relevant": n, "grounded": n, "specific": n, "note": "one short s
 
 
 def ask(url: str, question: str, lang: str) -> dict:
+    """One question, the way the app asks it: streamed. `seconds` is when the
+    finished answer and its sources arrived - what a reader waits for;
+    `map_seconds` is when the last map update did."""
     body = json.dumps({"question": question, "lang": lang}).encode()
-    # /api/v1/ask since 6 Oct 2026; /ask on builds before it, for comparing runs.
-    path = "/api/v1/ask" if _has_v1(url) else "/ask"
-    req = urllib.request.Request(f"{url}{path}", body, {"Content-Type": "application/json"})
+    if not _has_v1(url):  # a build from before the versioned API, for comparing runs
+        return _ask_whole(f"{url}/ask", body)
+    req = urllib.request.Request(
+        f"{url}/api/v1/ask/stream", body, {"Content-Type": "application/json"}
+    )
+    t0, data, event = time.monotonic(), {}, None
+    try:
+        with urllib.request.urlopen(req, timeout=180) as r:
+            for raw in r:
+                line = raw.decode("utf-8").rstrip("\n")
+                if line.startswith("event: "):
+                    event = line[7:]
+                elif line.startswith("data: ") and event in ("meta", "done", "map"):
+                    data.update(json.loads(line[6:]))
+                    if event == "done":
+                        data["seconds"] = round(time.monotonic() - t0, 1)
+    except Exception as exc:
+        return {"error": str(exc)[:200], "seconds": round(time.monotonic() - t0, 1)}
+    data["map_seconds"] = round(time.monotonic() - t0, 1)
+    data.setdefault("seconds", data["map_seconds"])
+    return data
+
+
+def _ask_whole(endpoint: str, body: bytes) -> dict:
+    req = urllib.request.Request(endpoint, body, {"Content-Type": "application/json"})
     t0 = time.monotonic()
     try:
         with urllib.request.urlopen(req, timeout=180) as r:
             data = json.loads(r.read())
     except Exception as exc:
         return {"error": str(exc)[:200], "seconds": round(time.monotonic() - t0, 1)}
-    data["seconds"] = round(time.monotonic() - t0, 1)
+    data["seconds"] = data["map_seconds"] = round(time.monotonic() - t0, 1)
     return data
 
 
@@ -123,6 +149,7 @@ def run(url: str, label: str, workers: int) -> None:
             "place": got.get("municipio"),
             "layers": got.get("suggested_layers", []),
             "seconds": got.get("seconds"),
+            "map_seconds": got.get("map_seconds"),
             "error": got.get("error"),
             "steps": got.get("steps", []),
         }

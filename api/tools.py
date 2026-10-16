@@ -27,7 +27,9 @@ from .repositories.places import Place
 
 log = logging.getLogger("mappa.tools")
 
-PASSAGE_CHARS = 1200  # enough of a passage to answer from, without flooding the model
+PASSAGE_CHARS = 1200
+MAX_FOUND = 50  # features one answer highlights on the map
+MAX_LISTED = 25  # names one tool call hands the model  # enough of a passage to answer from, without flooding the model
 
 
 @dataclass
@@ -39,6 +41,11 @@ class Session:
     passages: list[Passage] = field(default_factory=list)
     layers_used: list[Layer] = field(default_factory=list)
     measured_layers: list[Layer] = field(default_factory=list)  # what a figure came from
+    point: tuple[float, float] | None = None  # (lng, lat) the user clicked
+    question: str = ""  # its own numbers ("within 2 km") are not invented
+    found: list[dict[str, Any]] = field(default_factory=list)  # features to show on the map
+    shown_layers: list[Layer] = field(default_factory=list)  # chosen to illustrate the answer
+    choosing: Any = None  # a Future: the layers being chosen while the answer is written
     steps: list[dict[str, Any]] = field(default_factory=list)
     results: list[str] = field(default_factory=list)  # every tool result, as text
     measured: bool = False  # a map tool computed something
@@ -50,14 +57,31 @@ class Session:
         return bool(self.passages) or self.measured or self.found_layers
 
     def known_numbers(self) -> set[str]:
-        """Every number any tool returned, in the form the answer would write it."""
+        """Every number the answer may state: what the tools returned, what the
+        tools were asked (a distance also in km), and what the question said."""
         from .assistant import _numbers
 
-        return _numbers(" ".join(self.results))
+        asked = []
+        for step in self.steps:
+            for key, value in (step.get("arguments") or {}).items():
+                if isinstance(value, int | float):
+                    asked.append(str(value))
+                    if "metres" in key:
+                        asked.append(f"{value / 1000:g}")
+        return _numbers(" ".join([*self.results, *asked, self.question]))
 
     def use_layer(self, layer: Layer) -> None:
         if all(x.id != layer.id for x in self.layers_used):
             self.layers_used.append(layer)
+
+    def show(self, layer: Layer, features: list[spatial.Feature]) -> None:
+        """Mark features for the map to highlight - only on layers it can draw."""
+        if not layer.on_map:
+            return
+        for f in features:
+            row = {"layer_id": layer.id, "name": f.name, "lng": f.lng, "lat": f.lat}
+            if row not in self.found and len(self.found) < MAX_FOUND:
+                self.found.append(row)
 
     def measured_with(self, *used: Layer) -> None:
         """Record the layers a successful measurement read - the answer's map sources."""
@@ -131,19 +155,26 @@ def search_documents(session: Session, query: str, place_id: str | None = None) 
 
 
 def find_layers(session: Session, topic: str) -> dict:
-    return {
-        "layers": [
+    """Candidate layers for each topic; several topics, separated by semicolons,
+    are looked up at once so the model needs one turn, not one per topic."""
+    topics = [t.strip() for t in topic.split(";") if t.strip()][:4] or [topic]
+    out = {}
+    for t in topics:
+        out[t] = [
             {
                 "layer_id": layer.id,
                 "name": layer.name(session.lang),
                 "geometry": layer.geometry.lower(),
                 "features": layer.features,
                 "standard_for": layers.role_of(layer),
+                "on_map": layer.on_map,
                 "relevance": round(score, 2),
             }
-            for layer, score in layers.search(topic)
+            for layer, score in layers.search(t, limit=6 if len(topics) > 1 else 8)
         ]
-    }
+    if len(topics) == 1:
+        return {"layers": out[topics[0]]}
+    return {"layers_by_topic": out}
 
 
 def count_features(session: Session, layer_id: str, place_id: str | None = None) -> dict:
@@ -208,6 +239,96 @@ def area_share(session: Session, area_layer_id: str, place_id: str) -> dict:
     }
 
 
+def _clicked(session: Session) -> tuple[float, float]:
+    if session.point is None:
+        raise ToolError("the user has not clicked the map; ask them to, or use a place_id")
+    return session.point
+
+
+def _named(layer: Layer, found: list[spatial.Feature], lang: str) -> list[dict]:
+    out = []
+    for f in found:
+        row: dict[str, Any] = {"name": f.name} if f.name else {}
+        if f.metres is not None:
+            row["metres"] = round(f.metres)
+        out.append(row)
+    return out
+
+
+def _names_note(layer: Layer) -> str:
+    return (
+        "" if layer.names_shown else "This layer does not name its features; give the count only."
+    )
+
+
+def nearest(session: Session, layer_id: str, n: int = 3) -> dict:
+    lng, lat = _clicked(session)
+    n = max(1, min(int(n), 10))
+    layer = _layer(session, layer_id)
+    found = spatial.nearest(layer, lng, lat, n)
+    session.measured_with(layer)
+    session.show(layer, found)
+    return {
+        "layer": layer.name(session.lang),
+        "from": "the point the user clicked",
+        "nearest": _named(layer, found, session.lang),
+        "note": _names_note(layer),
+    }
+
+
+def list_features(
+    session: Session,
+    layer_id: str,
+    place_id: str | None = None,
+    inside_area_layer_id: str | None = None,
+    near_layer_id: str | None = None,
+    metres: int | None = None,
+    around_clicked_point_metres: int | None = None,
+) -> dict:
+    layer = _layer(session, layer_id)
+    place = _place(session, place_id)
+    inside = _layer(session, inside_area_layer_id, area=True) if inside_area_layer_id else None
+    near = None
+    if near_layer_id:
+        if not metres or not 1 <= int(metres) <= 50_000:
+            raise ToolError("near_layer_id needs metres between 1 and 50000")
+        near = (_layer(session, near_layer_id), int(metres))
+    around = None
+    if around_clicked_point_metres:
+        if not 1 <= int(around_clicked_point_metres) <= 50_000:
+            raise ToolError("around_clicked_point_metres must be between 1 and 50000")
+        around = (*_clicked(session), int(around_clicked_point_metres))
+    total, found = spatial.features(layer, place, inside, near, around, MAX_LISTED)
+    session.measured_with(layer, *[x for x in (inside, near and near[0]) if x])
+    session.show(layer, found)
+    return {
+        "layer": layer.name(session.lang),
+        "place": _where(place) if not around else "around the point the user clicked",
+        "count": total,
+        "features": _named(layer, found, session.lang) if layer.names_shown else [],
+        "listed": len(found) if layer.names_shown else 0,
+        "note": _names_note(layer),
+    }
+
+
+def show_on_map(session: Session, layer_ids: str = "") -> dict:
+    shown, skipped = [], []
+    for layer_id in [x.strip() for x in layer_ids.split(",") if x.strip()][:3]:
+        layer = layers.get(layer_id)
+        if layer is None:
+            raise ToolError(f"unknown layer_id {layer_id!r}; call find_layers first")
+        if not layer.on_map:
+            skipped.append(layer.name(session.lang))
+            continue
+        if all(x.id != layer.id for x in session.shown_layers):
+            session.shown_layers.append(layer)
+        shown.append(layer.name(session.lang))
+    return {
+        "shown": shown,
+        "note": f"Not drawable on the map: {', '.join(skipped)}." if skipped else "",
+    }
+
+
 # ---------------------------------------------------------------- the catalogue
 
 
@@ -261,12 +382,22 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         "find_layers",
-        "Find map data layers about a topic - schools, wells, flood zones, roads, protected areas, "
-        "land use. Returns candidate layer_ids, closest first; choose the one that fits. The "
-        "standard layers listed in your instructions can be used without calling this.",
-        _p(topic=("string", "The kind of thing, e.g. 'public schools' or 'flood zones'.")),
+        "Find map data layers about a topic - wells, roads, land use, beaches. Returns candidate "
+        "layer_ids, closest first; choose the one that fits. Do not call it for the standard "
+        "layers listed in your instructions: use their layer_id directly. For several topics, "
+        "pass them together separated by semicolons, e.g. 'wells; rivers'.",
+        _p(topic=("string", "The kind of thing, e.g. 'public wells', or 'wells; rivers'.")),
         find_layers,
-        lambda r: ", ".join(x["name"] for x in r["layers"][:3]) or "none",
+        lambda r: (
+            ", ".join(
+                x["name"]
+                for x in (
+                    r.get("layers")
+                    or [y for v in r.get("layers_by_topic", {}).values() for y in v[:1]]
+                )[:3]
+            )
+            or "none"
+        ),
     ),
     Tool(
         "count_features",
@@ -313,8 +444,64 @@ TOOLS: list[Tool] = [
     ),
 ]
 
+TOOLS += [
+    Tool(
+        "nearest",
+        "The features of a layer closest to the point the user clicked on the map - e.g. the three "
+        "nearest hospitals or shelters. Returns names (where the layer has them) and distances in "
+        "metres. Use for 'nearest', 'closest', 'near here'.",
+        _p(
+            layer_id=("string", "From find_layers."),
+            n=("integer?", "How many, 1-10. Default 3."),
+        ),
+        nearest,
+        lambda r: f"{len(r['nearest'])} nearest {r['layer']}",
+    ),
+    Tool(
+        "list_features",
+        "Which features of a layer meet conditions, by name, and how many: in a place, inside "
+        "another layer's areas, within a distance of another layer, or around the point the user "
+        "clicked. Use when the question asks 'which' or 'what are', not only 'how many'. The map "
+        "highlights what this finds.",
+        _p(
+            layer_id=("string", "The things to list, from find_layers."),
+            place_id=PLACE_ID,
+            inside_area_layer_id=("string?", "Only those inside this area layer's areas."),
+            near_layer_id=("string?", "Only those within `metres` of this layer."),
+            metres=("integer?", "The distance for near_layer_id, in metres."),
+            around_clicked_point_metres=(
+                "integer?",
+                "Only those within this many metres of the point the user clicked.",
+            ),
+        ),
+        list_features,
+        lambda r: f"{r['count']} {r['layer']} in {r['place']}",
+    ),
+    Tool(
+        "show_on_map",
+        "Put up to three layers on the map to illustrate the answer, when you did not measure "
+        "them - e.g. flood zones for a question about what a plan says on building near rivers. "
+        "Only layers with on_map true can be shown. Not evidence: it finds nothing.",
+        _p(
+            layer_ids=(
+                "string?",
+                "One to three layer_ids from find_layers, separated by commas; empty for none.",
+            )
+        ),
+        show_on_map,
+        lambda r: ", ".join(r["shown"]) or "nothing shown",
+    ),
+]
+
 BY_NAME = {t.name: t for t in TOOLS}
-MEASURING = {"count_features", "count_inside", "count_within_distance", "area_share"}
+MEASURING = {
+    "count_features",
+    "count_inside",
+    "count_within_distance",
+    "area_share",
+    "nearest",
+    "list_features",
+}
 
 
 def call(session: Session, name: str, args: dict[str, Any]) -> dict:

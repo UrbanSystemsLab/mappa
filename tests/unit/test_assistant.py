@@ -122,4 +122,36 @@ def test_nothing_found_after_every_round_is_said_plainly(monkeypatch):
         assistant.answer("three nearest schools?", Session(lang="en"), assistant.Context())
     )
     assert out == assistant.NOTHING_FOUND["en"]
-    assert len(asked) == assistant.MAX_ROUNDS
+    assert len(asked) == assistant.GIVE_UP_AFTER
+
+
+def test_dropping_a_sentence_keeps_the_bullets():
+    from api.tools import Session
+
+    s = Session()
+    s.results.append('{"count": 3}')
+    text = "There are 3 shelters. One has 99 beds.\n• Shelter A\n• Shelter B"
+    assert assistant._drop_unsupported(text, s) == "There are 3 shelters.\n• Shelter A\n• Shelter B"
+
+
+def test_layers_are_chosen_for_an_answer_with_nothing_on_the_map(monkeypatch):
+    from types import SimpleNamespace
+
+    from api.repositories.layers import Layer
+
+    flood = Layer("flood", "t", "Inundación", "Flood zones", "MULTIPOLYGON", 1, "published")
+    monkeypatch.setattr("api.repositories.layers.search", lambda *a, **k: [(flood, 0.7)])
+    pick = SimpleNamespace(name="show_on_map", args={"layer_ids": "flood"})
+    chunk = SimpleNamespace(
+        candidates=[
+            SimpleNamespace(
+                finish_reason=None,
+                content=SimpleNamespace(parts=[SimpleNamespace(function_call=pick, text=None)]),
+            )
+        ]
+    )
+    client = SimpleNamespace(models=SimpleNamespace(generate_content_stream=lambda **kw: [chunk]))
+    config = SimpleNamespace(model_copy=lambda update: None)
+    assert assistant._choose_layers(client, config, "building near rivers", "en") == {
+        "layer_ids": "flood"
+    }

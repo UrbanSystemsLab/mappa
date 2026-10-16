@@ -9,6 +9,7 @@ service, or a schema.
 
 import hashlib
 import re
+import threading
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -30,9 +31,9 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 def warm() -> None:
-    """Load the embedding model, the gazetteer and the layer roles before taking
-    traffic, so the first question after a deploy is not the slow one. A failure
-    is logged, not raised: the map and the catalogue still work without them."""
+    """Load the embedding model, the gazetteer and the layer roles as the service
+    starts, so the first question is not the slow one. A failure is logged, not
+    raised: the map and the catalogue still work without them."""
     from .embeddings import encoder
     from .repositories.layers import roles
     from .repositories.places import _all as gazetteer
@@ -52,7 +53,9 @@ def warm() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    warm()
+    # In the background, so the page and the map are served while the model
+    # loads; only a question asked in the first seconds waits for it.
+    threading.Thread(target=warm, name="warm", daemon=True).start()
     yield
 
 

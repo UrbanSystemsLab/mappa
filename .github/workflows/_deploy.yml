@@ -1,0 +1,67 @@
+# One release, to staging or production: the same scripts/release.sh a laptop
+# runs. Called by ci.yml (push to main -> staging, push to release -> production)
+# and by deploy.yml (by hand).
+#
+# Each GitHub environment holds its own deploy key, GCP_SA_KEY. The production
+# environment can require a reviewer's approval before this job starts; that
+# approval takes the place of typing "production" in the script.
+
+name: Deploy (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: staging | production
+        required: true
+        type: string
+      ref:
+        description: Commit to deploy (default - the commit that triggered the run)
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false   # never stop a release halfway
+
+jobs:
+  release:
+    name: Release to ${{ inputs.environment }}
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+
+      - name: Sign in to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install
+        run: |
+          python -m venv venv
+          ./venv/bin/pip install -q -r requirements.txt pytest ruff
+
+      - name: Database connection
+        run: |
+          # Outside the checkout: release.sh refuses to run with untracked files.
+          proxy="$RUNNER_TEMP/cloud-sql-proxy"
+          curl -sSLo "$proxy" https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.0/cloud-sql-proxy.linux.amd64
+          chmod +x "$proxy"
+          "$proxy" mappa-lamarana-aecc:us-central1:mappa-pg --port 5432 &
+          gcloud secrets versions access latest --secret mappa-db-password \
+            --project mappa-lamarana-aecc > .mappa_db_pw
+          for i in $(seq 1 30); do nc -z 127.0.0.1 5432 && break; sleep 1; done
+
+      - name: Release
+        run: ./scripts/release.sh ${{ inputs.environment }} --yes

@@ -1,7 +1,7 @@
 """The two question routes: the answer as it is written, and the answer at once.
 
 Both call api/services/answering.py, so they cannot differ in what they answer.
-The streaming route sends server-sent events - meta, delta..., done - whose
+The streaming route sends server-sent events - delta..., meta, done - whose
 shapes are api/schemas/ask.py's StreamMeta, StreamDelta and StreamDone.
 """
 
@@ -55,6 +55,7 @@ def ask(req: AskRequest) -> AskResponse:
         suggested_layers=out["suggested_layers"],
         municipio=out["municipio"],
         focus=out["focus"],
+        found=out["found"],
         disclaimer=DISCLAIMERS[a.lang],
     )
 
@@ -62,7 +63,7 @@ def ask(req: AskRequest) -> AskResponse:
 @router.post(
     "/ask/stream",
     response_class=StreamingResponse,
-    responses={200: {"content": {"text/event-stream": {}}, "description": "meta, delta..., done"}},
+    responses={200: {"content": {"text/event-stream": {}}, "description": "delta..., meta, done"}},
 )
 def ask_stream(req: AskRequest) -> StreamingResponse:
     """The answer as it is written, as server-sent events."""

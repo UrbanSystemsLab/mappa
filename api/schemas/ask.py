@@ -53,6 +53,15 @@ class Citation(BaseModel):
     doc_id: str = ""
 
 
+class FoundFeature(BaseModel):
+    """A feature the answer found, for the map to highlight."""
+
+    layer_id: str
+    name: str | None = Field(None, description="What it is called, where the layer says.")
+    lng: float
+    lat: float
+
+
 class AskResponse(BaseModel):
     answer: str
     citations: list[Citation]
@@ -62,6 +71,7 @@ class AskResponse(BaseModel):
     # there. Named municipio for the frontend's sake; it may be a barrio.
     municipio: str | None = None
     focus: list[float] | None = None
+    found: list[FoundFeature] = Field(default_factory=list, description="Features to highlight.")
     steps: list[Step] = Field(default_factory=list, description="What the assistant did to answer.")
 
 
@@ -75,17 +85,24 @@ class Step(BaseModel):
 
 # Server-sent events from POST /api/v1/ask/stream, in this order:
 #
-#   event: meta    once, as soon as the place and layers are known
-#   event: delta   many times, each a piece of the answer text
+#   event: delta   one or more times, each a piece of the answer text
+#   event: meta    once, after the text: where to fly, what to turn on and highlight
 #   event: done    once, with the cleaned final text, citations and steps
+#   event: map     sometimes, after done: layers chosen to illustrate the answer.
+#                  Same fields as meta; it replaces it.
 #
 # Each event's `data:` line is one JSON object with the fields below.
 
 
 class StreamMeta(BaseModel):
     municipio: str | None = Field(None, description="The place the answer is about.")
-    focus: list[float] | None = Field(None, description="Its bounding box, to fly the map to.")
-    suggested_layers: list[str] = Field(default_factory=list, description="Layer ids to turn on.")
+    focus: list[float] | None = Field(
+        None, description="Where to fly the map: the features found, or else the place."
+    )
+    suggested_layers: list[str] = Field(
+        default_factory=list, description="Layer ids to turn on: those the answer measured."
+    )
+    found: list[FoundFeature] = Field(default_factory=list, description="Features to highlight.")
     disclaimer: str
     disclaimers: dict[str, str] = Field(
         default_factory=dict, description="The disclaimer in es and en."
