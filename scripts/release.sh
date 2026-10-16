@@ -77,9 +77,10 @@ say "3/6  Database $DB: data from the repository's files"
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.apply_layer_roles --commit
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.apply_layer_names --commit
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.fill_document_places --commit
-DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.embed_layers --commit
-# What each layer shows when clicked, decided from its own data (a few minutes).
+# What each layer shows when clicked and what it holds, from its own data (a few
+# minutes). Before embed_layers: the search text includes what this finds.
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.profile_layers --commit
+DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.embed_layers --commit
 
 say "4/6  Integration tests against $DB"
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pytest tests/integration -q
