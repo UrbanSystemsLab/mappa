@@ -17,9 +17,11 @@ This reads each of the ~600 layers that have data and settles two things:
                        handful of kinds, the features are coloured by it and the
                        legend shows their values. Their words, never ours.
 
-It only decides from what is in the data. Column names are shown as they are,
-because readable names would be words we chose; those will come from La
-Maraña's data dictionaries.
+It only decides from what is in the data. Where La Maraña's data dictionary
+covers a layer, a click shows only the fields they marked Include, in the order
+the data suggests - never a field they excluded, and never a person's details
+even where they included them. Their field descriptions are applied as labels
+by apply_layer_dictionaries.
 
 Run:
     python -m pipelines.profile_layers            # dry run
@@ -35,6 +37,8 @@ import os
 import re
 
 import psycopg2
+
+from pipelines.layer_dictionaries import limit_for, resolve, rows_by_sheet, sheets_by_table
 
 # Columns that describe the file, not the place.
 BOOKKEEPING = re.compile(
@@ -261,10 +265,20 @@ def name_column(cur, table: str, prof: list[dict]) -> str | None:
     return None
 
 
-def decide(cur, table: str, features: int) -> tuple[list[str], dict | None, str | None, str | None]:
+def decide(
+    cur,
+    table: str,
+    features: int,
+    allowed: list[str] | None = None,
+    cap: int | None = MAX_SHOWN,
+) -> tuple[list[str], dict | None, str | None, str | None]:
+    """allowed: the columns their dictionary includes, in their order, when it
+    covers the table. cap: how many a click shows; None shows them all."""
     cols = columns(cur, table)
     prof = profile(cur, table, cols)
     useful = [p for p in prof if p["fill"] >= 0.2 and (p["distinct"] > 1 or len(prof) == 1)]
+    if allowed is not None:
+        useful = [p for p in useful if p["name"] in allowed]
 
     by = None
     candidates = sorted(
@@ -301,11 +315,21 @@ def decide(cur, table: str, features: int) -> tuple[list[str], dict | None, str 
     # the rest. Decided afresh on every run from the data, never from what the
     # registry already lists.
     shown: list[str] = [by["by"]] if by else []
+    if allowed is not None:
+        # Their order: January to December reads as a year, not as the data sorts.
+        have = {p["name"] for p in useful}
+        for c in allowed:
+            if PERSONAL.match(c):
+                continue  # a person's details, whatever the dictionary says
+            if c in have and c not in shown and (cap is None or len(shown) < cap):
+                shown.append(c)
+        label = name_column(cur, table, prof)
+        return shown, by, label, summary(cur, table, by, label)
     # Words before numbers, and descriptive text before short codes: the soil
     # layer's name ("Humatas clay, 20 to 40 percent slopes") ahead of its map
     # symbol ("HmF").
     for p in sorted(useful, key=lambda p: (not p["text"], -min(p["avg_len"], 60), -p["fill"])):
-        if len(shown) >= MAX_SHOWN:
+        if cap is not None and len(shown) >= cap:
             break
         if PERSONAL.match(p["name"]) and not (
             p["name"].lower() == "owner" and p["distinct"] <= MAX_KINDS
@@ -365,11 +389,13 @@ def main() -> None:
         (args.table,) if args.table else (),
     )
     layers = cur.fetchall()
+    dict_tables = sheets_by_table()
+    dict_sheets = rows_by_sheet()
 
     if args.after:
         layers = [row for row in layers if row[1] > args.after]
 
-    coloured = clickable = nothing = failed = named = 0
+    coloured = clickable = nothing = failed = named = from_dictionary = 0
     for i, (rid, table, features, _old, style) in enumerate(layers, 1):
         # Saved every few layers, so a dropped connection loses only those.
         if args.commit and i % 10 == 0:
@@ -378,7 +404,14 @@ def main() -> None:
         for attempt in (1, 2):
             try:
                 cur.execute("SAVEPOINT layer")
-                shown, by, label, about = decide(cur, table, features)
+                allowed, cap = None, MAX_SHOWN
+                if table in dict_tables:
+                    cols = [c for c, _ in columns(cur, table)]
+                    fields = resolve(dict_sheets.get(dict_tables[table], []), cols)
+                    allowed = [f.column for f in fields if f.shown]
+                    cap = limit_for(dict_tables[table][0])
+                    from_dictionary += 1
+                shown, by, label, about = decide(cur, table, features, allowed, cap)
                 style = dict(style or {})
                 style.pop("by", None)
                 style.pop("categories", None)
@@ -420,6 +453,7 @@ def main() -> None:
     print(f"\n[profile] {len(layers)} layers with data")
     print(f"    {clickable:>4}  now show their information when clicked")
     print(f"    {named:>4}  name their features (an answer can say which)")
+    print(f"    {from_dictionary:>4}  show the fields La Maraña's dictionary includes")
     print(f"    {coloured:>4}  could be coloured by category (not applied)")
     print(f"    {nothing:>4}  hold nothing beyond their shape")
     if failed:

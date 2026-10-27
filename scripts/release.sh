@@ -77,6 +77,9 @@ say "3/6  Database $DB: data from the repository's files"
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.apply_layer_roles --commit
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.apply_layer_names --commit
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.fill_document_places --commit
+# Field names from La Maraña's data dictionaries; profile_layers then shows
+# only the fields they marked Include.
+DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.apply_layer_dictionaries --commit
 # What each layer shows when clicked and what it holds, from its own data (a few
 # minutes). Before embed_layers: the search text includes what this finds.
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.profile_layers --commit
@@ -105,7 +108,11 @@ if [ "$TARGET" = staging ]; then
     >/dev/null 2>&1 || true   # already tagged on later deploys
 else
   # Not rebuilt: the exact image staging was checked on.
-  gcloud run deploy "$SERVICE" --image "$IMAGE" "${COMMON[@]}" --cpu-boost --quiet
+  # One instance stays warm so the first visitor doesn't wait, but its CPU is
+  # paid only while it answers (--cpu-throttling). Kept always allocated at 4
+  # CPUs it cost about $200 a month with nobody on the site.
+  gcloud run deploy "$SERVICE" --image "$IMAGE" "${COMMON[@]}" --cpu-boost \
+    --cpu 2 --memory 4Gi --min-instances 1 --cpu-throttling --quiet
 fi
 URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT" --format='value(status.url)')
 [ "$TARGET" = production ] && URL=https://app.mappealo.org
