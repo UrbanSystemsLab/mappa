@@ -29,7 +29,15 @@ def describe(row: dict) -> str:
     La Maraña or from the layer itself. The name is repeated deliberately - it is
     the strongest signal and the one most likely to appear in a question.
     """
-    columns = " ".join(c.replace("_", " ") for c in (row.get("tile_properties") or []))
+    # What a click shows, in La Maraña's words where their dictionary names the
+    # field ("Average wind speed in January ... in knots"), else the column name.
+    labels = row.get("property_labels") or {}
+    seen: list[str] = []
+    for c in row.get("tile_properties") or []:
+        text = (labels.get(c) or {}).get("en") or c.replace("_", " ")
+        if text not in seen:
+            seen.append(text)
+    columns = " ".join(seen[:12])
     parts = [
         row.get("name_es"),
         row.get("name_es"),
@@ -72,7 +80,7 @@ def main() -> None:
     cur.execute("""
         SELECT id, name_es, name_en, description_es, description_en, purpose, category,
                subcategory, source_agency, vintage_year, keywords, content_summary,
-               tile_properties
+               tile_properties, property_labels
         FROM layer_registry ORDER BY id
     """)
     cols = [d[0] for d in cur.description]

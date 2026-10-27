@@ -672,7 +672,8 @@ async function showLayerInfo(id) {
   } catch (e) { /* non-fatal */ }
 }
 
-// Label a field and a value using the registry, never the raw column name.
+// Label a field and a value using the registry - La Maraña's own description
+// of the field where their dictionary has one - never the raw column name.
 function fieldLabel(rec, key) {
   const m = (rec && rec.property_labels) || {};
   const l = m[key] || m[key.toLowerCase()];
@@ -696,8 +697,9 @@ const isEmpty = v => v === null || v === undefined || String(v).trim() === '' ||
 function featureCard(rec, props) {
   const shown = (rec && rec.tile_properties_order) || Object.keys(props);
   const rows = shown
+    // As many as the layer sends: the server already keeps it to what La
+    // Maraña's dictionary includes, or six chosen from the data.
     .filter(k => k !== 'id' && !isEmpty(props[k]))
-    .slice(0, 6)
     .map(k => `<tr><th>${esc(fieldLabel(rec, k))}</th><td>${esc(String(valueLabel(rec, props[k])))}</td></tr>`)
     .join('');
   const sw = `<span class="fp-sw" style="background:${rec ? colourOf(rec) : '#09814A'}"></span>`;
