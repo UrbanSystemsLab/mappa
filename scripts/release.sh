@@ -75,6 +75,8 @@ DATABASE_URL="$DB_URL" ./venv/bin/alembic upgrade head
 say "3/6  Database $DB: data from the repository's files"
 # Each of these reads a reviewed file in data/ and is safe to run again.
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.apply_layer_roles --commit
+# Their platform names first; the English names were translated from those.
+DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.apply_platform_names --commit
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.apply_layer_names --commit
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.fill_document_places --commit
 # Field names from La Maraña's data dictionaries; profile_layers then shows

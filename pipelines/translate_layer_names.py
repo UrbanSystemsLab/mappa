@@ -92,9 +92,20 @@ def main() -> None:
         )
         rows = [{"id": r[0], "table_name": r[1], "name_es": r[2]} for r in cur.fetchall()]
 
+    # A name that has not changed since it was translated keeps its translation;
+    # only new or renamed layers are sent.
     done: dict[str, str] = {}
-    for i in range(0, len(rows), BATCH):
-        batch = rows[i : i + BATCH]
+    if OUT.exists():
+        with OUT.open(encoding="utf-8") as f:
+            before = {r["id"]: r for r in csv.DictReader(f)}
+        for r in rows:
+            old = before.get(str(r["id"]))
+            if old and old["name_es"] == r["name_es"] and old["name_en"]:
+                done[str(r["id"])] = old["name_en"]
+    todo = [r for r in rows if str(r["id"]) not in done]
+    print(f"[names] {len(rows) - len(todo)} unchanged, {len(todo)} to translate")
+    for i in range(0, len(todo), BATCH):
+        batch = todo[i : i + BATCH]
         for attempt in range(3):
             try:
                 done.update(translate(batch))
@@ -102,7 +113,7 @@ def main() -> None:
             except Exception as exc:  # a malformed reply is retried, then skipped
                 if attempt == 2:
                     print(f"  batch {i // BATCH + 1} failed: {str(exc)[:80]}")
-        print(f"  {min(i + BATCH, len(rows))} / {len(rows)}", flush=True)
+        print(f"  {min(i + BATCH, len(todo))} / {len(todo)}", flush=True)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with OUT.open("w", newline="", encoding="utf-8") as f:
