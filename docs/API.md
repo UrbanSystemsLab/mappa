@@ -40,6 +40,7 @@ instructions follow as soon as the answer's layers are chosen:
 
 | Event | Data | Use it to |
 |---|---|---|
+| `status` (zero or more) | `text` | what it is doing now ("Searching plans and documents"); show while waiting |
 | `delta` (one or more) | `text` | append to the answer on screen |
 | `meta` (once) | `municipio`, `focus` (bbox `[w, s, e, n]`: the features found, or else the place), `suggested_layers` (ids of the layers the answer measured), `found` (features to highlight: `{layer_id, name, lng, lat}`), `disclaimer`, `disclaimers` (`{es, en}`) | move the map, turn on layers, highlight what was found |
 | `done` (once) | `answer` (final cleaned text), `citations`, `steps` | replace the streamed text with `answer`, list sources |

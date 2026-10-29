@@ -63,7 +63,12 @@ def ask(req: AskRequest) -> AskResponse:
 @router.post(
     "/ask/stream",
     response_class=StreamingResponse,
-    responses={200: {"content": {"text/event-stream": {}}, "description": "delta..., meta, done"}},
+    responses={
+        200: {
+            "content": {"text/event-stream": {}},
+            "description": "status..., delta..., meta, done, [map]",
+        }
+    },
 )
 def ask_stream(req: AskRequest) -> StreamingResponse:
     """The answer as it is written, as server-sent events."""

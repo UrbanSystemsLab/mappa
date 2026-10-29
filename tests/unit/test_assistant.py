@@ -118,9 +118,11 @@ def test_nothing_found_after_every_round_is_said_plainly(monkeypatch):
     monkeypatch.setattr(assistant, "_client", lambda: SimpleNamespace(models=Models()))
     monkeypatch.setattr(assistant, "_standard_layers", lambda lang: "")
     monkeypatch.setattr(assistant, "call", lambda session, name, args: {"layers": []})
-    out = "".join(
+    pieces = list(
         assistant.answer("three nearest schools?", Session(lang="en"), assistant.Context())
     )
+    out = "".join(p for p in pieces if not isinstance(p, assistant.Status))
+    assert any(isinstance(p, assistant.Status) for p in pieces)  # the reader saw it working
     assert out == assistant.NOTHING_FOUND["en"]
     assert len(asked) == assistant.GIVE_UP_AFTER
 
@@ -155,3 +157,11 @@ def test_layers_are_chosen_for_an_answer_with_nothing_on_the_map(monkeypatch):
     assert assistant._choose_layers(client, config, "building near rivers", "en") == {
         "layer_ids": "flood"
     }
+
+
+def test_progress_lines_say_what_is_being_looked_up():
+    assert assistant._step("find_place", {"name": "Camuy"}, "en") == "Finding Camuy on the map"
+    assert assistant._step("find_layers", {"topic": "flood; schools"}, "es") == (
+        "Buscando capas del mapa sobre flood"
+    )
+    assert assistant._step("something_new", {}, "en") == "Looking it up"

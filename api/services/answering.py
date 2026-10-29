@@ -65,6 +65,9 @@ def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
     written = []
     try:
         for piece in assistant.answer(ask.question, session, context):
+            if isinstance(piece, assistant.Status):
+                yield "status", {"text": str(piece)}
+                continue
             written.append(piece)
             yield "delta", {"text": piece}
     except assistant.AssistantUnavailable:
@@ -90,7 +93,7 @@ def answer(ask: Ask) -> dict[str, Any]:
     """The whole answer at once - the streaming events, gathered."""
     out: dict[str, Any] = {}
     for kind, payload in stream(ask):
-        if kind != "delta":
+        if kind not in ("delta", "status"):
             out.update(payload)  # a later map event replaces the first
     return out
 
