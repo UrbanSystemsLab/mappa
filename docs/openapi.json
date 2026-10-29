@@ -68,7 +68,7 @@
         },
         "responses": {
           "200": {
-            "description": "delta..., meta, done",
+            "description": "status..., delta..., meta, done, [map]",
             "content": {
               "text/event-stream": {}
             }

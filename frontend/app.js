@@ -232,23 +232,48 @@ function render() {
         c.year && !String(c.title).includes(String(c.year)) ? ` · ${c.year}` : ''}${
         c.doc_id ? ` · <span class="cid">${esc(c.doc_id)}</span>` : ''}</div>`
     ).join('');
-    const thinking = m.answer === '…';
+    const thinking = !m.answer;
+    // While it works: each step it has taken, the current one moving.
+    const steps = m.steps && m.steps.length ? m.steps : [LANG === 'es' ? 'Consultando' : 'Thinking'];
+    const working = `<div class="steps">${steps.map((st, i) => i < steps.length - 1
+      ? `<div class="step done">✓ ${esc(st)}</div>`
+      : `<div class="step now"><span class="spin"></span>${esc(st)}…</div>`).join('')}</div>`;
+    const text = m.shown != null ? m.answer.slice(0, m.shown) : m.answer;
     return `
       <div class="row user"><div class="bubble">${esc(m.question)}</div></div>
       <div class="row bot"><div class="bubble">
         <div class="who">Mappa</div>
-        <div class="answer${thinking ? ' typing' : ''}">${thinking ? (LANG === 'es' ? 'Consultando…' : 'Thinking…') : answerHtml(m.answer)}</div>
+        ${thinking ? working : `<div class="answer">${answerHtml(text)}</div>`}
         ${cites ? `<div class="cites"><div class="cites-h">${t('sources')}</div>${cites}</div>` : ''}
       </div></div>`;
   }).join('');
   out.scrollTop = out.scrollHeight;
 }
 
+// The answer arrives whole - every figure in it is checked first - so it is
+// shown a few words at a time instead of appearing all at once.
+function reveal(turn) {
+  if (turn.shown != null) return;  // already revealing; it reads turn.answer as it goes
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { render(); return; }
+  turn.shown = 0;
+  const started = performance.now();
+  const tick = now => {
+    const total = turn.answer.length;
+    const want = Math.min(total, Math.round(total * (now - started) / 900));
+    const cut = turn.answer.indexOf(' ', want);
+    turn.shown = want >= total || cut < 0 ? total : cut;
+    if (turn.shown >= total) { turn.shown = null; render(); return; }
+    render();
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
 async function ask() {
   const question = q.value.trim();
   if (!question) return;
   btn.disabled = true;
-  const turn = { question, answer: '', citations: [], suggested_layers: [] };
+  const turn = { question, answer: '', citations: [], suggested_layers: [], steps: [], shown: null };
   conversation.push(turn);
   render();
   q.value = '';
@@ -315,9 +340,12 @@ async function ask() {
           if (openPopup) openPopup.remove();  // the click's card would cover the result
           autoShowLayers(turn.suggested_layers).then(() => showFound(found));
           if (d.focus) focusBBox(d.focus, found.length ? 15 : 11);
+        } else if (ev[1] === 'status') {
+          turn.steps.push(d.text || '');
+          render();
         } else if (ev[1] === 'delta') {
           turn.answer += d.text || '';
-          render();
+          reveal(turn);
         } else if (ev[1] === 'done') {
           turn.citations = d.citations || [];
           // The streamed text is raw. The server's cleaned version removes
@@ -884,7 +912,15 @@ if (map) map.on('click', async (e) => {
   const checks = Array.isArray(info.hazards) ? info.hazards : [];
   const es = LANG === 'es';
   const yn = b => b ? `<b class="yes">${es ? 'Sí' : 'Yes'}</b>` : `<span class="no">No</span>`;
-  pending = muni ? { municipio: muni, spatial: { ...info, lng, lat } } : null;
+  // What the question can be about: the layers under the click, the layers that
+  // are on, and the hazard areas this spot is inside.
+  const nameOf = rec => rec && rec.name;
+  pending = muni ? {
+    municipio: muni, spatial: { ...info, lng, lat },
+    here: [...byLayer.keys()].map(lid => nameOf(ACTIVE.get(lid))).filter(Boolean),
+    on: [...ACTIVE.values()].map(nameOf).filter(Boolean),
+    inside: checks.filter(c => c.inside).map(c => (es ? c.name_es : c.name_en) || c.key),
+  } : null;
 
   const place = `<div class="fp-card fp-place">
       <div class="fp-h">📍 ${esc(muni || (es ? 'Fuera de Puerto Rico' : 'Outside Puerto Rico'))}</div>
@@ -905,10 +941,31 @@ function askHere() {
   activeLocation = pending.municipio;
   activeSpatial = pending.spatial;
   renderLoc();
-  q.value = LANG === 'es'
-    ? `¿Qué debo saber sobre ${pending.municipio}: riesgos naturales, uso de terrenos y reglas de planificación?`
-    : `What should I know about ${pending.municipio}: natural hazards, land use, and planning rules?`;
+  q.value = placeQuestion(pending, LANG === 'es');
   ask();
+}
+
+// The question a click asks: about what is on the map there, so it changes
+// with the layers the user has on, not the same sentence every time.
+function placeQuestion(p, es) {
+  const list = names => {
+    const n = names.slice(0, 3);
+    const and = es ? ' y ' : ' and ';
+    return n.length > 1 ? n.slice(0, -1).join(', ') + and + n[n.length - 1] : n[0];
+  };
+  const m = p.municipio;
+  if (p.here.length) return es
+    ? `¿Qué muestra${p.here.length > 1 ? 'n' : ''} ${list(p.here)} en este punto de ${m}, y qué significa para este lugar?`
+    : `What does ${list(p.here)} show at this spot in ${m}, and what does it mean for this place?`;
+  if (p.on.length) return es
+    ? `¿Qué dice${p.on.length > 1 ? 'n' : ''} ${list(p.on)} sobre esta zona de ${m}?`
+    : `What does ${list(p.on)} say about this area of ${m}?`;
+  if (p.inside.length) return es
+    ? `Este punto de ${m} está en ${list(p.inside)}. ¿Qué significa y qué reglas de planificación aplican aquí?`
+    : `This spot in ${m} is in ${list(p.inside)}. What does that mean, and what planning rules apply here?`;
+  return es
+    ? `¿Qué debo saber sobre este punto de ${m}: riesgos naturales, uso de terrenos y reglas de planificación?`
+    : `What should I know about this spot in ${m}: natural hazards, land use, and planning rules?`;
 }
 
 // initial paint (welcome state) + language labels

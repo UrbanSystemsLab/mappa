@@ -102,6 +102,39 @@ NOTHING_FOUND = {
 }
 
 
+class Status(str):
+    """A line saying what the assistant is doing, sent while the reader waits."""
+
+
+# What each tool is doing, in the words a reader would use.
+_STEPS = {
+    "find_place": ("Buscando {place} en el mapa", "Finding {place} on the map"),
+    "search_documents": ("Buscando en planes y documentos", "Searching plans and documents"),
+    "find_layers": (
+        "Buscando capas del mapa sobre {topic}",
+        "Looking for map layers about {topic}",
+    ),
+    "count_features": ("Contando en el mapa", "Counting on the map"),
+    "count_inside": ("Contando en el mapa", "Counting on the map"),
+    "count_within_distance": ("Midiendo distancias", "Measuring distances"),
+    "area_share": ("Midiendo áreas", "Measuring areas"),
+    "nearest": ("Buscando lo más cercano", "Finding what is nearest"),
+    "list_features": ("Revisando lo que hay en el mapa", "Checking what is on the map"),
+    "show_on_map": ("Eligiendo capas para el mapa", "Choosing layers for the map"),
+}
+
+
+def _step(name: str, args: dict, lang: str) -> str:
+    es, en = _STEPS.get(name, ("Consultando", "Looking it up"))
+    words = {
+        "place": str(args.get("name") or "").strip()
+        or ("el lugar" if lang == "es" else "the place"),
+        "topic": str(args.get("topic") or "").split(";")[0].strip()[:40]
+        or ("el tema" if lang == "es" else "the topic"),
+    }
+    return (es if lang == "es" else en).format(**words)
+
+
 class AssistantUnavailable(Exception):
     """The model could not be reached or failed."""
 
@@ -203,6 +236,7 @@ def _contents(question: str, context: Context, lang: str) -> list:
 
 
 def answer(question: str, session: Session, context: Context) -> Iterator[str]:
+    # Yields Status lines while it works, then the answer text.
     """The answer, once it has been checked against what the tools found.
 
     The model calls tools for a few rounds, then writes. Before the text is
@@ -221,6 +255,7 @@ def answer(question: str, session: Session, context: Context) -> Iterator[str]:
     client, config = _client(), _config(session.lang)
     contents = _contents(question, context, session.lang)
     sent_back = retried = False
+    said: set[str] = set()  # each progress line once, however many rounds repeat it
     for round_ in range(MAX_ROUNDS + 2):
         last = round_ >= MAX_ROUNDS
         if (last or round_ >= GIVE_UP_AFTER) and not session.has_evidence:
@@ -229,6 +264,12 @@ def answer(question: str, session: Session, context: Context) -> Iterator[str]:
             log.info("no evidence after %d rounds", round_)
             yield NOTHING_FOUND[session.lang]
             return
+        writing = "Escribiendo la respuesta" if session.lang == "es" else "Writing the answer"
+        if session.has_evidence and writing not in said:
+            said.add(writing)
+            yield Status(writing)
+        elif round_ == 0:
+            yield Status("Leyendo la pregunta" if session.lang == "es" else "Reading the question")
         calls, text, finish = [], "", None
         started = time.monotonic()
         try:
@@ -263,6 +304,11 @@ def answer(question: str, session: Session, context: Context) -> Iterator[str]:
         )
 
         if calls:
+            for c in calls:
+                line = _step(c.name, dict(c.args or {}), session.lang)
+                if line not in said:
+                    said.add(line)
+                    yield Status(line)
             contents.append(
                 types.Content(role="model", parts=[types.Part(function_call=c) for c in calls])
             )
