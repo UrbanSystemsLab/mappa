@@ -139,6 +139,21 @@ class AssistantUnavailable(Exception):
     """The model could not be reached or failed."""
 
 
+def clicked_features(clicked: dict[str, Any] | None) -> str:
+    """The values of the layers under a click, as one line: "Land Use Plan 2015:
+    Description ... = Suelo Rústico ...". Capped so a busy click stays short."""
+    parts = []
+    for f in ((clicked or {}).get("features") or [])[:4]:
+        if not isinstance(f, dict) or not isinstance(f.get("values"), dict):
+            continue
+        pairs = [
+            f"{str(k)[:90]} = {str(v)[:120]}" for k, v in list(f["values"].items())[:8] if v != ""
+        ]
+        if pairs:
+            parts.append(f"{str(f.get('layer') or 'Layer')[:80]}: " + "; ".join(pairs))
+    return " | ".join(parts)
+
+
 @dataclass
 class Context:
     """What the user did besides asking: a clicked point, layers on the map."""
@@ -161,6 +176,13 @@ class Context:
                 f"The user clicked a point in {self.clicked['municipio']}. At that exact point only - "
                 f"not the whole municipio: {facts or 'no layers checked'}. For questions about this "
                 f"point, use nearest or list_features with around_clicked_point_metres."
+            )
+        shown = clicked_features(self.clicked)
+        if shown:
+            lines.append(
+                "What the map shows at that exact point (the user's map layers, as clicked): "
+                + shown
+                + ". Use these values when the question is about this spot or these layers."
             )
         if self.places:
             lines.append(

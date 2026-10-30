@@ -381,7 +381,7 @@ function esc(s) { return (s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': 
 // and provenance all come from /catalog, which is what makes 600 layers workable
 // and lets La Marana add layers without a frontend deploy.
 // ---------------------------------------------------------------------------
-const ACTIVE = new Map();        // layerId -> catalog row (+ opacity)
+const ACTIVE = new Map();        // layerId -> catalog row (+ colour, hidden)
 const EXPANDED = new Set();      // categories the user has opened
 let CATEGORIES = [];             // [{category, count}]
 let RESULTS = [];                // current catalog page
@@ -411,7 +411,7 @@ async function fetchLayers() {
   RESULTS = d.layers || [];
   RESULT_TOTAL = d.total || 0;
   // Layers already on the map hold their catalogue row in the previous
-  // language. Refresh it, keeping opacity and order.
+  // language. Refresh it, keeping colour, visibility and order.
   const fresh = new Map(RESULTS.map(l => [l.id, l]));
   await Promise.all([...ACTIVE.keys()].map(async id => {
     let l = fresh.get(id);
@@ -441,19 +441,35 @@ function statusChip(st) {
   return `<span class="mstat ${L.c}">${esc(L[LANG] || st)}</span>`;
 }
 
+const ICON = {
+  eye: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeOff: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c7 0 11 7 11 7a18 18 0 0 1-3.2 4.1M6.6 6.6A17.6 17.6 0 0 0 1 12s4 7 11 7a10 10 0 0 0 5.4-1.6"/></svg>',
+  x: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+};
+
 function layerRow(l, isActive) {
   const yr = l.source && l.source.year ? ` · ${l.source.year}` : '';
   const sw = `<span class="sw" style="background:${isActive ? colourOf(l) : '#c3cbd3'}"></span>`;
   const info = `<button class="ic info" data-act="info" data-id="${l.id}" title="${
     LANG === 'es' ? 'Sobre esta capa' : 'About this layer'}">i</button>`;
   if (isActive) {
-    return `<div class="lrow on" data-id="${l.id}">
-      ${sw}<span class="nm">${esc(l.name)}</span>
-      <button class="ic up" data-act="raise" data-id="${l.id}" title="${
-        LANG === 'es' ? 'Traer al frente' : 'Bring to front'}">&#8593;</button>
-      ${info}
-      <button class="ic rm" data-act="remove" data-id="${l.id}" title="${
-        LANG === 'es' ? 'Quitar' : 'Remove'}">&times;</button></div>`;
+    const rec = ACTIVE.get(l.id) || l;
+    const es = LANG === 'es';
+    const front = ACTIVE.size > 1 && [...ACTIVE.keys()].pop() !== l.id
+      ? `<button class="lk" data-act="raise" data-id="${l.id}">${es ? 'Traer al frente' : 'Bring to front'}</button>` : '';
+    return `<div class="arow${rec.hidden ? ' hid' : ''}" data-id="${l.id}">
+      <div class="arow-top">
+        <span class="sw" style="background:${colourOf(l)}"></span>
+        <span class="nm">${esc(l.name)}</span>
+        <button class="ic eye" data-act="toggle" data-id="${l.id}" title="${
+          rec.hidden ? (es ? 'Mostrar' : 'Show') : (es ? 'Ocultar' : 'Hide')}" aria-pressed="${!rec.hidden}">${
+          rec.hidden ? ICON.eyeOff : ICON.eye}</button>
+        <button class="ic rm" data-act="remove" data-id="${l.id}" title="${es ? 'Quitar del mapa' : 'Remove from map'}">${ICON.x}</button>
+      </div>
+      <div class="arow-ctl">
+        ${front}
+        <button class="lk" data-act="info" data-id="${l.id}">${es ? 'Acerca de' : 'About'}</button>
+      </div></div>`;
   }
   if (l.available === false) {
     return `<div class="lrow off" data-id="${l.id}">
@@ -494,7 +510,7 @@ function renderLayerPanel() {
     html += `<div class="lsec">
       <div class="lsec-h clickable" data-act="cat" data-cat="${esc(c)}">
         <span>${open ? '&#9662;' : '&#9656;'} ${esc(catLabel(c))}</span><span class="cnt">${
-          rows.filter(r => r.available !== false).length} / ${rows.length}</span>
+          rows.filter(r => r.available !== false).length}</span>
       </div>${open ? rows.map(l => layerRow(l, false)).join('') : ''}</div>`;
   });
 
@@ -537,6 +553,10 @@ document.getElementById('layerlist').addEventListener('click', (e) => {
   else if (act === 'remove') { AUTO.delete(id); removeLayer(id); }
   else if (act === 'info') showLayerInfo(id);
   else if (act === 'raise') raiseLayer(id);
+  else if (act === 'toggle') {
+    const rec = ACTIVE.get(id);
+    if (rec) { rec.hidden = !rec.hidden; restyle(); renderLayerPanel(); }
+  }
   else if (act === 'clear') [...ACTIVE.keys()].forEach(removeLayer);
   else if (act === 'cat') {
     const c = el.dataset.cat;
@@ -553,8 +573,9 @@ document.getElementById('lyrq').addEventListener('input', (e) => {
 // --- map wiring: vector tiles, not whole-layer GeoJSON ---
 // Every layer you turn on gets its own colour from this list, the first one not
 // already on the map, so layers shown together never share a colour.
-const LAYER_COLOURS = ['#d62728', '#1f77b4', '#2ca02c', '#ff7f0e', '#9467bd',
-                       '#8c564b', '#e377c2', '#17becf', '#bcbd22', '#7f7f7f'];
+// No red: on a hazard map red reads as danger, and land use is not a danger.
+const LAYER_COLOURS = ['#2b6cb0', '#d97706', '#0f8b8d', '#7c3aed', '#c2410c',
+                       '#4d7c0f', '#be185d', '#475569', '#a16207', '#0e7490'];
 function nextColour() {
   const used = new Set([...ACTIVE.values()].map(r => r.colour));
   return LAYER_COLOURS.find(c => !used.has(c)) || LAYER_COLOURS[ACTIVE.size % LAYER_COLOURS.length];
@@ -595,8 +616,7 @@ function addLayer(id) {
     if (fillOp > 0) map.addLayer({ id: base, type: 'fill', ...common,
       paint: { 'fill-color': color, 'fill-opacity': fillOp } }, under);
     map.addLayer({ id: base + '_ln', type: 'line', ...common,
-      paint: { 'line-color': color,
-               'line-width': (l.style && l.style.lineWidth) || 0.8 } }, under);
+      paint: { 'line-color': color, 'line-width': OUTLINE } }, under);
   } else if (g.includes('line')) {
     map.addLayer({ id: base, type: 'line', ...common,
       paint: { 'line-color': color, 'line-width': 1.4 } }, labelAnchor());
@@ -614,7 +634,7 @@ function addLayer(id) {
     map.on('mouseenter', lid, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', lid, () => { map.getCanvas().style.cursor = ''; });
   });
-  ACTIVE.set(id, { ...l, colour: color });
+  ACTIVE.set(id, { ...l, colour: color, hidden: false });
   restyle();
   renderLayerPanel();
 }
@@ -628,38 +648,32 @@ function removeLayer(id) {
   renderLayerPanel();
 }
 
-// Stacking rules. Two flat 35% fills make mud and three are unreadable, so only the
-// topmost polygon layer is filled - everything under it keeps its outline and reads
-// as a boundary. Draw order follows meaning rather than the order things were
-// clicked: boundaries sit under hazards, hazards under facilities.
-const STACK_ORDER = { political: 0, uso_de_terrenos: 1, inundacion: 2, deslizamiento: 3,
-                      vias: 4, refugios: 5, educacion: 6, salud: 7 };
+// How every active layer is drawn and stacked: see AREA_FILL and DRAW_ORDER.
 
 function restyle() {
   if (!map) return;
   const actives = [...ACTIVE.values()];
   // Sort by meaning, then by the order the user added them.
+  // Areas at the bottom, then boundaries, lines and points; within each kind
+  // the order the user added or brought them to the front.
   const ordered = actives
     .map((l, i) => ({ l, i }))
-    .sort((a, b) => (STACK_ORDER[a.l.theme] ?? 2) - (STACK_ORDER[b.l.theme] ?? 2) || a.i - b.i)
+    .sort((a, b) => DRAW_ORDER[kindOf(a.l)] - DRAW_ORDER[kindOf(b.l)] || a.i - b.i)
     .map(x => x.l);
-
-  const polys = ordered.filter(l => (l.geometry_type || '').toLowerCase().includes('polygon'));
-  const topPoly = polys.length ? polys[polys.length - 1].id : null;
 
   ordered.forEach(l => {
     const fillId = LYR(l.id);
-    if (map.getLayer(fillId) && map.getLayer(fillId).type === 'fill') {
-      const target = l.id === topPoly
-        ? (l.style && l.style.fillOpacity != null ? l.style.fillOpacity : 0.4)
-        : 0;                                  // underneath: outline only
-      map.setPaintProperty(fillId, 'fill-opacity', target);
-    }
-    // Outlines get heavier when a layer is not the filled one, so it still reads.
     const lnId = fillId + '_ln';
+    // Each layer at the see-through level the user set, so layers stacked on
+    // each other all show. Hidden layers stay loaded and keep their settings.
+    const vis = l.hidden ? 'none' : 'visible';
+    [fillId, lnId].forEach(x => { if (map.getLayer(x)) map.setLayoutProperty(x, 'visibility', vis); });
+    const boundary = kindOf(l) === 'boundary';
+    const t = map.getLayer(fillId) && map.getLayer(fillId).type;
+    if (t === 'fill') map.setPaintProperty(fillId, 'fill-opacity', boundary ? 0 : AREA_FILL);
     if (map.getLayer(lnId)) {
-      map.setPaintProperty(lnId, 'line-width', l.id === topPoly ? 0.7 : 1.3);
-      map.setPaintProperty(lnId, 'line-opacity', l.id === topPoly ? 0.55 : 0.95);
+      map.setPaintProperty(lnId, 'line-width', boundary ? BOUNDARY : OUTLINE);
+      map.setPaintProperty(lnId, 'line-opacity', boundary ? 0.9 : 0.7);
     }
     // Re-assert draw order - still beneath the place names, except points.
     const isPoint = map.getLayer(fillId) && map.getLayer(fillId).type === 'circle';
@@ -668,7 +682,27 @@ function restyle() {
   });
 }
 
-// Bring a layer to the front: it becomes the filled one.
+// Layers stay readable together through how each kind is drawn, not through
+// settings the user has to adjust: the way ZoLa, FEMA's and Google's maps work.
+//   boundaries  outline only, a little heavier, so they never cover anything
+//   areas       one light fill and a hairline edge
+//   lines, points  above areas, points on top
+// Outlines stay hairline at island scale - thousands of parcel edges drawn thick
+// turned the whole map one colour.
+const AREA_FILL = 0.3;
+const OUTLINE = ['interpolate', ['linear'], ['zoom'], 8, 0.2, 12, 0.6, 15, 1.2];
+const BOUNDARY = ['interpolate', ['linear'], ['zoom'], 8, 0.9, 12, 1.5, 15, 2.2];
+const isBoundary = l => l.theme === 'political' ||
+  /bound|l[ií]mite|division|divisi[oó]n/i.test(`${l.category || ''} ${l.category_source || ''}`);
+function kindOf(l) {
+  const g = (l.geometry_type || '').toLowerCase();
+  if (g.includes('point')) return 'point';
+  if (g.includes('line')) return 'line';
+  return isBoundary(l) ? 'boundary' : 'area';
+}
+const DRAW_ORDER = { area: 0, boundary: 1, line: 2, point: 3 };
+
+// Bring a layer to the front: drawn over the others.
 function raiseLayer(id) {
   const rec = ACTIVE.get(id);
   if (!rec) return;
@@ -728,13 +762,13 @@ function featureCard(rec, props) {
     // As many as the layer sends: the server already keeps it to what La
     // Maraña's dictionary includes, or six chosen from the data.
     .filter(k => k !== 'id' && !isEmpty(props[k]))
-    .map(k => `<tr><th>${esc(fieldLabel(rec, k))}</th><td>${esc(String(valueLabel(rec, props[k])))}</td></tr>`)
+    .map(k => `<div><dt>${esc(fieldLabel(rec, k))}</dt><dd>${esc(String(valueLabel(rec, props[k])))}</dd></div>`)
     .join('');
   const sw = `<span class="fp-sw" style="background:${rec ? colourOf(rec) : '#09814A'}"></span>`;
   const yr = rec && rec.source && rec.source.year ? ` · ${rec.source.year}` : '';
   return `<div class="fp-card">
       <div class="fp-h">${sw}${esc(rec ? rec.name : 'Capa')}${yr}</div>
-      ${rows ? `<table class="fp">${rows}</table>`
+      ${rows ? `<dl class="fv">${rows}</dl>`
              : `<div class="fp-none">${LANG === 'es' ? 'Sin atributos' : 'No attributes'}</div>`}
     </div>`;
 }
@@ -915,8 +949,18 @@ if (map) map.on('click', async (e) => {
   // What the question can be about: the layers under the click, the layers that
   // are on, and the hazard areas this spot is inside.
   const nameOf = rec => rec && rec.name;
+  // The values the cards show, sent with the question so the answer can say
+  // what is at this spot, in the same words the popup used.
+  const features = [...byLayer.entries()].map(([lid, props]) => {
+    const rec = ACTIVE.get(lid);
+    const values = {};
+    ((rec && rec.tile_properties_order) || Object.keys(props))
+      .filter(k => k !== 'id' && !isEmpty(props[k])).slice(0, 8)
+      .forEach(k => { values[fieldLabel(rec, k)] = String(valueLabel(rec, props[k])); });
+    return { layer: nameOf(rec), values };
+  }).filter(f => f.layer && Object.keys(f.values).length);
   pending = muni ? {
-    municipio: muni, spatial: { ...info, lng, lat },
+    municipio: muni, spatial: { ...info, lng, lat, features },
     here: [...byLayer.keys()].map(lid => nameOf(ACTIVE.get(lid))).filter(Boolean),
     on: [...ACTIVE.values()].map(nameOf).filter(Boolean),
     inside: checks.filter(c => c.inside).map(c => (es ? c.name_es : c.name_en) || c.key),

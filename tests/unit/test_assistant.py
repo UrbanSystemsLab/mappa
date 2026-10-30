@@ -165,3 +165,16 @@ def test_progress_lines_say_what_is_being_looked_up():
         "Buscando capas del mapa sobre flood"
     )
     assert assistant._step("something_new", {}, "en") == "Looking it up"
+
+
+def test_a_click_sends_what_the_popup_showed():
+    clicked = {
+        "municipio": "Carolina",
+        "features": [
+            {"layer": "Land Use Plan 2015", "values": {"Description": "Suelo Rústico", "Code": ""}}
+        ],
+    }
+    line = assistant.clicked_features(clicked)
+    assert line == "Land Use Plan 2015: Description = Suelo Rústico"
+    assert "Suelo Rústico" in assistant.Context(clicked=clicked).note("en")
+    assert assistant.clicked_features(None) == ""
