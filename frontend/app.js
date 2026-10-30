@@ -381,7 +381,7 @@ function esc(s) { return (s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': 
 // and provenance all come from /catalog, which is what makes 600 layers workable
 // and lets La Marana add layers without a frontend deploy.
 // ---------------------------------------------------------------------------
-const ACTIVE = new Map();        // layerId -> catalog row (+ opacity)
+const ACTIVE = new Map();        // layerId -> catalog row (+ colour, hidden)
 const EXPANDED = new Set();      // categories the user has opened
 let CATEGORIES = [];             // [{category, count}]
 let RESULTS = [];                // current catalog page
@@ -411,7 +411,7 @@ async function fetchLayers() {
   RESULTS = d.layers || [];
   RESULT_TOTAL = d.total || 0;
   // Layers already on the map hold their catalogue row in the previous
-  // language. Refresh it, keeping opacity and order.
+  // language. Refresh it, keeping colour, visibility and order.
   const fresh = new Map(RESULTS.map(l => [l.id, l]));
   await Promise.all([...ACTIVE.keys()].map(async id => {
     let l = fresh.get(id);
@@ -455,7 +455,6 @@ function layerRow(l, isActive) {
   if (isActive) {
     const rec = ACTIVE.get(l.id) || l;
     const es = LANG === 'es';
-    const pct = Math.round((rec.opacity ?? DEFAULT_OPACITY) * 100);
     const front = ACTIVE.size > 1 && [...ACTIVE.keys()].pop() !== l.id
       ? `<button class="lk" data-act="raise" data-id="${l.id}">${es ? 'Traer al frente' : 'Bring to front'}</button>` : '';
     return `<div class="arow${rec.hidden ? ' hid' : ''}" data-id="${l.id}">
@@ -468,10 +467,6 @@ function layerRow(l, isActive) {
         <button class="ic rm" data-act="remove" data-id="${l.id}" title="${es ? 'Quitar del mapa' : 'Remove from map'}">${ICON.x}</button>
       </div>
       <div class="arow-ctl">
-        <label class="op" title="${es ? 'Transparencia' : 'Opacity'}">
-          <input type="range" min="5" max="90" step="5" value="${pct}" data-op="${l.id}"
-                 aria-label="${es ? 'Transparencia' : 'Opacity'}: ${esc(l.name)}">
-          <span>${pct}%</span></label>
         ${front}
         <button class="lk" data-act="info" data-id="${l.id}">${es ? 'Acerca de' : 'About'}</button>
       </div></div>`;
@@ -569,16 +564,6 @@ document.getElementById('layerlist').addEventListener('click', (e) => {
     renderLayerPanel();
   }
 });
-// Opacity: the map follows the slider as it moves; the panel is not redrawn
-// meanwhile, so the slider stays under the pointer.
-document.getElementById('layerlist').addEventListener('input', (e) => {
-  const id = e.target.dataset && e.target.dataset.op;
-  const rec = id && ACTIVE.get(id);
-  if (!rec) return;
-  rec.opacity = Number(e.target.value) / 100;
-  e.target.nextElementSibling.textContent = e.target.value + '%';
-  restyle();
-});
 document.getElementById('lyrq').addEventListener('input', (e) => {
   layerQuery = e.target.value.trim();
   clearTimeout(searchTimer);
@@ -649,7 +634,7 @@ function addLayer(id) {
     map.on('mouseenter', lid, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', lid, () => { map.getCanvas().style.cursor = ''; });
   });
-  ACTIVE.set(id, { ...l, colour: color, opacity: DEFAULT_OPACITY, hidden: false });
+  ACTIVE.set(id, { ...l, colour: color, hidden: false });
   restyle();
   renderLayerPanel();
 }
@@ -663,20 +648,17 @@ function removeLayer(id) {
   renderLayerPanel();
 }
 
-// Stacking rules. Two flat 35% fills make mud and three are unreadable, so only the
-// topmost polygon layer is filled - everything under it keeps its outline and reads
-// as a boundary. Draw order follows meaning rather than the order things were
-// clicked: boundaries sit under hazards, hazards under facilities.
-const STACK_ORDER = { political: 0, uso_de_terrenos: 1, inundacion: 2, deslizamiento: 3,
-                      vias: 4, refugios: 5, educacion: 6, salud: 7 };
+// How every active layer is drawn and stacked: see AREA_FILL and DRAW_ORDER.
 
 function restyle() {
   if (!map) return;
   const actives = [...ACTIVE.values()];
   // Sort by meaning, then by the order the user added them.
+  // Areas at the bottom, then boundaries, lines and points; within each kind
+  // the order the user added or brought them to the front.
   const ordered = actives
     .map((l, i) => ({ l, i }))
-    .sort((a, b) => (STACK_ORDER[a.l.theme] ?? 2) - (STACK_ORDER[b.l.theme] ?? 2) || a.i - b.i)
+    .sort((a, b) => DRAW_ORDER[kindOf(a.l)] - DRAW_ORDER[kindOf(b.l)] || a.i - b.i)
     .map(x => x.l);
 
   ordered.forEach(l => {
@@ -686,11 +668,13 @@ function restyle() {
     // each other all show. Hidden layers stay loaded and keep their settings.
     const vis = l.hidden ? 'none' : 'visible';
     [fillId, lnId].forEach(x => { if (map.getLayer(x)) map.setLayoutProperty(x, 'visibility', vis); });
+    const boundary = kindOf(l) === 'boundary';
     const t = map.getLayer(fillId) && map.getLayer(fillId).type;
-    if (t === 'fill') map.setPaintProperty(fillId, 'fill-opacity', l.opacity);
-    if (t === 'line') map.setPaintProperty(fillId, 'line-opacity', Math.min(1, l.opacity + 0.4));
-    if (t === 'circle') map.setPaintProperty(fillId, 'circle-opacity', Math.min(1, l.opacity + 0.4));
-    if (map.getLayer(lnId)) map.setPaintProperty(lnId, 'line-opacity', Math.min(0.9, l.opacity + 0.3));
+    if (t === 'fill') map.setPaintProperty(fillId, 'fill-opacity', boundary ? 0 : AREA_FILL);
+    if (map.getLayer(lnId)) {
+      map.setPaintProperty(lnId, 'line-width', boundary ? BOUNDARY : OUTLINE);
+      map.setPaintProperty(lnId, 'line-opacity', boundary ? 0.9 : 0.7);
+    }
     // Re-assert draw order - still beneath the place names, except points.
     const isPoint = map.getLayer(fillId) && map.getLayer(fillId).type === 'circle';
     const under = isPoint ? undefined : labelAnchor();
@@ -698,10 +682,25 @@ function restyle() {
   });
 }
 
-// How see-through a new layer starts, and outlines that stay hairline at island
-// scale - thousands of parcel edges drawn thick turned the whole map one colour.
-const DEFAULT_OPACITY = 0.35;
+// Layers stay readable together through how each kind is drawn, not through
+// settings the user has to adjust: the way ZoLa, FEMA's and Google's maps work.
+//   boundaries  outline only, a little heavier, so they never cover anything
+//   areas       one light fill and a hairline edge
+//   lines, points  above areas, points on top
+// Outlines stay hairline at island scale - thousands of parcel edges drawn thick
+// turned the whole map one colour.
+const AREA_FILL = 0.3;
 const OUTLINE = ['interpolate', ['linear'], ['zoom'], 8, 0.2, 12, 0.6, 15, 1.2];
+const BOUNDARY = ['interpolate', ['linear'], ['zoom'], 8, 0.9, 12, 1.5, 15, 2.2];
+const isBoundary = l => l.theme === 'political' ||
+  /bound|l[ií]mite|division|divisi[oó]n/i.test(`${l.category || ''} ${l.category_source || ''}`);
+function kindOf(l) {
+  const g = (l.geometry_type || '').toLowerCase();
+  if (g.includes('point')) return 'point';
+  if (g.includes('line')) return 'line';
+  return isBoundary(l) ? 'boundary' : 'area';
+}
+const DRAW_ORDER = { area: 0, boundary: 1, line: 2, point: 3 };
 
 // Bring a layer to the front: drawn over the others.
 function raiseLayer(id) {
