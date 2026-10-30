@@ -728,13 +728,13 @@ function featureCard(rec, props) {
     // As many as the layer sends: the server already keeps it to what La
     // Maraña's dictionary includes, or six chosen from the data.
     .filter(k => k !== 'id' && !isEmpty(props[k]))
-    .map(k => `<tr><th>${esc(fieldLabel(rec, k))}</th><td>${esc(String(valueLabel(rec, props[k])))}</td></tr>`)
+    .map(k => `<div><dt>${esc(fieldLabel(rec, k))}</dt><dd>${esc(String(valueLabel(rec, props[k])))}</dd></div>`)
     .join('');
   const sw = `<span class="fp-sw" style="background:${rec ? colourOf(rec) : '#09814A'}"></span>`;
   const yr = rec && rec.source && rec.source.year ? ` · ${rec.source.year}` : '';
   return `<div class="fp-card">
       <div class="fp-h">${sw}${esc(rec ? rec.name : 'Capa')}${yr}</div>
-      ${rows ? `<table class="fp">${rows}</table>`
+      ${rows ? `<dl class="fv">${rows}</dl>`
              : `<div class="fp-none">${LANG === 'es' ? 'Sin atributos' : 'No attributes'}</div>`}
     </div>`;
 }
@@ -915,8 +915,18 @@ if (map) map.on('click', async (e) => {
   // What the question can be about: the layers under the click, the layers that
   // are on, and the hazard areas this spot is inside.
   const nameOf = rec => rec && rec.name;
+  // The values the cards show, sent with the question so the answer can say
+  // what is at this spot, in the same words the popup used.
+  const features = [...byLayer.entries()].map(([lid, props]) => {
+    const rec = ACTIVE.get(lid);
+    const values = {};
+    ((rec && rec.tile_properties_order) || Object.keys(props))
+      .filter(k => k !== 'id' && !isEmpty(props[k])).slice(0, 8)
+      .forEach(k => { values[fieldLabel(rec, k)] = String(valueLabel(rec, props[k])); });
+    return { layer: nameOf(rec), values };
+  }).filter(f => f.layer && Object.keys(f.values).length);
   pending = muni ? {
-    municipio: muni, spatial: { ...info, lng, lat },
+    municipio: muni, spatial: { ...info, lng, lat, features },
     here: [...byLayer.keys()].map(lid => nameOf(ACTIVE.get(lid))).filter(Boolean),
     on: [...ACTIVE.values()].map(nameOf).filter(Boolean),
     inside: checks.filter(c => c.inside).map(c => (es ? c.name_es : c.name_en) || c.key),

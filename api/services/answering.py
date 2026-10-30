@@ -62,6 +62,11 @@ def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
         active_layers=[str(x.get("name")) for x in ask.active_layers if x.get("name")],
         history=[(t.question, t.answer) for t in ask.history],
     )
+    # What the click showed counts as found: a figure read off the popup (a flood
+    # elevation, an area) is supported, not invented.
+    shown = assistant.clicked_features(ask.spatial)
+    if shown:
+        session.results.append(shown)
     written = []
     try:
         for piece in assistant.answer(ask.question, session, context):
