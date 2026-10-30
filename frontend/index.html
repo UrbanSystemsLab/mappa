@@ -238,6 +238,27 @@
   .lrow .ic.info{font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:11px}
   .lrow .ic.add{font-size:15px;color:var(--accent)}
   .lrow .ic.up{color:var(--accent);font-size:11px}
+  /* An active layer: name with show/hide and remove, then its controls. */
+  .arow{padding:8px 8px 7px;border-radius:9px;background:var(--surface-2);margin-bottom:6px;
+        border:1px solid var(--line-2)}
+  .arow-top{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;font-weight:600}
+  .arow .sw{width:11px;height:11px;border-radius:3px;flex:none;margin-top:3px}
+  .arow .nm{flex:1;min-width:0;line-height:1.35}
+  .arow .ic{border:0;background:none;cursor:pointer;color:var(--muted);width:24px;height:24px;
+            border-radius:6px;display:grid;place-items:center;flex:none;margin-top:-3px}
+  .arow .ic:hover{background:var(--line);color:var(--ink)}
+  .arow .ic.rm:hover{background:rgba(179,57,42,.12);color:var(--danger)}
+  .arow .ic:focus-visible,.arow .lk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .arow-ctl{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;margin:6px 0 0 19px;
+            font-size:11.5px}
+  .arow .op{display:flex;align-items:center;gap:6px;color:var(--muted)}
+  .arow .op input{width:84px;accent-color:var(--accent)}
+  .arow .op span{width:30px;font-variant-numeric:tabular-nums}
+  .arow .lk{border:0;background:none;padding:0;color:var(--accent);cursor:pointer;font:inherit;
+            font-weight:600}
+  .arow .lk:hover{text-decoration:underline}
+  .arow.hid .nm,.arow.hid .sw{opacity:.45}
+  .arow.hid .arow-ctl{opacity:.5}
   .lrow .ic.rm:hover{background:rgba(179,57,42,.12);color:var(--danger)}
   .lempty,.lmore{font-size:11.5px;color:var(--faint);padding:9px 4px;text-align:center}
   .mstat{font-size:9px;font-weight:700;padding:1px 7px;border-radius:999px;text-transform:uppercase;
