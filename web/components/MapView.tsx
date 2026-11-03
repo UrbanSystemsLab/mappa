@@ -6,6 +6,7 @@ import { useCallback, useRef } from 'react';
 import Map, { AttributionControl, NavigationControl, ScaleControl, type MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { BASEMAP_STYLE, HOME, WORLD, prefersCalm } from '@/lib/map';
+import MapLayers from './MapLayers';
 
 export default function MapView() {
   const ref = useRef<MapRef>(null);
@@ -30,6 +31,7 @@ export default function MapView() {
       <AttributionControl compact />
       <NavigationControl position="top-right" showCompass={false} />
       <ScaleControl position="bottom-left" unit="metric" maxWidth={110} />
+      <MapLayers />
     </Map>
   );
 }
