@@ -21,3 +21,6 @@ data/corpus_*.json
 # image means it cannot be served by accident.
 data/planning_docs.json
 data/drive_docs.json
+frontend/node_modules/
+frontend/.next/
+frontend/out/

@@ -16,7 +16,15 @@ cloud-sql-proxy mappa-lamarana-aecc:us-central1:mappa-pg --port 5432   # leave r
 ./scripts/run_local.sh                                                 # second terminal
 ```
 
-Open http://127.0.0.1:8765. The page shows a LOCAL banner.
+Open http://127.0.0.1:8765. The page shows a LOCAL banner. The server shows the Next.js app
+from `frontend/out`, so build it once (and after changing it); the earlier page is at `/classic`.
+
+```bash
+cd frontend && npm ci && npm run build     # the app the server shows
+cd frontend && npm run dev                 # or: live-reloading at http://127.0.0.1:3000
+```
+
+Stop `npm run dev` before running `npm run build`: both write to `frontend/.next`.
 
 `run_local.sh` uses the **staging** database (`mappa_staging`), so nothing you do locally
 can change live data. `./scripts/run_local.sh production` reads the live database instead;

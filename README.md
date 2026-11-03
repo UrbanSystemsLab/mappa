@@ -12,7 +12,7 @@ Live at https://app.mappealo.org.
 ```
 api/          the web service: routers, services, the assistant and its tools, SQL
 core/         settings and shared constants
-frontend/     the web app (plain JavaScript + MapLibre)
+frontend/     the web app (Next.js + react-map-gl); frontend/classic/ is the earlier page
 pipelines/    scripts that load and prepare data, and the answer evaluation
 migrations/   database structure (Alembic)
 scripts/      run locally, copy production to staging, release

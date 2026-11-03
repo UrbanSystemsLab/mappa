@@ -1,7 +1,7 @@
 """Layer catalog — search, filter and describe layers from layer_registry.
 
 Replaces the hardcoded LAYER_LABELS / THEME / CATEGORY dictionaries that used to
-live in frontend/app.js. Everything the client needs to render the layer panel now
+live in frontend/classic/app.js. Everything the client needs to render the layer panel now
 comes from the database, so adding a layer is a data operation rather than a code
 change and a deploy — which is what makes 600 layers tractable, and what lets
 La Maraña manage the catalog themselves after handoff.
