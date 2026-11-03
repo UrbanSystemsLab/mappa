@@ -5,7 +5,11 @@
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import type { CatalogLayer } from '@/lib/catalog';
+import { ChatProvider } from '@/lib/chat';
 import { LayersProvider, useLayers } from '@/lib/layers';
+import { MapRefProvider } from '@/lib/mapref';
+import ChatPanel from './ChatPanel';
+import PlaceSearch from './PlaceSearch';
 import LayerAbout from './LayerAbout';
 import LayerPanel from './LayerPanel';
 import Legend from './Legend';
@@ -37,17 +41,17 @@ export default function App() {
   const [about, setAbout] = useState<CatalogLayer | null>(null);
   const [chatHidden, setChatHidden] = useState(false);
   return (
-    <LayersProvider>
+    <LayersProvider><MapRefProvider><ChatProvider>
       <Topbar onChat={() => setChatHidden(h => !h)} />
       <main className={chatHidden ? 'chat-hidden' : undefined}>
-        {/* The chat moves here in a later step. */}
-        <section className="chat"><div className="messages" /></section>
+        <ChatPanel />
         <section className="mappanel">
           <div id="map"><MapView /></div>
+          <PlaceSearch />
           <Legend />
           <LayerPanel onAbout={setAbout} about={<LayerAbout layer={about} onClose={() => setAbout(null)} />} />
         </section>
       </main>
-    </LayersProvider>
+    </ChatProvider></MapRefProvider></LayersProvider>
   );
 }
