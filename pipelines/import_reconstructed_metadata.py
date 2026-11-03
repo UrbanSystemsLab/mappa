@@ -30,6 +30,7 @@ Run:
 from __future__ import annotations
 
 import argparse
+import csv
 import os
 import re
 import unicodedata
@@ -40,6 +41,18 @@ import psycopg2
 
 SRC = Path("data/raw/metadata")
 SOURCE = "La Maraña — Metadata Reconstruída"
+
+# What a sheet provides, as read_tab names it, in the order written to the CSV.
+EXPORT_FIELDS = [
+    "description",
+    "agency",
+    "federal_agency",
+    "purpose",
+    "limitation",
+    "original_metadata",
+    "reference",
+    "confidence",
+]
 
 # Tabs that describe the workbook rather than a layer.
 NOT_A_LAYER = {"confidence guide", "guia", "guía", "index", "readme"}
@@ -247,6 +260,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--commit", action="store_true")
     ap.add_argument("--src", default=str(SRC), help="folder holding their workbooks")
+    ap.add_argument(
+        "--export", help="also write what was read to this CSV, e.g. data/layer_metadata.csv"
+    )
     args = ap.parse_args()
     src = Path(args.src)
     dsn = os.environ.get("DATABASE_URL")
@@ -269,6 +285,7 @@ def main() -> None:
     conn.commit()
 
     applied, unmatched, tabs = 0, [], 0
+    found: list[dict] = []
     for book in sorted(src.glob("*.xls[xm]")):
         wb = openpyxl.load_workbook(book, data_only=True)
         print(f"\n[meta] {book.name}")
@@ -285,6 +302,14 @@ def main() -> None:
                 unmatched.append((book.name, ws.title, m.get("title", "")[:40]))
                 continue
             for lid in ids:
+                found.append(
+                    {
+                        "id": lid,
+                        "workbook": book.name,
+                        "sheet": ws.title,
+                        **{k: m.get(k) or "" for k in EXPORT_FIELDS},
+                    }
+                )
                 cur.execute(
                     """
                     UPDATE layer_registry SET
@@ -322,6 +347,15 @@ def main() -> None:
         print(f"[meta] {len(unmatched)} tabs matched no layer:")
         for b, t, title in unmatched:
             print(f"   {b[:30]:32} {t[:26]:28} {title}")
+
+    if args.export:
+        # The reviewed file every release applies (pipelines/apply_layer_metadata),
+        # so production gets what staging got without anyone's laptop.
+        with open(args.export, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=["id", "workbook", "sheet", *EXPORT_FIELDS])
+            w.writeheader()
+            w.writerows(sorted(found, key=lambda r: (r["id"], r["workbook"], r["sheet"])))
+        print(f"[meta] {len(found)} rows written to {args.export}")
 
     if args.commit:
         conn.commit()
