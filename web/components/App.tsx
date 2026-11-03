@@ -13,7 +13,7 @@ import Legend from './Legend';
 // The map needs the browser (WebGL), so it is not rendered on the server.
 const MapView = dynamic(() => import('./MapView'), { ssr: false });
 
-function Topbar() {
+function Topbar({ onChat }: { onChat: () => void }) {
   const { lang, setLang } = useLayers();
   return (
     <div className="topbar">
@@ -21,6 +21,8 @@ function Topbar() {
       <span className="brand" translate="no"><img src="/logo.png" alt="" width={32} height={32} />Mappa</span>
       <span className="tag">{lang === 'es' ? 'Asistente de planificación y riesgos de Puerto Rico'
                                            : 'Planning & hazard assistant for Puerto Rico'}</span>
+      <button id="chattoggle" className="chattog" onClick={onChat}
+              title={lang === 'es' ? 'Mostrar/ocultar chat' : 'Show/hide chat'}>&#9776;</button>
       <span className="langtog">
         {(['es', 'en'] as const).map(l => (
           <a key={l} className={lang === l ? 'on' : ''} role="button" tabIndex={0} aria-pressed={lang === l}
@@ -33,10 +35,11 @@ function Topbar() {
 
 export default function App() {
   const [about, setAbout] = useState<CatalogLayer | null>(null);
+  const [chatHidden, setChatHidden] = useState(false);
   return (
     <LayersProvider>
-      <Topbar />
-      <main>
+      <Topbar onChat={() => setChatHidden(h => !h)} />
+      <main className={chatHidden ? 'chat-hidden' : undefined}>
         {/* The chat moves here in a later step. */}
         <section className="chat"><div className="messages" /></section>
         <section className="mappanel">
