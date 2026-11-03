@@ -37,14 +37,19 @@ const API = API_ORIGIN + '/api/v1';
 
 let map = null;
 let usingFallback = false;
+// The map opens on the world and flies in to Puerto Rico, so the first thing a
+// visitor sees is where they are. Straight to the island for anyone who has
+// asked their system for less motion.
+const CALM = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const HOME = { center: [-66.25, 18.22], zoom: 8.3 };
 try {
   map = new maplibregl.Map({
     container: 'map',
     style: BASEMAP_STYLE,
-    center: [-66.25, 18.22],
-    zoom: 8.3,
+    ...(CALM ? HOME : { center: [-45, 22], zoom: 1.3 }),
     attributionControl: { compact: true },
   });
+  if (!CALM) map.once('load', () => map.flyTo({ ...HOME, duration: 2800, curve: 1.5, essential: false }));
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
   map.addControl(new maplibregl.ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-left');
 
@@ -613,19 +618,23 @@ function addLayer(id) {
   if (g.includes('polygon')) {
     const fillOp = l.style && l.style.fillOpacity != null ? l.style.fillOpacity : 0.35;
     const under = labelAnchor();
+    // Every layer starts invisible and fades to its level (restyle sets it).
     if (fillOp > 0) map.addLayer({ id: base, type: 'fill', ...common,
-      paint: { 'fill-color': color, 'fill-opacity': fillOp } }, under);
+      paint: { 'fill-color': color, 'fill-opacity': 0, 'fill-opacity-transition': FADE } }, under);
     map.addLayer({ id: base + '_ln', type: 'line', ...common,
-      paint: { 'line-color': color, 'line-width': OUTLINE } }, under);
+      paint: { 'line-color': color, 'line-width': OUTLINE, 'line-opacity': 0,
+               'line-opacity-transition': FADE } }, under);
   } else if (g.includes('line')) {
     map.addLayer({ id: base, type: 'line', ...common,
-      paint: { 'line-color': color, 'line-width': 1.4 } }, labelAnchor());
+      paint: { 'line-color': color, 'line-width': 1.4, 'line-opacity': 0,
+               'line-opacity-transition': FADE } }, labelAnchor());
   } else {
     // Points stay above the labels: a hospital is small, and hiding it under a
     // town name would lose it.
     map.addLayer({ id: base, type: 'circle', ...common,
-      paint: { 'circle-radius': 5, 'circle-color': color,
-               'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
+      paint: { 'circle-radius': 5, 'circle-color': color, 'circle-opacity': 0,
+               'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0,
+               'circle-opacity-transition': FADE, 'circle-stroke-opacity-transition': FADE } });
   }
   // Cursor feedback only — the click itself is handled once at map level, so
   // overlapping layers report together instead of each replacing the other's popup.
@@ -635,7 +644,8 @@ function addLayer(id) {
     map.on('mouseleave', lid, () => { map.getCanvas().style.cursor = ''; });
   });
   ACTIVE.set(id, { ...l, colour: color, hidden: false });
-  restyle();
+  // A frame later, so the map has drawn it at 0 and the change can fade in.
+  requestAnimationFrame(restyle);
   renderLayerPanel();
 }
 
@@ -671,6 +681,11 @@ function restyle() {
     const boundary = kindOf(l) === 'boundary';
     const t = map.getLayer(fillId) && map.getLayer(fillId).type;
     if (t === 'fill') map.setPaintProperty(fillId, 'fill-opacity', boundary ? 0 : AREA_FILL);
+    if (t === 'line') map.setPaintProperty(fillId, 'line-opacity', 0.9);
+    if (t === 'circle') {
+      map.setPaintProperty(fillId, 'circle-opacity', 1);
+      map.setPaintProperty(fillId, 'circle-stroke-opacity', 1);
+    }
     if (map.getLayer(lnId)) {
       map.setPaintProperty(lnId, 'line-width', boundary ? BOUNDARY : OUTLINE);
       map.setPaintProperty(lnId, 'line-opacity', boundary ? 0.9 : 0.7);
@@ -690,6 +705,7 @@ function restyle() {
 // Outlines stay hairline at island scale - thousands of parcel edges drawn thick
 // turned the whole map one colour.
 const AREA_FILL = 0.3;
+const FADE = { duration: CALM ? 0 : 600, delay: 0 };
 const OUTLINE = ['interpolate', ['linear'], ['zoom'], 8, 0.2, 12, 0.6, 15, 1.2];
 const BOUNDARY = ['interpolate', ['linear'], ['zoom'], 8, 0.9, 12, 1.5, 15, 2.2];
 const isBoundary = l => l.theme === 'political' ||
