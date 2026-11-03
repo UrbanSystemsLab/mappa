@@ -77,6 +77,18 @@ jobs:
           alembic downgrade base
           alembic upgrade head
 
+  web:
+    name: Next.js app builds
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - run: npm ci --no-audit --no-fund
+      - name: Types check and the static build succeeds
+        run: npm run build
+
   frontend-shape:
     name: Frontend integrity
     runs-on: ubuntu-latest
@@ -85,7 +97,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
       - name: JavaScript parses
-        run: node --check frontend/app.js
+        run: node --check frontend/classic/app.js
       - name: Every expected function still exists
         # The page renders its welcome screen from HTML even when these are gone,
         # so their absence would not show without this check.
@@ -94,14 +106,14 @@ jobs:
           for fn in ask askHere render renderLayerPanel addLayer removeLayer \
                     restyle autoShowLayers focusBBox fetchLayers layerRow \
                     renderLegend showPopup featureCard applyLang showFound; do
-            grep -q "function $fn" frontend/app.js || { echo "MISSING: $fn"; missing=1; }
+            grep -q "function $fn" frontend/classic/app.js || { echo "MISSING: $fn"; missing=1; }
           done
           exit $missing
 
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [lint, unit, schema, frontend-shape]
+    needs: [lint, unit, schema, frontend-shape, web]
     runs-on: ubuntu-latest
     steps:
       - name: Every check passed

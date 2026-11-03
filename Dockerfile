@@ -1,4 +1,14 @@
 # MAPPA API — container for Cloud Run (or any host).
+
+# Stage 1: the Next.js frontend (frontend/), built to static files the API serves.
+FROM node:20-slim AS web
+WORKDIR /web
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend ./
+RUN npm run build
+
+# Stage 2: the API, which serves those files at / and the earlier page at /classic.
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
@@ -25,7 +35,8 @@ ENV HF_HUB_OFFLINE=1 \
 
 COPY core ./core
 COPY api ./api
-COPY frontend ./frontend
+COPY frontend/classic ./frontend/classic
+COPY --from=web /web/out ./frontend/out
 COPY data ./data
 
 # Cloud Run provides $PORT (defaults to 8080).

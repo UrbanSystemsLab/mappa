@@ -8,6 +8,7 @@ service, or a schema.
 """
 
 import hashlib
+import json
 import re
 import threading
 import time
@@ -27,7 +28,11 @@ from .routers import catalog as catalog_router
 from .routers import places as places_router
 from .routers import tiles as tiles_router
 
-FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend" / "classic"
+# The Next.js app (frontend/), built to static files by `npm run build` - in the
+# Docker image, by its first stage. Served at / when present; the earlier page
+# stays at /classic while the new one settles in.
+WEB_DIR = Path(__file__).resolve().parent.parent / "frontend" / "out"
 
 
 def warm() -> None:
@@ -106,7 +111,15 @@ if settings.serve_frontend and FRONTEND_DIR.exists():
 
 @app.get("/", include_in_schema=False)
 def index() -> Response:
-    """Serve the app shell, stamped with the current asset versions.
+    """The app: the Next.js build when there is one, else the earlier page."""
+    if settings.serve_frontend and (WEB_DIR / "index.html").exists():
+        return _page((WEB_DIR / "index.html").read_text(encoding="utf-8"))
+    return classic()
+
+
+@app.get("/classic", include_in_schema=False)
+def classic() -> Response:
+    """The earlier single-file page, stamped with the current asset versions.
 
     The ?v= stamp is a hash of each file's contents, so browsers fetch a file
     again exactly when it changes.
@@ -122,17 +135,30 @@ def index() -> Response:
         html = re.sub(
             rf"/static/{re.escape(asset)}(\?v=[^\"\']*)?", f"/static/{asset}?v={digest}", html
         )
+    return _page(html)
+
+
+def _page(html: str) -> Response:
+    """A page as sent: never cached, and marked as a test copy off production."""
     headers = {"Cache-Control": "no-store"}
     if settings.app_env != "production":
         # A test copy says so on every screen, and stays out of search results.
+        # Drawn by CSS on the page itself, adding no element: React builds the
+        # body and would reject one it did not make. Fixed, so it sits over the
+        # page rather than pushing its full-height layout down.
+        label = f"{settings.app_env.upper()} · test copy, not the live site · copia de prueba"
         banner = (
-            # Fixed, so it sits over the page rather than pushing its
-            # full-height layout down.
-            '<div style="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;'
-            "background:#b45309;color:#fff;font:600 12px/1.7 system-ui,sans-serif;"
-            f'padding:2px 12px;border-radius:0 0 7px 7px">{settings.app_env.upper()} · test copy, not '
-            "the live site · copia de prueba</div>"
+            "<style>html::after{content:" + json.dumps(label) + ";position:fixed;top:0;left:50%;"
+            "transform:translateX(-50%);z-index:9999;background:#b45309;color:#fff;"
+            "font:600 12px/1.7 system-ui,sans-serif;padding:2px 12px;border-radius:0 0 7px 7px;"
+            "pointer-events:none}</style>"
         )
-        html = html.replace("<body>", "<body>" + banner, 1)
+        html = html.replace("</head>", banner + "</head>", 1)
         headers["X-Robots-Tag"] = "noindex, nofollow"
     return Response(html, media_type="text/html", headers=headers)
+
+
+# The Next.js build's own files (/_next/..., /logo.png). Mounted last, so every
+# route above - the API, /health, /classic, /static - is matched first.
+if settings.serve_frontend and WEB_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(WEB_DIR)), name="web")

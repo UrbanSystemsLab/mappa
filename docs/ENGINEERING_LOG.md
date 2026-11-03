@@ -730,3 +730,37 @@ early demo data files, and the four planning documents above.
 5. **Questions with La Maraña** — `QUESTIONS_FOR_LAMARANA.md`, including the
    empty data-dictionaries folder and who writes the English layer names.
 6. **OCR, inventory sync, document–layer links** — still open from section 12.
+
+---
+
+## 15. Their dictionaries, names and metadata; a Next.js frontend (16 Oct – 3 Nov)
+
+**From La Maraña's 16 October email.**
+- Data dictionaries: 26 workbooks, 128 sheets, all read. 85 sheets reach 119 layers
+  (`data/layer_dictionaries.csv`, `data/layer_dictionary_tables.csv`). A click shows their
+  description of each field and only the fields they marked Include; owner names and a
+  parcel's taxpayer address stay hidden even where included. Not attached: NHDPlus (not
+  loaded), AAA (display names, not column names), and ten sheets whose fields match no
+  table - questions for them.
+- Platform names: 436 layers use their Nombre Plataforma; English translated from it.
+- Metadata Reconstruída: 17 workbooks, 229 sheets; 223 reach a layer, 4 match none.
+  Applied from `data/layer_metadata.csv` on every release. Layers with a description went
+  from 40 to 203, with their confidence rating from 22 to 136.
+
+**Answers.** The panel shows each step while the assistant works ("status" events); the
+answer appears a few words at a time; "Ask about this place" asks about the layers under
+the click and sends what the popup showed, so the answer says what is at that spot.
+
+**Map.** Layers are drawn by kind (boundaries as outlines, areas lightly filled, lines and
+points on top), never in red; show/hide and Bring to front replace an opacity slider. The
+map flies in from the world to Puerto Rico; layers fade in.
+
+**Frontend.** Moved to Next.js (React) with react-map-gl, as the PRD specifies, in
+`frontend/`; the earlier page is `frontend/classic/`, served at `/classic`. It uses the earlier
+page's stylesheet unchanged, builds to static files the API serves (one Cloud Run service),
+and switches to Mapbox by changing an import.
+
+**Cost.** Production ran one instance with 4 CPUs always allocated, about $200 a month
+with nobody on the site. Now 2 CPUs billed per request, one instance kept warm; old images
+are cleaned up by a registry policy. Expected total $150-200 a month.
+
