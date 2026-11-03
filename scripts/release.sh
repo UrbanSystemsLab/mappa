@@ -82,6 +82,8 @@ DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.fill_document_places --com
 # Field names from La Maraña's data dictionaries; profile_layers then shows
 # only the fields they marked Include.
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.apply_layer_dictionaries --commit
+# Their reconstructed metadata: descriptions, agencies, how sure they are.
+DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.apply_layer_metadata --commit
 # What each layer shows when clicked and what it holds, from its own data (a few
 # minutes). Before embed_layers: the search text includes what this finds.
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.profile_layers --commit

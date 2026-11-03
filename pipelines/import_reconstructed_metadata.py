@@ -24,11 +24,13 @@ rather than being translated.
 Run:
     python -m pipelines.import_reconstructed_metadata            # dry run
     python -m pipelines.import_reconstructed_metadata --commit
+    python -m pipelines.import_reconstructed_metadata --src "data/raw/metadata_2026-11/..."
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import os
 import re
 import unicodedata
@@ -39,6 +41,18 @@ import psycopg2
 
 SRC = Path("data/raw/metadata")
 SOURCE = "La Maraña — Metadata Reconstruída"
+
+# What a sheet provides, as read_tab names it, in the order written to the CSV.
+EXPORT_FIELDS = [
+    "description",
+    "agency",
+    "federal_agency",
+    "purpose",
+    "limitation",
+    "original_metadata",
+    "reference",
+    "confidence",
+]
 
 # Tabs that describe the workbook rather than a layer.
 NOT_A_LAYER = {"confidence guide", "guia", "guía", "index", "readme"}
@@ -66,6 +80,11 @@ ALIASES = {
     "reptiles_1": "layer_reptiles",
     "balnearios": "layer_turismo_balnearios",
     "corredor_agricola": "layer_corredor_agricola_de_project_exportfeatures",
+    # Our table names carry spelling slips from the original files.
+    "pr_marejada_ciclonica_general": "layer_marejada_coclonica_general",
+    "dfirms_flood_areas_2009": "layer_dffirms_fllod_areas_2009",
+    "areas_protegidas_pr_dic2016": "layer_areas_protegidas_pr_diciembre2016_clcc_pacat",
+    "critical_wildlife_areas_2005": "layer_g01_conserv_critical_wildlife_areas",
 }
 
 # Their field labels -> our columns. Both passes used different wording for the
@@ -182,21 +201,70 @@ def match(cur, dataset: str, tab: str) -> list[str]:
                       'áéíóúñü','aeiounu')), '[^a-z0-9]+', '', 'g') = %s
                OR gis_id IN (
                     SELECT gis_id FROM layer_inventory
-                    WHERE regexp_replace(lower(translate(coalesce(layer_name,''),
-                              'áéíóúñü','aeiounu')), '[^a-z0-9]+', '', 'g') = %s)
+                    WHERE %s IN (
+                      regexp_replace(lower(translate(coalesce(layer_name,''),
+                          'áéíóúñü','aeiounu')), '[^a-z0-9]+', '', 'g'),
+                      regexp_replace(lower(translate(coalesce(original_name,''),
+                          'áéíóúñü','aeiounu')), '[^a-z0-9]+', '', 'g'),
+                      regexp_replace(lower(translate(coalesce(gdb_name,''),
+                          'áéíóúñü','aeiounu')), '[^a-z0-9]+', '', 'g')))
         """,
             (key, "layer" + key, key, key),
         )
         hits = [r[0] for r in cur.fetchall()]
         if hits:
             return hits
+    for name in (dataset, tab):
+        hits = _shortened(cur, name)
+        if hits:
+            return hits
     return []
+
+
+def _shortened(cur, tab: str) -> list[str]:
+    """A tab whose name Excel cut at 31 characters, or that abbreviates words
+    ("Areas_Est_Basadas_Nucleos_2010" for areas_estadisticas_basadas_en_nucleos_
+    2010). Accepted only when every word of the tab begins a word of the layer's
+    name, in order, with the same years and at most one word more - and at
+    most a few layers match, which
+    are copies of one dataset. Anything looser is reported, not guessed."""
+    words = [w for w in re.split(r"[^a-z0-9]+", norm_words(tab)) if w]
+    if len(words) < 2:
+        return []
+    years = {w for w in words if re.fullmatch(r"(19|20)\d\d", w)}
+    cur.execute("SELECT id, table_name FROM layer_registry WHERE table_name IS NOT NULL")
+    hits = []
+    for rid, table in cur.fetchall():
+        names = [w for w in table.removeprefix("layer_").split("_") if w]
+        if years and not years <= set(names):
+            continue
+        i = extra = 0
+        for w in names:
+            if i < len(words) and w.startswith(words[i]):
+                i += 1
+            elif not w.isdigit():
+                extra += 1  # a copy's _1 is not a different name
+        # At most one word more than the tab ("de", "en"): NHS_JUL_2017 is not
+        # act_carreteras_nhs_unbuilt_jul_2017, which has a sheet of its own.
+        if i == len(words) and extra <= 1:
+            hits.append(rid)
+    return hits if 0 < len(hits) <= 3 else []
+
+
+def norm_words(s: str) -> str:
+    s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "_", s)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--commit", action="store_true")
+    ap.add_argument("--src", default=str(SRC), help="folder holding their workbooks")
+    ap.add_argument(
+        "--export", help="also write what was read to this CSV, e.g. data/layer_metadata.csv"
+    )
     args = ap.parse_args()
+    src = Path(args.src)
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
         raise SystemExit("DATABASE_URL not set")
@@ -217,7 +285,8 @@ def main() -> None:
     conn.commit()
 
     applied, unmatched, tabs = 0, [], 0
-    for book in sorted(SRC.glob("*.xls[xm]")):
+    found: list[dict] = []
+    for book in sorted(src.glob("*.xls[xm]")):
         wb = openpyxl.load_workbook(book, data_only=True)
         print(f"\n[meta] {book.name}")
         for ws in wb.worksheets:
@@ -227,11 +296,20 @@ def main() -> None:
             m = read_tab(ws)
             if not m:
                 continue
-            ids = match(cur, m.get("dataset_name", ""), ws.title)
+            # The full title too: Excel cuts a tab's name at 31 characters.
+            ids = match(cur, m.get("dataset_name") or m.get("title", ""), ws.title)
             if not ids:
                 unmatched.append((book.name, ws.title, m.get("title", "")[:40]))
                 continue
             for lid in ids:
+                found.append(
+                    {
+                        "id": lid,
+                        "workbook": book.name,
+                        "sheet": ws.title,
+                        **{k: m.get(k) or "" for k in EXPORT_FIELDS},
+                    }
+                )
                 cur.execute(
                     """
                     UPDATE layer_registry SET
@@ -269,6 +347,15 @@ def main() -> None:
         print(f"[meta] {len(unmatched)} tabs matched no layer:")
         for b, t, title in unmatched:
             print(f"   {b[:30]:32} {t[:26]:28} {title}")
+
+    if args.export:
+        # The reviewed file every release applies (pipelines/apply_layer_metadata),
+        # so production gets what staging got without anyone's laptop.
+        with open(args.export, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=["id", "workbook", "sheet", *EXPORT_FIELDS])
+            w.writeheader()
+            w.writerows(sorted(found, key=lambda r: (r["id"], r["workbook"], r["sheet"])))
+        print(f"[meta] {len(found)} rows written to {args.export}")
 
     if args.commit:
         conn.commit()
