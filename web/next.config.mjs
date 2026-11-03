@@ -7,6 +7,7 @@ const API = process.env.MAPPA_API || 'http://127.0.0.1:8765';
 const config = {
   output: 'export',
   trailingSlash: true,
+  skipTrailingSlashRedirect: true, // never on /api/... calls
   images: { unoptimized: true },
   ...(process.env.NODE_ENV === 'development' && {
     async rewrites() {
