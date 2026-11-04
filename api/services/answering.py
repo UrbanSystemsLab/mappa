@@ -67,6 +67,7 @@ def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
     shown = assistant.clicked_features(ask.spatial)
     if shown:
         session.results.append(shown)
+        session.clicked_shown = True
     written = []
     try:
         for piece in assistant.answer(ask.question, session, context):

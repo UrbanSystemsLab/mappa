@@ -48,13 +48,15 @@ class Session:
     choosing: Any = None  # a Future: the layers being chosen while the answer is written
     steps: list[dict[str, Any]] = field(default_factory=list)
     results: list[str] = field(default_factory=list)  # every tool result, as text
+    clicked_shown: bool = False  # the request says what the map showed at the clicked point
     measured: bool = False  # a map tool computed something
     found_layers: bool = False  # find_layers returned at least one layer
 
     @property
     def has_evidence(self) -> bool:
-        """Something was found: passages, layers, or a measurement."""
-        return bool(self.passages) or self.measured or self.found_layers
+        """Something was found: passages, layers, a measurement, or what the map
+        showed at the point the user clicked."""
+        return bool(self.passages) or self.measured or self.found_layers or self.clicked_shown
 
     def known_numbers(self) -> set[str]:
         """Every number the answer may state: what the tools returned, what the
