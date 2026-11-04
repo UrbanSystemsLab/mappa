@@ -148,7 +148,9 @@ def _page(html: str) -> Response:
         # page rather than pushing its full-height layout down.
         label = f"{settings.app_env.upper()} · test copy, not the live site · copia de prueba"
         banner = (
-            "<style>html::after{content:" + json.dumps(label) + ";position:fixed;top:0;left:50%;"
+            "<style>html::after{content:"
+            + json.dumps(label, ensure_ascii=False)
+            + ";position:fixed;top:0;left:50%;"
             "transform:translateX(-50%);z-index:9999;background:#b45309;color:#fff;"
             "font:600 12px/1.7 system-ui,sans-serif;padding:2px 12px;border-radius:0 0 7px 7px;"
             "pointer-events:none}</style>"

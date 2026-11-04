@@ -12,6 +12,7 @@ export interface Citation { kind?: string; title: string; source?: string; year?
 export interface Turn {
   question: string; answer: string; shown: number | null;  // shown: characters revealed so far
   steps: string[]; citations: Citation[];
+  next: string[];  // questions the reader might ask next
 }
 // What a click found at a spot, for "Ask about this place".
 export interface Pending {
@@ -61,7 +62,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setBusy(true);
     const history = turns.map(t => ({ question: t.question, answer: t.answer }));
     const i = turns.length;
-    setTurns(ts => [...ts, { question, answer: '', shown: null, steps: [], citations: [] }]);
+    setTurns(ts => [...ts, { question, answer: '', shown: null, steps: [], citations: [], next: [] }]);
 
     // A request with no deadline once sat on "Thinking…" for ten minutes.
     const ctl = new AbortController();
@@ -116,6 +117,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             // The server's cleaned answer replaces the streamed text.
             if (d.answer) got = d.answer;
             update(i, t => ({ ...t, citations: d.citations || [], answer: got }));
+          } else if (ev === 'followups') {
+            update(i, t => ({ ...t, next: d.questions || [] }));
           }
         }
       }

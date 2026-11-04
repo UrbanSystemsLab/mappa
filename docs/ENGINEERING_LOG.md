@@ -764,3 +764,31 @@ and switches to Mapbox by changing an import.
 with nobody on the site. Now 2 CPUs billed per request, one instance kept warm; old images
 are cleaned up by a registry policy. Expected total $150-200 a month.
 
+
+## 16. Answers that start from the person's situation (4 Nov)
+
+Six questions (buying land in Toa Baja, risks in Utuado, Loíza floods and its plan, land
+use in Ponce, shelters in Cataño, building in Arecibo) showed four gaps: answers stated
+facts without the reader's decision in mind; map and documents were not used together for
+the same place; nothing said what a layer holds in a place (Ponce's land use came back as
+"the plan covers 100%"); and nothing suggested where to go next.
+
+- **A tool for what a place holds.** `what_is_in` returns a layer's kinds in a place and how
+  much of each: land use classes with km², flood zone types, landslide levels. The column
+  is chosen from the data, not named in code: of the columns that sort features into a few
+  repeating kinds, the one with the most descriptive values; meanings come from their
+  dictionaries.
+- **Instructions.** Work out what the person is deciding; look at the map and the
+  documents for the same place in one turn; put what limits them first; name features when
+  there are 5 or fewer; ask them to click their land when the answer depends on the spot;
+  end with what to do next.
+- **Follow-up questions.** After each answer one small request suggests 3 next questions,
+  sent as a `followups` event and shown as chips under the answer.
+- **A crash fixed.** A slow area measurement (landslides across Utuado) raised a geometry
+  error the tools did not catch, and the whole answer failed. It is now told to the model
+  as too slow, and shapes are cut to the place's box first, so it takes 7 s, not 20+.
+
+Before and after, the same six: Utuado went from "100% at landslide risk" to each level
+with km²; Ponce got its land use classes; Arecibo joined the permit rules with its land
+use; every answer ended with a next step and three follow-ups. Answers that measure more
+take a few seconds longer (Toa Baja 13 s → 19 s).

@@ -208,3 +208,45 @@ def test_show_on_map_shows_only_drawable_layers(monkeypatch):
 def test_show_on_map_can_show_nothing():
     s = tools.Session()
     assert tools.call(s, "show_on_map", {"layer_ids": ""})["shown"] == []
+
+
+def test_what_is_in_gives_kinds_in_the_readers_words(monkeypatch):
+    monkeypatch.setattr(
+        tools.layers,
+        "fields",
+        lambda layer, lang: tools.layers.Fields(
+            ("zone",), {"zone": "Flood zone type"}, {"AE": "Base flood elevation determined"}
+        ),
+    )
+    monkeypatch.setattr(
+        tools.spatial,
+        "kinds",
+        lambda layer, columns, place=None: {"zone": [("AE", 21, 27.791), ("X", 4, 1.0)]},
+    )
+    s = tools.Session()
+    out = tools.call(s, "what_is_in", {"layer_id": "flood", "place_id": "72113"})
+    kinds = out["by_kind"][0]
+    assert kinds["column"] == "Flood zone type"
+    assert kinds["kinds"][0] == {
+        "kind": "AE",
+        "means": "Base flood elevation determined",
+        "features": 21,
+        "km2": 27.79,
+    }
+    assert s.measured and s.measured_layers == [FLOOD]
+
+
+def test_a_geometry_timeout_is_told_to_the_model(monkeypatch):
+    import psycopg2
+
+    class Interrupted(psycopg2.errors.InternalError_):
+        def __str__(self):
+            return "lwgeom_unaryunion_prec: GEOS Error: InterruptedException: Interrupted!"
+
+    def slow(area, place):
+        raise Interrupted()
+
+    monkeypatch.setattr(tools.spatial, "area_share", slow)
+    s = tools.Session()
+    out = tools.call(s, "area_share", {"area_layer_id": "flood", "place_id": "72113"})
+    assert "too long" in out["error"]

@@ -239,6 +239,36 @@ def area_share(session: Session, area_layer_id: str, place_id: str) -> dict:
     }
 
 
+def what_is_in(session: Session, layer_id: str, place_id: str | None = None) -> dict:
+    layer = _layer(session, layer_id)
+    place = _place(session, place_id)
+    f = layers.fields(layer, session.lang)
+    found = spatial.kinds(layer, f.columns, place)
+    session.measured_with(layer)
+    return {
+        "layer": layer.name(session.lang),
+        "place": _where(place),
+        "by_kind": [
+            {
+                "column": f.meanings.get(column) or column,
+                "kinds": [
+                    {
+                        "kind": kind,
+                        **({"means": f.values[kind]} if kind in f.values else {}),
+                        "features": n,
+                        **({"km2": round(km2, 2)} if km2 is not None else {}),
+                    }
+                    for kind, n, km2 in rows
+                ],
+            }
+            for column, rows in found.items()
+        ],
+        "note": ""
+        if found
+        else "This layer does not sort its features into kinds here; count or list them instead.",
+    }
+
+
 def _clicked(session: Session) -> tuple[float, float]:
     if session.point is None:
         raise ToolError("the user has not clicked the map; ask them to, or use a place_id")
@@ -478,6 +508,16 @@ TOOLS += [
         lambda r: f"{r['count']} {r['layer']} in {r['place']}",
     ),
     Tool(
+        "what_is_in",
+        "What a layer holds in a place, by kind - e.g. the land use classes in Ponce and how many "
+        "km² each covers, the flood zone types in Toa Baja, the landslide susceptibility levels in "
+        "Utuado. Use when the question is what a place is like, what it is zoned or classified as, "
+        "or what risk it has - not only how much.",
+        _p(layer_id=("string", "From find_layers or the standard layers."), place_id=PLACE_ID),
+        what_is_in,
+        lambda r: f"{r['layer']} in {r['place']} by kind",
+    ),
+    Tool(
         "show_on_map",
         "Put up to three layers on the map to illustrate the answer, when you did not measure "
         "them - e.g. flood zones for a question about what a plan says on building near rivers. "
@@ -501,6 +541,7 @@ MEASURING = {
     "area_share",
     "nearest",
     "list_features",
+    "what_is_in",
 }
 
 
@@ -517,7 +558,11 @@ def call(session: Session, name: str, args: dict[str, Any]) -> dict:
         result, summary = {"error": str(exc)}, f"error: {exc}"
     except TypeError as exc:  # wrong or missing arguments
         result, summary = {"error": f"bad arguments: {exc}"}, "bad arguments"
-    except psycopg2.errors.QueryCanceled:
+    except (psycopg2.errors.QueryCanceled, psycopg2.errors.InternalError_) as exc:
+        # A timeout that lands inside a geometry operation surfaces as GEOS
+        # "Interrupted", not as a cancelled query.
+        if not isinstance(exc, psycopg2.errors.QueryCanceled) and "Interrupted" not in str(exc):
+            raise
         log.warning("%s timed out: %s", name, args)
         result = {"error": "This took too long to compute. Say it could not be measured."}
         summary = "took too long"

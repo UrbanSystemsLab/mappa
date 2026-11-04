@@ -68,7 +68,7 @@
         },
         "responses": {
           "200": {
-            "description": "status..., delta..., meta, done, [map]",
+            "description": "status..., delta..., meta, done, [map], [followups]",
             "content": {
               "text/event-stream": {}
             }
@@ -668,6 +668,14 @@
             "type": "array",
             "title": "Found",
             "description": "Features to highlight."
+          },
+          "followups": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Followups",
+            "description": "Questions the user might ask next."
           },
           "steps": {
             "items": {
