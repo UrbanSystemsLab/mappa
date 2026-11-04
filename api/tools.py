@@ -20,7 +20,7 @@ from typing import Any
 
 import psycopg2
 
-from .repositories import documents, layers, places, spatial
+from .repositories import connections, documents, layers, places, spatial
 from .repositories.documents import Passage
 from .repositories.layers import Layer
 from .repositories.places import Place
@@ -29,6 +29,7 @@ log = logging.getLogger("mappa.tools")
 
 PASSAGE_CHARS = 1200
 MAX_FOUND = 50  # features one answer highlights on the map
+ALL_OF_IT = 95.0  # percent of a place an area layer covers that means it maps every level
 MAX_LISTED = 25  # names one tool call hands the model  # enough of a passage to answer from, without flooding the model
 
 
@@ -49,6 +50,9 @@ class Session:
     steps: list[dict[str, Any]] = field(default_factory=list)
     results: list[str] = field(default_factory=list)  # every tool result, as text
     measured: bool = False  # a map tool computed something
+    # Layers about_place read, with the figures each gave: a source only when the
+    # answer uses one of its figures.
+    overview: list[tuple[Layer, set[str]]] = field(default_factory=list)
     found_layers: bool = False  # find_layers returned at least one layer
 
     @property
@@ -82,6 +86,15 @@ class Session:
             row = {"layer_id": layer.id, "name": f.name, "lng": f.lng, "lat": f.lat}
             if row not in self.found and len(self.found) < MAX_FOUND:
                 self.found.append(row)
+
+    def cited_overview(self, text: str) -> None:
+        """The overview layers whose figures the answer states become its sources."""
+        from .assistant import _numbers
+
+        said = _numbers(text)
+        for layer, figures in self.overview:
+            if figures & said:
+                self.measured_with(layer)
 
     def measured_with(self, *used: Layer) -> None:
         """Record the layers a successful measurement read - the answer's map sources."""
@@ -135,9 +148,16 @@ def find_place(session: Session, name: str, municipio: str | None = None) -> dic
     }
 
 
-def search_documents(session: Session, query: str, place_id: str | None = None) -> dict:
+def search_documents(
+    session: Session, query: str, place_id: str | None = None, about_layer_id: str | None = None
+) -> dict:
     place = _place(session, place_id)
-    found = documents.search(query, place.municipio if place else None)
+    only = None
+    if about_layer_id:
+        layer = _layer(session, about_layer_id)
+        # The place's own documents on this layer, then the island-wide ones.
+        only = connections.document_ids(layer, place) + connections.document_ids(layer, None, 30)
+    found = documents.search(query, place.municipio if place else None, only=only or None)
     out = []
     for p in found:
         session.passages.append(p)
@@ -230,12 +250,34 @@ def area_share(session: Session, area_layer_id: str, place_id: str) -> dict:
         raise ToolError("area_share needs a place_id")
     total, covered = spatial.area_share(area, place)
     session.measured_with(area)
+    share = round(100 * covered / total, 1) if total else 0.0
     return {
         "area_layer": area.name(session.lang),
         "place": place.label,
         "place_km2": round(total, 1),
         "covered_km2": round(covered, 1),
-        "share_percent": round(100 * covered / total, 1) if total else 0.0,
+        "share_percent": share,
+        # A layer that covers a whole place maps every level of something, low
+        # included: "100% at landslide risk" would be wrong.
+        "note": "This layer covers nearly all the place, so it maps every level, low ones "
+        "included; do not call this share at risk. what_is_in gives how much is at each level."
+        if share >= ALL_OF_IT
+        else "",
+    }
+
+
+def _kinds(f: layers.Fields, column: str, rows: spatial.Kinds, limit: int = 8) -> dict:
+    return {
+        "column": f.meanings.get(column) or column,
+        "kinds": [
+            {
+                "kind": kind,
+                **({"means": f.values[kind]} if kind in f.values else {}),
+                "features": n,
+                **({"km2": round(km2, 2)} if km2 is not None else {}),
+            }
+            for kind, n, km2 in rows[:limit]
+        ],
     }
 
 
@@ -243,29 +285,58 @@ def what_is_in(session: Session, layer_id: str, place_id: str | None = None) -> 
     layer = _layer(session, layer_id)
     place = _place(session, place_id)
     f = layers.fields(layer, session.lang)
-    found = spatial.kinds(layer, f.columns, place)
+    known = connections.stored(layer, place) if place else None
+    if known is not None:  # measured ahead by profile_places
+        found = {known.column: known.kinds} if known.column else {}
+    else:
+        found = spatial.kinds(layer, f.columns, place)
     session.measured_with(layer)
     return {
         "layer": layer.name(session.lang),
         "place": _where(place),
-        "by_kind": [
-            {
-                "column": f.meanings.get(column) or column,
-                "kinds": [
-                    {
-                        "kind": kind,
-                        **({"means": f.values[kind]} if kind in f.values else {}),
-                        "features": n,
-                        **({"km2": round(km2, 2)} if km2 is not None else {}),
-                    }
-                    for kind, n, km2 in rows
-                ],
-            }
-            for column, rows in found.items()
-        ],
+        "by_kind": [_kinds(f, column, rows) for column, rows in found.items()],
         "note": ""
         if found
         else "This layer does not sort its features into kinds here; count or list them instead.",
+    }
+
+
+def about_place(session: Session, place_id: str) -> dict:
+    place = _place(session, place_id)
+    if place is None:
+        raise ToolError("about_place needs a place_id")
+    on_map = []
+    for p in connections.profile(place, session.lang):
+        row = {
+            "layer_id": p.layer.id,
+            "layer": p.layer.name(session.lang),
+            "year": p.layer.year,
+            "features_here": p.features,
+            **(
+                _kinds(p.fields, p.column, p.kinds, 5)
+                if p.fields and p.column and p.features
+                else {}
+            ),
+        }
+        on_map.append(row)
+        if p.features:
+            from .assistant import _numbers
+
+            # Its areas when it has them: a count like 5 turns up in any answer.
+            areas = [str(k["km2"]) for k in row.get("kinds", []) if "km2" in k]
+            figures = " ".join(areas) or " ".join(str(k["features"]) for k in row.get("kinds", []))
+            session.overview.append((p.layer, _numbers(figures)))
+    docs = [
+        {"title": d.title, "year": d.year, "discusses": list(d.layer_names[:4])}
+        for d in connections.documents(place, limit=8, lang=session.lang)
+    ]
+    return {
+        "place": place.label,
+        "on_the_map_here": on_map,
+        "its_documents": docs,
+        "note": ""
+        if on_map or docs
+        else "Nothing stored for this place; measure with what_is_in and search_documents.",
     }
 
 
@@ -406,6 +477,11 @@ TOOLS: list[Tool] = [
         _p(
             query=("string", "What to look for, in the words a document would use."),
             place_id=PLACE_ID,
+            about_layer_id=(
+                "string?",
+                "A layer_id: search only the documents that discuss this layer, e.g. what the "
+                "plans say about the flood zones you measured.",
+            ),
         ),
         search_documents,
         lambda r: f"{len(r['passages'])} passages",
@@ -508,6 +584,19 @@ TOOLS += [
         lambda r: f"{r['count']} {r['layer']} in {r['place']}",
     ),
     Tool(
+        "about_place",
+        "An overview of a place, at once: what each standard map layer holds there (flood zone "
+        "types, landslide levels, land use classes with km², how many schools or shelters) and "
+        "the place's own documents with the layers each discusses. Call it first for a general "
+        "question about a place - what to know, its risks, whether one can build there.",
+        _p(place_id=("string", "A place_id from find_place.")),
+        about_place,
+        lambda r: (
+            f"{len(r['on_the_map_here'])} layers, {len(r['its_documents'])} documents "
+            f"for {r['place']}"
+        ),
+    ),
+    Tool(
         "what_is_in",
         "What a layer holds in a place, by kind - e.g. the land use classes in Ponce and how many "
         "km² each covers, the flood zone types in Toa Baja, the landslide susceptibility levels in "
@@ -542,6 +631,7 @@ MEASURING = {
     "nearest",
     "list_features",
     "what_is_in",
+    "about_place",
 }
 
 

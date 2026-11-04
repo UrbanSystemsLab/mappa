@@ -230,7 +230,11 @@ def fields(layer: Layer, lang: str) -> Fields:
             (layer.id,),
         )
         row = cur.fetchone()
-    columns, labels, values = row if row else (None, None, None)
+    return fields_from(*(row or (None, None, None)), lang)
+
+
+def fields_from(columns, labels, values, lang: str) -> Fields:
+    """Fields from a registry row's tile_properties, property_labels and value_labels."""
 
     def say(x: dict) -> str:
         return x.get(lang) or x.get("en") or x.get("es") or ""

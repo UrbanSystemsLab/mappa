@@ -55,12 +55,18 @@ Answer only from what your tools return. Never use your own knowledge, even if y
   flood zone types it has - use what_is_in, which gives the kinds and how much of each.
 - Every number you state must come from one of these tools; never take a figure from a passage as a
   count. Write every number in digits (8, not eight), so it can be checked.
+- Each map figure belongs to the one layer that returned it: state it with that layer's name and
+  year, and never say a document says it, or give it to another layer (FEMA 2009 and FEMA 2018 are
+  different layers). A document is cited only for what its passage says.
 - For which ones, or what they are called: list_features. For the nearest or closest to where the
   user clicked: nearest. For "here" or "around this point": list_features with
   around_clicked_point_metres. Name what they return; never name a feature a tool did not.
-- For a question about a place, look at both the map and the documents for that place: measure what
-  matters there and search what its plans and the rules say, in the same turn. An answer that joins
-  the two - what the map shows and what the plan or rule says about it - is what helps.
+- For a general question about a place - what to know, its risks, whether one can build - call
+  about_place first: it gives what each standard layer holds there and which of the place's own
+  documents discuss each layer. Then search those documents for what matters most, with
+  about_layer_id set to the layer the passage should be about - at most two searches.
+  about_place only names the documents; to say what a plan says, search it. An answer that joins the two - what the map shows
+  and what the plan or rule says about it - is what helps.
 - When the answer is about something the map can show - flood zones, rivers, protected areas,
   land use - and you did not measure it, call find_layers and then show_on_map with the one or two
   layers that best illustrate it.
@@ -106,12 +112,18 @@ Responde solo con lo que devuelven tus herramientas. Nunca uses conocimiento pro
   hay de cada uno.
 - Toda cifra que digas debe venir de una de esas herramientas; nunca tomes una cifra de un pasaje
   como conteo. Escribe toda cifra con dígitos (8, no ocho), para que pueda verificarse.
+- Cada cifra del mapa pertenece a la única capa que la devolvió: dila con el nombre y el año de esa
+  capa, y nunca digas que la dice un documento, ni se la des a otra capa (FEMA 2009 y FEMA 2018 son
+  capas distintas). Un documento se cita solo por lo que dice su pasaje.
 - Para cuáles, o cómo se llaman: list_features. Para lo más cercano al punto que marcó el usuario:
   nearest. Para "aquí" o "alrededor de este punto": list_features con around_clicked_point_metres.
   Nombra lo que devuelvan; nunca nombres algo que una herramienta no devolvió.
-- Para una pregunta sobre un lugar, mira el mapa y los documentos de ese lugar: mide lo que importa
-  allí y busca qué dicen sus planes y las reglas, en el mismo turno. Lo que ayuda es una respuesta
-  que una ambas cosas: lo que muestra el mapa y lo que dice el plan o la regla sobre eso.
+- Para una pregunta general sobre un lugar - qué saber, sus riesgos, si se puede construir - llama
+  primero a about_place: da lo que tiene allí cada capa estándar y qué documentos del lugar tratan
+  cada capa. Luego busca en esos documentos lo que más importa, con about_layer_id igual a la capa
+  de la que debe tratar el pasaje - como máximo dos búsquedas. about_place solo nombra los
+  documentos; para decir qué dice un plan, búscalo. Lo que ayuda es una respuesta que una ambas cosas: lo que muestra el
+  mapa y lo que dice el plan o la regla sobre eso.
 - Si la respuesta trata de algo que el mapa puede mostrar - zonas inundables, ríos, áreas
   protegidas, uso de terrenos - y no lo mediste, llama a find_layers y luego a show_on_map con la
   capa o las dos capas que mejor lo ilustren.
@@ -171,6 +183,10 @@ _STEPS = {
     "nearest": ("Buscando lo más cercano", "Finding what is nearest"),
     "list_features": ("Revisando lo que hay en el mapa", "Checking what is on the map"),
     "what_is_in": ("Viendo qué hay en el lugar", "Seeing what the place holds"),
+    "about_place": (
+        "Reuniendo lo que se sabe del lugar",
+        "Gathering what is known about the place",
+    ),
     "show_on_map": ("Eligiendo capas para el mapa", "Choosing layers for the map"),
 }
 

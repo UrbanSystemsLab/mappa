@@ -1051,6 +1051,15 @@
             "description": "The feature properties carried in this layer's tiles, in display order.",
             "default": []
           },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/LayerDocument"
+            },
+            "type": "array",
+            "title": "Documents",
+            "description": "Documents that discuss this layer, most first. Only on GET /layers/{id}.",
+            "default": []
+          },
           "available": {
             "type": "boolean",
             "title": "Available",
@@ -1085,6 +1094,36 @@
           "queryable"
         ],
         "title": "Layer"
+      },
+      "LayerDocument": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "passages": {
+            "type": "integer",
+            "title": "Passages",
+            "description": "How many of its passages discuss this layer."
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "passages"
+        ],
+        "title": "LayerDocument"
       },
       "LayerList": {
         "properties": {

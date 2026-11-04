@@ -100,12 +100,18 @@ def area_share(area: Layer, place: Place) -> tuple[float, float]:
 
 
 KINDS_AREA_MS = 10_000
+DOMINANT = 0.9  # a column whose one value holds more of the features than this sorts nothing
+# Bumped when how kinds are worked out changes, so stored profiles are measured again.
+KINDS_VERSION = 2
 MAX_KINDS = 40  # more different values than this and a column names things, not kinds
+
+
+Kinds = list[tuple[str, int, float | None]]  # (kind, features, km² or None)
 
 
 def kinds(
     layer: Layer, columns: tuple[str, ...], place: Place | None = None, limit: int = 8
-) -> dict[str, list[tuple[str, int, float | None]]]:
+) -> dict[str, Kinds]:
     """What a layer holds in a place, by kind: from the column that sorts its
     features into a few kinds (a land use class, a hazard level), the commonest
     kinds, how many features have each and - for an area layer - the km² each
@@ -119,23 +125,38 @@ def kinds(
         return {}
     with db.connection() as conn:
         cur = conn.cursor()
-        # How many different values each column has, and how long they are: of
-        # the columns that sort features into a few kinds, the one with the
-        # longest values describes them ("Suelo Urbano") rather than coding them ("SU").
+        # For each column: how many different values, how long they are, and how
+        # many features share the commonest, and whether they are all numbers. A
+        # column sorts features into kinds when its values are words that repeat,
+        # few of them, and no one value holds nearly all (a vertical datum the
+        # same on every shape says nothing). Of those, the
+        # one with the longest values describes ("Suelo Urbano") rather than codes ("SU").
+        per_column = ", ".join(
+            f"(SELECT count(DISTINCT v) FROM (SELECT nullif(trim(\"{c}\"::text), '') v FROM s) x), "
+            f'(SELECT avg(length("{c}"::text)) FROM s), '
+            f'(SELECT max(n) FROM (SELECT count(*) n FROM s GROUP BY "{c}") x), '
+            f"(SELECT bool_and(\"{c}\"::text ~ '^[-0-9.,]*$') FROM s)"
+            for c in columns
+        )
+        picked = ", ".join(f'f."{c}"' for c in columns)
         cur.execute(
-            "SELECT count(*), "
-            + ", ".join(
-                f'count(DISTINCT nullif(trim(f."{c}"::text), \'\')), avg(length(f."{c}"::text))'
-                for c in columns
-            )
-            + f' FROM (SELECT * FROM "{layer.table}" f WHERE f.geom IS NOT NULL{where} LIMIT 5000) f',
+            f'WITH s AS MATERIALIZED (SELECT {picked} FROM "{layer.table}" f '
+            f"WHERE f.geom IS NOT NULL{where} LIMIT 5000) "
+            f"SELECT (SELECT count(*) FROM s), {per_column}",
             params,
         )
         rows, *row = cur.fetchone()
-        stats = [(c, row[2 * i], row[2 * i + 1] or 0) for i, c in enumerate(columns)]
-        # Kinds repeat: a column with a different value on every feature names them.
+        stats = [(c, *row[4 * i : 4 * i + 4]) for i, c in enumerate(columns)]
+        # Numbers are measurements or identifiers, not kinds.
         sorting = sorted(
-            [(c, length) for c, n, length in stats if 2 <= n <= MAX_KINDS and n < rows],
+            [
+                (c, length or 0)
+                for c, n, length, top, numeric in stats
+                if 2 <= n <= MAX_KINDS
+                and n < rows
+                and (top or 0) <= DOMINANT * rows
+                and not numeric
+            ],
             key=lambda x: -x[1],
         )[:1]
         # Only shapes crossing the place's edge are cut, and first to the

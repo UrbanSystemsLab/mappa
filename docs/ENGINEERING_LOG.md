@@ -792,3 +792,25 @@ Before and after, the same six: Utuado went from "100% at landslide risk" to eac
 with km²; Ponce got its land use classes; Arecibo joined the permit rules with its land
 use; every answer ended with a next step and three follow-ups. Answers that measure more
 take a few seconds longer (Toa Baja 13 s → 19 s).
+
+**Layers, documents and places joined.** Only 18 of 507 documents named a layer,
+and none by its id: an answer found a flood layer and a mitigation plan each on its
+own and hoped they matched. Two tables now join them (migration 0011), both built by
+pipelines from the data, nothing named in code:
+- `layer_documents` (`pipelines/link_layer_documents`): for each of the 603 layers
+  with data, which documents have passages close in meaning to it, and how many.
+  FEMA's flood zones reach every municipio's hazard mitigation plan; the Land Use
+  Plan reaches the territorial plans and the Reglamento Conjunto. Layers most plans
+  mention (special communities, shelters) are weighted down when ranking.
+- `place_profiles` (`pipelines/profile_places`): what each of the 15 standard
+  layers holds in each of the 78 municipios, by kind, measured once.
+
+The assistant's new `about_place` reads both in one call: what the map holds in a
+place and which of its own documents discuss each layer. `search_documents` takes
+`about_layer_id` to search only the documents that discuss a layer. A layer's About
+panel lists them. The column a layer is sorted by is chosen from its values: words
+that repeat, a few of them, none holding over 90% of the features (a vertical datum
+the same on every shape was being picked), not numbers.
+
+Both pipelines run in `release.sh` and only recompute what changed. The first run
+takes about an hour per database.

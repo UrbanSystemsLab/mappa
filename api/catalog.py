@@ -19,6 +19,7 @@ from typing import Any
 from core import settings
 
 from . import db
+from .repositories import connections
 
 # Their sheet spells five categories more than one way - Conservacion and
 # Conservación, Limites geograficos and Limites_Geograficos - which would split
@@ -235,7 +236,15 @@ def get_layer(layer_id: str, lang: str = "es") -> dict[str, Any] | None:
             (layer_id,),
         )
         row = cur.fetchone()
-    return _row_to_layer(row, lang) if row else None
+    if not row:
+        return None
+    return {
+        **_row_to_layer(row, lang),
+        "documents": [
+            {"title": d.title, "year": d.year, "passages": d.passages}
+            for d in connections.documents(layer_ids=[layer_id], limit=6)
+        ],
+    }
 
 
 def categories(lang: str = "es", available_only: bool = False) -> list[dict[str, Any]]:

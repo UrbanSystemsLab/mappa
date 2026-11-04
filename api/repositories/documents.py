@@ -53,9 +53,13 @@ def display_title(title: str) -> str:
     return t.strip(" -_") or (title or "").strip()
 
 
-def search(query: str, municipio: str | None = None, k: int = 6) -> list[Passage]:
+def search(
+    query: str, municipio: str | None = None, k: int = 6, only: list[int] | None = None
+) -> list[Passage]:
     """The `k` passages nearest the query, from that municipio's documents and the
-    island-wide ones. Below MIN_RELEVANCE a passage is not about the query."""
+    island-wide ones. Given `only` - the documents that discuss a layer - from
+    those alone, when any of them has a passage on the query. Below
+    MIN_RELEVANCE a passage is not about the query."""
     lit = vector(query)
     sql = (
         "SELECT d.source_id, d.title, d.year, c.text, 1 - (c.embedding <=> %s::vector) "
@@ -63,25 +67,29 @@ def search(query: str, municipio: str | None = None, k: int = 6) -> list[Passage
         "ORDER BY c.embedding <=> %s::vector LIMIT %s"
     )
     limit = k * CANDIDATES_PER_RESULT
+    place = f"(d.jurisdiction ILIKE %s OR {_ISLAND_WIDE})"
+    tries: list[tuple[str, list]] = []
+    if only and municipio:
+        tries.append((f"WHERE c.document_id = ANY(%s) AND {place}", [only, municipio]))
+    elif only:
+        tries.append(("WHERE c.document_id = ANY(%s)", [only]))
+    if municipio:
+        tries.append((f"WHERE {place}", [municipio]))
+    tries.append(("", []))
     with db.connection() as conn:
         cur = conn.cursor()
+        # The vector index returns nearest-first and then filters; iterative
+        # scan keeps going until enough rows pass the filter.
+        cur.execute("SET LOCAL hnsw.iterative_scan = relaxed_order")
         rows = []
-        if municipio:
-            # The vector index returns nearest-first and then filters; iterative
-            # scan keeps going until enough rows pass the filter.
-            cur.execute("SET LOCAL hnsw.iterative_scan = relaxed_order")
-            cur.execute(
-                sql.format(where=f"WHERE d.jurisdiction ILIKE %s OR {_ISLAND_WIDE}"),
-                (lit, municipio, lit, limit),
-            )
-            rows = cur.fetchall()
-        if not rows:
-            cur.execute(sql.format(where=""), (lit, lit, limit))
-            rows = cur.fetchall()
+        for where, params in tries:
+            cur.execute(sql.format(where=where), (lit, *params, lit, limit))
+            rows = [r for r in cur.fetchall() if r[4] is not None and float(r[4]) >= MIN_RELEVANCE]
+            if rows:
+                break
     found = [
         Passage(doc_id, display_title(title), year, text, float(score))
         for doc_id, title, year, text, score in rows
-        if score is not None and float(score) >= MIN_RELEVANCE
     ]
     return spread(found, k)
 

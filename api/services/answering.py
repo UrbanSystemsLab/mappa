@@ -81,6 +81,7 @@ def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
         written, failed = [UNAVAILABLE[ask.lang]], True
         yield "delta", {"text": written[0]}
     text = "".join(written)
+    session.cited_overview(text)
     asking = None if failed else assistant.follow_ups_soon(ask.question, text, session)
     yield "meta", _map(session)
     yield "done", _finish(text, session)

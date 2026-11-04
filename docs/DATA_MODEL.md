@@ -60,14 +60,19 @@ comunidad, so "in Santurce" can be turned into a shape.
 | a document | their inventory row | `documents.source_id = doc_id` | no — 339 of 440 match; the rest are files they sent that are not on the sheet |
 | a role | its layer | `layer_roles.layer_id` | yes (since migration 0009) |
 | a document | a place | municipality name in `documents.jurisdiction` | no |
-| a layer | a place | the shapes overlap — computed when asked | — |
-| **a document** | **a layer** | **nothing direct** | — |
+| a layer | a place | `place_profiles`: what each standard layer holds in each municipio, by kind; any other layer, computed when asked | yes (since migration 0011) |
+| **a document** | **a layer** | **`layer_documents`**: how many of the document's passages discuss the layer | yes (since migration 0011) |
 
-**Documents and layers are not linked to each other.** They meet through the
-place and through meaning, and in the answer itself. La Maraña's inventory looks
-as though it links them, but the 13 layers that name a document are PDF map
-images (pages of 7 plans), and the 18 documents that name a layer give a theme
-("Red vial / carreteras"), not a layer.
+**Documents and layers were not linked to each other** until migration 0011. La
+Maraña's inventory looks as though it links them, but the 13 layers that name a
+document are PDF map images (pages of 7 plans), and the 18 documents that name a
+layer give a theme ("Red vial / carreteras"), not a layer. `layer_documents` is
+built from meaning instead: a layer and a passage are embedded by the same model,
+and a document's passages within 0.55 of a layer are counted as discussing it
+(`pipelines/link_layer_documents`). The FEMA flood zones reach each municipio's
+hazard mitigation plan; the Land Use Plan reaches the territorial plans and the
+Reglamento Conjunto. Layers most documents mention (special communities, shelters)
+are weighted down when ranking, so a plan is described by what is particular to it.
 
 ## Known problems
 

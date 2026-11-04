@@ -9,6 +9,12 @@ from pydantic import BaseModel, Field
 LayerStatus = Literal["published", "loaded", "catalogued", "duplicate", "draft", "hidden"]
 
 
+class LayerDocument(BaseModel):
+    title: str
+    year: int | None = None
+    passages: int = Field(description="How many of its passages discuss this layer.")
+
+
 class LayerSource(BaseModel):
     agency: str | None = None
     inventory: str | None = Field(
@@ -54,6 +60,10 @@ class Layer(BaseModel):
     reliability: Literal["reliable", "needs_review", "outdated"] | None = None
     tile_properties_order: list[str] = Field(
         [], description="The feature properties carried in this layer's tiles, in display order."
+    )
+    documents: list[LayerDocument] = Field(
+        [],
+        description="Documents that discuss this layer, most first. Only on GET /layers/{id}.",
     )
     available: bool = Field(description="True if the layer can be drawn: its tiles exist.")
     queryable: bool = Field(description="True if the assistant can answer from it.")

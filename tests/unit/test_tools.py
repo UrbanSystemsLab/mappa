@@ -27,6 +27,10 @@ def stand_ins(monkeypatch):
     )
     monkeypatch.setattr(tools.spatial, "count", lambda layer, place=None: 42)
     monkeypatch.setattr(tools.spatial, "count_inside", lambda layer, area, place=None: (3, 7))
+    monkeypatch.setattr(tools.connections, "stored", lambda layer, place: None)
+    monkeypatch.setattr(tools.connections, "profile", lambda place, lang="en": [])
+    monkeypatch.setattr(tools.connections, "documents", lambda *a, **k: [])
+    monkeypatch.setattr(tools.connections, "document_ids", lambda *a, **k: [])
 
 
 def test_every_tool_declares_a_valid_schema():
@@ -250,3 +254,53 @@ def test_a_geometry_timeout_is_told_to_the_model(monkeypatch):
     s = tools.Session()
     out = tools.call(s, "area_share", {"area_layer_id": "flood", "place_id": "72113"})
     assert "too long" in out["error"]
+
+
+def test_about_place_joins_the_map_and_the_places_documents(monkeypatch):
+    from api.repositories.connections import LinkedDocument, Profile
+
+    monkeypatch.setattr(
+        tools.connections,
+        "profile",
+        lambda place, lang="en": [
+            Profile(FLOOD, 21, "zone", [("AE", 21, 27.79)], tools.layers.Fields(("zone",), {}, {})),
+            Profile(SCHOOLS, 0, None, []),
+        ],
+    )
+    monkeypatch.setattr(
+        tools.connections,
+        "documents",
+        lambda place=None, layer_ids=None, limit=8, lang="en": [
+            LinkedDocument(
+                7, "Plan de Mitigación de Riesgos - Ponce", 2021, 14, ("flood",), ("Flood zones",)
+            )
+        ],
+    )
+    s = tools.Session()
+    out = tools.call(s, "about_place", {"place_id": "72113"})
+    flood, schools = out["on_the_map_here"]
+    assert flood["features_here"] == 21 and flood["kinds"][0]["km2"] == 27.79
+    assert schools["features_here"] == 0 and "kinds" not in schools
+    assert out["its_documents"][0]["discusses"] == ["Flood zones"]
+    # An overview layer is a source only once the answer uses one of its figures.
+    assert s.measured_layers == []
+    s.cited_overview("Ponce has 27.79 km² in flood zones.")
+    assert s.measured_layers == [FLOOD]
+
+
+def test_what_is_in_uses_the_stored_profile(monkeypatch):
+    from api.repositories.connections import Profile
+
+    monkeypatch.setattr(
+        tools.connections, "stored", lambda layer, place: Profile(FLOOD, 3, "zone", [("X", 3, 1.5)])
+    )
+    monkeypatch.setattr(
+        tools.layers, "fields", lambda layer, lang: tools.layers.Fields(("zone",), {}, {})
+    )
+
+    def measured(*a, **k):
+        raise AssertionError("measured again")
+
+    monkeypatch.setattr(tools.spatial, "kinds", measured)
+    out = tools.call(tools.Session(), "what_is_in", {"layer_id": "flood", "place_id": "72113"})
+    assert out["by_kind"][0]["kinds"] == [{"kind": "X", "features": 3, "km2": 1.5}]

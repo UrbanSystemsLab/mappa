@@ -175,6 +175,7 @@
              border:1px solid var(--line);padding:3px 10px;border-radius:999px;cursor:pointer}
   .samples a:hover{background:var(--ok-bg)}
   .next{margin-top:10px}
+  .li-docs{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
   .next .samples{margin:4px 0 0}
   .next .samples a{text-align:left}
   .inputrow{display:flex;gap:7px;align-items:flex-end}
