@@ -12,11 +12,16 @@ the assistant as too slow, so it cannot hold a connection the map needs.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
+
+import psycopg2
 
 from .. import db
 from .layers import Layer, roles
 from .places import Place, municipio_at, scope
+
+log = logging.getLogger("mappa.spatial")
 
 _POINT = "ST_SetSRID(ST_MakePoint(%s, %s), 4326)"
 _METRES_PER_DEGREE = 111_320.0
@@ -75,13 +80,16 @@ def area_share(area: Layer, place: Place) -> tuple[float, float]:
     """The place's area and how much of it the layer covers, both in km².
 
     Overlapping shapes are merged before measuring, so nothing is counted twice.
+    Each is first cut to the place's box: a hazard shape can have a million
+    points, nearly all far outside the place.
     """
     with db.connection() as conn:
         cur = conn.cursor()
         cur.execute(
             f"""SELECT ST_Area(r.geom::geography) / 1e6,
                        coalesce((SELECT ST_Area(ST_Union(ST_Intersection(
-                                    ST_MakeValid(ST_Force2D(a.geom)), r.geom))::geography) / 1e6
+                                    ST_MakeValid(ST_ClipByBox2D(ST_Force2D(a.geom), r.geom::box2d)),
+                                    r.geom))::geography) / 1e6
                                  FROM "{area.table}" a
                                  WHERE a.geom IS NOT NULL AND ST_Intersects(a.geom, r.geom)), 0)
                 FROM reference_units r WHERE r.unit_code = %s""",
@@ -89,6 +97,107 @@ def area_share(area: Layer, place: Place) -> tuple[float, float]:
         )
         total, covered = cur.fetchone()
     return float(total), float(covered)
+
+
+KINDS_AREA_MS = 10_000
+DOMINANT = 0.9  # a column whose one value holds more of the features than this sorts nothing
+# Bumped when how kinds are worked out changes, so stored profiles are measured again.
+KINDS_VERSION = 2
+MAX_KINDS = 40  # more different values than this and a column names things, not kinds
+
+
+Kinds = list[tuple[str, int, float | None]]  # (kind, features, km² or None)
+
+
+def kinds(
+    layer: Layer, columns: tuple[str, ...], place: Place | None = None, limit: int = 8
+) -> dict[str, Kinds]:
+    """What a layer holds in a place, by kind: from the column that sorts its
+    features into a few kinds (a land use class, a hazard level), the commonest
+    kinds, how many features have each and - for an area layer - the km² each
+    covers inside the place. Columns that name each feature are left out.
+
+    The columns come from the registry, never from a request.
+    """
+    where, params = scope(place)
+    columns = tuple(c for c in columns if c != layer.label)[:8]
+    if not columns:
+        return {}
+    with db.connection() as conn:
+        cur = conn.cursor()
+        # For each column: how many different values, how long they are, and how
+        # many features share the commonest, and whether they are all numbers. A
+        # column sorts features into kinds when its values are words that repeat,
+        # few of them, and no one value holds nearly all (a vertical datum the
+        # same on every shape says nothing). Of those, the
+        # one with the longest values describes ("Suelo Urbano") rather than codes ("SU").
+        per_column = ", ".join(
+            f"(SELECT count(DISTINCT v) FROM (SELECT nullif(trim(\"{c}\"::text), '') v FROM s) x), "
+            f'(SELECT avg(length("{c}"::text)) FROM s), '
+            f'(SELECT max(n) FROM (SELECT count(*) n FROM s GROUP BY "{c}") x), '
+            f"(SELECT bool_and(\"{c}\"::text ~ '^[-0-9.,]*$') FROM s)"
+            for c in columns
+        )
+        picked = ", ".join(f'f."{c}"' for c in columns)
+        cur.execute(
+            f'WITH s AS MATERIALIZED (SELECT {picked} FROM "{layer.table}" f '
+            f"WHERE f.geom IS NOT NULL{where} LIMIT 5000) "
+            f"SELECT (SELECT count(*) FROM s), {per_column}",
+            params,
+        )
+        rows, *row = cur.fetchone()
+        stats = [(c, *row[4 * i : 4 * i + 4]) for i, c in enumerate(columns)]
+        # Numbers are measurements or identifiers, not kinds.
+        sorting = sorted(
+            [
+                (c, length or 0)
+                for c, n, length, top, numeric in stats
+                if 2 <= n <= MAX_KINDS
+                and n < rows
+                and (top or 0) <= DOMINANT * rows
+                and not numeric
+            ],
+            key=lambda x: -x[1],
+        )[:1]
+        # Only shapes crossing the place's edge are cut, and first to the
+        # place's box: a hazard shape can have a million points, nearly all
+        # far outside the place.
+        size = (
+            "sum(CASE WHEN ST_Within(f.geom, u.geom) THEN ST_Area(f.geom::geography) "
+            "ELSE ST_Area(ST_Intersection(ST_MakeValid(ST_ClipByBox2D(ST_Force2D(f.geom), "
+            "u.geom::box2d)), u.geom)::geography) END) / 1e6"
+            if place is not None and layer.is_area
+            else "sum(ST_Area(f.geom::geography)) / 1e6"
+            if layer.is_area
+            else "NULL"
+        )
+        unit = (
+            ", (SELECT geom FROM reference_units WHERE unit_code = %s) u"
+            if place is not None and layer.is_area
+            else ""
+        )
+        out = {}
+        for c, _ in sorting:
+            query = f"""SELECT nullif(trim(f."{c}"::text), '') AS kind, count(*), {{size}}
+                    FROM "{layer.table}" f{{unit}} WHERE f.geom IS NOT NULL{where}
+                    GROUP BY 1 ORDER BY {{order}} DESC NULLS LAST LIMIT %s"""
+            try:
+                # A few huge shapes on the place's edge can take long to cut;
+                # then the kinds are counted without their area.
+                cur.execute("SAVEPOINT kinds; SET LOCAL statement_timeout = %s", (KINDS_AREA_MS,))
+                cur.execute(
+                    query.format(size=size, unit=unit, order="3" if layer.is_area else "2"),
+                    ([place.unit_code] if unit else []) + params + [limit],
+                )
+            except (psycopg2.errors.QueryCanceled, psycopg2.errors.InternalError_):
+                log.info("kinds of %s: area too slow, counting only", layer.id)
+                cur.execute("ROLLBACK TO SAVEPOINT kinds")
+                cur.execute(query.format(size="NULL", unit="", order="2"), [*params, limit])
+            out[c] = [
+                (r[0] or "", int(r[1]), float(r[2]) if r[2] is not None else None)
+                for r in cur.fetchall()
+            ]
+    return out
 
 
 @dataclass(frozen=True, slots=True)

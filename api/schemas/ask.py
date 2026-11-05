@@ -72,6 +72,9 @@ class AskResponse(BaseModel):
     municipio: str | None = None
     focus: list[float] | None = None
     found: list[FoundFeature] = Field(default_factory=list, description="Features to highlight.")
+    followups: list[str] = Field(
+        default_factory=list, description="Questions the user might ask next."
+    )
     steps: list[Step] = Field(default_factory=list, description="What the assistant did to answer.")
 
 
@@ -90,6 +93,7 @@ class Step(BaseModel):
 #   event: done    once, with the cleaned final text, citations and steps
 #   event: map     sometimes, after done: layers chosen to illustrate the answer.
 #                  Same fields as meta; it replaces it.
+#   event: followups  sometimes, last: questions the user might ask next.
 #
 # Each event's `data:` line is one JSON object with the fields below.
 
@@ -117,3 +121,9 @@ class StreamDone(BaseModel):
     answer: str = Field("", description="The final text. Replaces everything streamed so far.")
     citations: list[Citation] = Field(default_factory=list)
     steps: list[Step] = Field(default_factory=list)
+
+
+class StreamFollowUps(BaseModel):
+    questions: list[str] = Field(
+        default_factory=list, description="Up to 3 questions to ask next, in the answer's language."
+    )

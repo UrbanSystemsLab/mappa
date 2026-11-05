@@ -208,3 +208,39 @@ def roles() -> dict[str, Role]:
 
 def role_of(layer: Layer) -> str | None:
     return next((r.name for r in roles().values() if r.layer.id == layer.id), None)
+
+
+@dataclass(frozen=True, slots=True)
+class Fields:
+    """A layer's columns that may be read out, what each one means, and what
+    coded values stand for - from La Maraña's data dictionaries."""
+
+    columns: tuple[str, ...]
+    meanings: dict[str, str]
+    values: dict[str, str]
+
+
+def fields(layer: Layer, lang: str) -> Fields:
+    """The columns profile_layers chose to show (never a person's name or
+    address), with their dictionary meaning in the reader's language."""
+    with db.connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT tile_properties, property_labels, value_labels FROM layer_registry WHERE id = %s",
+            (layer.id,),
+        )
+        row = cur.fetchone()
+    return fields_from(*(row or (None, None, None)), lang)
+
+
+def fields_from(columns, labels, values, lang: str) -> Fields:
+    """Fields from a registry row's tile_properties, property_labels and value_labels."""
+
+    def say(x: dict) -> str:
+        return x.get(lang) or x.get("en") or x.get("es") or ""
+
+    return Fields(
+        tuple(columns or ()),
+        {k: say(v) for k, v in (labels or {}).items() if isinstance(v, dict)},
+        {k: say(v) for k, v in (values or {}).items() if isinstance(v, dict)},
+    )

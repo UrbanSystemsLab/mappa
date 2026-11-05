@@ -68,7 +68,7 @@
         },
         "responses": {
           "200": {
-            "description": "status..., delta..., meta, done, [map]",
+            "description": "status..., delta..., meta, done, [map], [followups]",
             "content": {
               "text/event-stream": {}
             }
@@ -669,6 +669,14 @@
             "title": "Found",
             "description": "Features to highlight."
           },
+          "followups": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Followups",
+            "description": "Questions the user might ask next."
+          },
           "steps": {
             "items": {
               "$ref": "#/components/schemas/Step"
@@ -1043,6 +1051,15 @@
             "description": "The feature properties carried in this layer's tiles, in display order.",
             "default": []
           },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/LayerDocument"
+            },
+            "type": "array",
+            "title": "Documents",
+            "description": "Documents that discuss this layer, most first. Only on GET /layers/{id}.",
+            "default": []
+          },
           "available": {
             "type": "boolean",
             "title": "Available",
@@ -1077,6 +1094,36 @@
           "queryable"
         ],
         "title": "Layer"
+      },
+      "LayerDocument": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "passages": {
+            "type": "integer",
+            "title": "Passages",
+            "description": "How many of its passages discuss this layer."
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "passages"
+        ],
+        "title": "LayerDocument"
       },
       "LayerList": {
         "properties": {

@@ -1,7 +1,11 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { API } from '@/lib/api';
 import type { CatalogLayer } from '@/lib/catalog';
 import { useLayers } from '@/lib/layers';
+
+interface LayerDocument { title: string; year?: number | null; passages: number }
 
 // A layer's provenance: what it is, who made it, when, and how sure La Maraña is.
 const STATUS: Record<string, { es: string; en: string }> = {
@@ -11,6 +15,18 @@ const STATUS: Record<string, { es: string; en: string }> = {
 
 export default function LayerAbout({ layer, onClose }: { layer: CatalogLayer | null; onClose: () => void }) {
   const { lang } = useLayers();
+  // The documents that discuss this layer come with its full record.
+  const [docs, setDocs] = useState<LayerDocument[]>([]);
+  useEffect(() => {
+    setDocs([]);
+    if (!layer) return;
+    let live = true;
+    fetch(`${API}/catalog/layers/${encodeURIComponent(layer.id)}?lang=${lang}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (live && d?.documents) setDocs(d.documents); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [layer, lang]);
   if (!layer) return null;
   const es = lang === 'es';
   const s = layer.source || {};
@@ -26,6 +42,12 @@ export default function LayerAbout({ layer, onClose }: { layer: CatalogLayer | n
         <dt>{es ? 'Procedencia' : 'Provenance'}</dt><dd>{s.inventory || '—'}</dd>
         {st && <><dt>{es ? 'Evaluación de La Maraña' : 'La Maraña rating'}</dt><dd>{st}</dd></>}
       </dl>
+      {docs.length > 0 && (
+        <div className="li-docs">
+          <div className="cites-h">{es ? 'Documentos que tratan esta capa' : 'Documents that discuss this layer'}</div>
+          {docs.map(d => (
+            <div className="cite" key={d.title}>📄 <span className="ct">{d.title}</span>{d.year ? ` · ${d.year}` : ''}</div>))}
+        </div>)}
     </div>
   );
 }
