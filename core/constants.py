@@ -18,4 +18,6 @@ TILE_MAX_ZOOM = 14
 MIN_RELEVANCE = 0.25
 
 # Tables named layer_* that hold no map data.
-NOT_LAYER_TABLES = frozenset({"layer_registry", "layer_inventory", "layer_roles"})
+NOT_LAYER_TABLES = frozenset(
+    {"layer_registry", "layer_inventory", "layer_roles", "layer_documents", "layer_document_runs"}
+)
