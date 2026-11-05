@@ -974,7 +974,7 @@ if (map) map.on('click', async (e) => {
       .filter(k => k !== 'id' && !isEmpty(props[k])).slice(0, 8)
       .forEach(k => { values[fieldLabel(rec, k)] = String(valueLabel(rec, props[k])); });
     return { layer: nameOf(rec), values };
-  }).filter(f => f.layer && Object.keys(f.values).length);
+  }).filter(f => f.layer);
   pending = muni ? {
     municipio: muni, spatial: { ...info, lng, lat, features },
     here: [...byLayer.keys()].map(lid => nameOf(ACTIVE.get(lid))).filter(Boolean),

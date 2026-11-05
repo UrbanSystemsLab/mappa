@@ -65,7 +65,7 @@ export default function MapView() {
       (a.layer.tile_properties_order || Object.keys(props)).filter(k => k !== 'id' && !isEmpty(props[k])).slice(0, 8)
         .forEach(k => { values[fieldLabel(a.layer, k, lang)] = valueLabel(a.layer, props[k], lang); });
       return { layer: a.layer.name, values };
-    }).filter(f => Object.keys(f.values).length);
+    });
     const pending: Pending | null = municipio ? {
       municipio, spatial: { ...info, lng, lat, features: shown },
       here: hits.map(h => h.layer.layer.name),
