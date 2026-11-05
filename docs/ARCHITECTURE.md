@@ -76,6 +76,24 @@ river?") follows the same path but uses `search_documents`. That embeds the ques
 finds the closest passages in `document_chunks` with pgvector. Passages from the place's
 own municipio come first, then island-wide documents.
 
+**Layers, documents and places are joined in the database.** Two tables, written by
+pipelines from the data itself, connect them:
+
+- `layer_documents`: which documents discuss each layer. A layer and a passage are
+  embedded by the same model, so a document's passages close in meaning to a layer are
+  the ones about what it maps (`pipelines/link_layer_documents`).
+- `place_profiles`: what each standard layer holds in each municipio, by kind - land use
+  classes and flood zone types with km², how many shelters - measured once
+  (`pipelines/profile_places`).
+
+A general question about a place ("What should I know about Toa Baja?") starts with
+`about_place`, which reads both at once: what the map holds there and which of the
+place's own documents discuss each layer. `search_documents` with `about_layer_id`
+then searches only the documents that discuss a layer, so "what does the plan say
+about these flood zones" reaches the flood sections of that municipio's plan.
+`what_is_in` gives one layer's kinds in a place, from the stored profile when there
+is one. A layer's About panel lists the documents that discuss it.
+
 No list of keywords decides what a question means. The model chooses the tools; the code
 makes sure that what they return is exact and that the answer sticks to it.
 
@@ -92,6 +110,8 @@ One Cloud SQL server, `mappa-pg`, holds two databases: `mappa` (production) and
 | `layer_registry` | every layer in La Maraña's inventory: names, source, year, geometry, whether its data is loaded, what a click shows |
 | `layer_<name>` tables | the shapes of each layer (PostGIS) |
 | `layer_roles` | the standard layer for common questions (flood zones, schools...) |
+| `layer_documents` | which documents discuss each layer, and how many of their passages |
+| `place_profiles` | what each standard layer holds in each municipio, by kind |
 | `reference_units` | municipios, barrios and comunidades, with their boundaries |
 
 [DATA_MODEL.md](DATA_MODEL.md) has the full detail.
@@ -101,7 +121,8 @@ One Cloud SQL server, `mappa-pg`, holds two databases: `mappa` (production) and
 The scripts in `pipelines/` load data. They do not run while the app is serving.
 `sync_drive` and `ingest_lamarana_docs` load documents from La Maraña's Drive.
 `load_gpkg_layers` and `rebuild_layer_registry` load map layers. `build_gazetteer` builds
-the places. `embed_layers` and `profile_layers` prepare layers for search and display.
+the places. `embed_layers` and `profile_layers` prepare layers for search and display;
+`link_layer_documents` and `profile_places` join layers to documents and places.
 `eval_answers` measures answer quality on 100 test questions.
 
 ## Where it runs

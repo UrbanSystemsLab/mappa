@@ -178,3 +178,25 @@ def test_a_click_sends_what_the_popup_showed():
     assert line == "Land Use Plan 2015: Description = Suelo Rústico"
     assert "Suelo Rústico" in assistant.Context(clicked=clicked).note("en")
     assert assistant.clicked_features(None) == ""
+
+
+def test_follow_ups_drop_repeats_and_keep_three(monkeypatch):
+    from types import SimpleNamespace
+
+    from api import assistant
+    from api.tools import Session
+
+    reply = SimpleNamespace(
+        text='["What is flood risk here?", "Where are shelters in Ponce?", '
+        '"where are shelters in ponce?", "What does the plan allow in Ponce?", "Q4 in Ponce?"]'
+    )
+    client = SimpleNamespace(models=SimpleNamespace(generate_content=lambda **kw: reply))
+    monkeypatch.setattr(assistant, "_client", lambda: client)
+    s = Session(measured=True)
+    got = assistant.follow_ups("What is flood risk here?", "Some answer.", s)
+    assert got == [
+        "Where are shelters in Ponce?",
+        "What does the plan allow in Ponce?",
+        "Q4 in Ponce?",
+    ]
+    assert assistant.follow_ups("q", "answer", Session()) == []  # nothing found, nothing to suggest

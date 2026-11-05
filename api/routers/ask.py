@@ -1,8 +1,9 @@
 """The two question routes: the answer as it is written, and the answer at once.
 
 Both call api/services/answering.py, so they cannot differ in what they answer.
-The streaming route sends server-sent events - delta..., meta, done - whose
-shapes are api/schemas/ask.py's StreamMeta, StreamDelta and StreamDone.
+The streaming route sends server-sent events - delta..., meta, done, then
+sometimes map and followups - whose shapes are api/schemas/ask.py's StreamMeta,
+StreamDelta, StreamDone and StreamFollowUps.
 """
 
 from __future__ import annotations
@@ -56,6 +57,7 @@ def ask(req: AskRequest) -> AskResponse:
         municipio=out["municipio"],
         focus=out["focus"],
         found=out["found"],
+        followups=out.get("followups", []),
         disclaimer=DISCLAIMERS[a.lang],
     )
 
@@ -66,7 +68,7 @@ def ask(req: AskRequest) -> AskResponse:
     responses={
         200: {
             "content": {"text/event-stream": {}},
-            "description": "status..., delta..., meta, done, [map]",
+            "description": "status..., delta..., meta, done, [map], [followups]",
         }
     },
 )

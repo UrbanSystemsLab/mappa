@@ -23,6 +23,7 @@ from ..tools import Session
 MAX_SOURCES = 5
 MAX_LAYER_SOURCES = 4
 MAX_LAYERS_SHOWN = 3  # more at once and the map stops being readable
+FOLLOW_UPS_WAIT = 10.0  # seconds; after that the answer goes without suggestions
 
 UNAVAILABLE = {
     "en": "The assistant could not answer just now. Please try again in a moment.",
@@ -47,9 +48,10 @@ class Ask:
 
 
 def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
-    """("delta"..., "meta", "done", ["map"]) events: the text as it is written, what
-    the map should do, the finished answer and its sources - and, when layers
-    were chosen to illustrate the answer, a later map update."""
+    """("status"..., "delta"..., "meta", "done", ["map"], ["followups"]) events:
+    progress, the text as it is written, what the map should do, the finished
+    answer and its sources - then, when layers were chosen to illustrate the
+    answer, a later map update, and questions the reader might ask next."""
     session = Session(lang=ask.lang, question=ask.question)
     session.place = places.from_selection(ask.location)
     session.point = _clicked_point(ask.spatial)
@@ -67,7 +69,7 @@ def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
     shown = assistant.clicked_features(ask.spatial)
     if shown:
         session.results.append(shown)
-    written = []
+    written, failed = [], False
     try:
         for piece in assistant.answer(ask.question, session, context):
             if isinstance(piece, assistant.Status):
@@ -76,13 +78,23 @@ def stream(ask: Ask) -> Iterator[tuple[str, dict[str, Any]]]:
             written.append(piece)
             yield "delta", {"text": piece}
     except assistant.AssistantUnavailable:
-        written = [UNAVAILABLE[ask.lang]]
+        written, failed = [UNAVAILABLE[ask.lang]], True
         yield "delta", {"text": written[0]}
+    text = "".join(written)
+    session.cited_overview(text)
+    asking = None if failed else assistant.follow_ups_soon(ask.question, text, session)
     yield "meta", _map(session)
-    yield "done", _finish("".join(written), session)
-    # The reader has everything; layers picked beside the answer arrive after.
+    yield "done", _finish(text, session)
+    # The reader has everything; layers picked beside the answer arrive after,
+    # then questions they might ask next.
     if assistant.chosen_layers(session):
         yield "map", _map(session)
+    try:
+        questions = asking.result(timeout=FOLLOW_UPS_WAIT) if asking else []
+    except Exception:  # the answer stands without suggestions
+        questions = []
+    if questions:
+        yield "followups", {"questions": questions}
 
 
 def _clicked_point(spatial: dict[str, Any] | None) -> tuple[float, float] | None:
@@ -98,7 +110,9 @@ def answer(ask: Ask) -> dict[str, Any]:
     """The whole answer at once - the streaming events, gathered."""
     out: dict[str, Any] = {}
     for kind, payload in stream(ask):
-        if kind not in ("delta", "status"):
+        if kind == "followups":
+            out["followups"] = payload["questions"]
+        elif kind not in ("delta", "status"):
             out.update(payload)  # a later map event replaces the first
     return out
 

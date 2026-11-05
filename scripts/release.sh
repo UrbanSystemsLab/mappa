@@ -88,6 +88,10 @@ DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.apply_layer_metadata --com
 # minutes). Before embed_layers: the search text includes what this finds.
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.profile_layers --commit
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.embed_layers --commit
+# Which documents discuss each layer, and what each standard layer holds in each
+# municipio. Only what changed is recomputed; the first run takes about an hour.
+DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.link_layer_documents --commit
+DATABASE_URL="$DB_URL" ./venv/bin/python -m pipelines.profile_places --commit
 
 say "4/6  Integration tests against $DB"
 DATABASE_URL="$DB_URL" ./venv/bin/python -m pytest tests/integration -q

@@ -13,7 +13,7 @@ function AnswerText({ text }: { text: string }) {
   return <>{parts.map((p, i) => (i % 2 ? <b key={i}>{p}</b> : <Fragment key={i}>{p}</Fragment>))}</>;
 }
 
-function TurnView({ t, lang }: { t: Turn; lang: 'es' | 'en' }) {
+function TurnView({ t, lang, last, onAsk }: { t: Turn; lang: 'es' | 'en'; last: boolean; onAsk: (q: string) => void }) {
   const L = I18N[lang];
   const steps = t.steps.length ? t.steps : [L.thinking];
   const text = t.shown != null ? t.answer.slice(0, t.shown) : t.answer;
@@ -35,6 +35,12 @@ function TurnView({ t, lang }: { t: Turn; lang: 'es' | 'en' }) {
                 {c.year && !String(c.title).includes(String(c.year)) ? ` · ${c.year}` : ''}
                 {c.doc_id ? <> · <span className="cid">{c.doc_id}</span></> : null}
               </div>))}
+          </div>)}
+        {last && t.next.length > 0 && (
+          <div className="next"><div className="cites-h">{L.next}</div>
+            <div className="samples">{t.next.map(q => (
+              <a key={q} role="button" tabIndex={0} onClick={() => onAsk(q)}
+                 onKeyDown={e => e.key === 'Enter' && onAsk(q)}>{q}</a>))}</div>
           </div>)}
       </div></div>
     </>
@@ -61,7 +67,8 @@ export default function ChatPanel() {
             <p>{L.emptyB}</p>
             <div className="hint"><b>{L.hint[0]}</b>{L.hint[1]}</div>
           </div>
-        ) : turns.map((t, i) => <TurnView key={i} t={t} lang={lang} />)}
+        ) : turns.map((t, i) => (
+          <TurnView key={i} t={t} lang={lang} last={i === turns.length - 1 && !busy} onAsk={send} />))}
       </div>
       <div className="composer">
         <div className="samples">
