@@ -32,6 +32,7 @@ Run:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -101,6 +102,8 @@ NAME_WORDS = re.compile(
 )
 
 MAX_SHOWN = 6  # every property is repeated per feature per tile
+# Bumped when the rules below change, so every layer is profiled again.
+PROFILE_VERSION = 1
 MAX_KINDS = 20  # beyond this a legend stops being readable
 SAMPLE = 5000
 KIND_SAMPLE = 50_000
@@ -364,6 +367,7 @@ def main() -> None:
     ap.add_argument("--commit", action="store_true")
     ap.add_argument("--table")
     ap.add_argument("--after", help="resume: only tables named after this one")
+    ap.add_argument("--all", action="store_true", help="profile every layer, changed or not")
     args = ap.parse_args()
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
@@ -382,7 +386,7 @@ def main() -> None:
     where = "AND table_name = %s" if args.table else ""
     cur.execute(
         f"""SELECT id, table_name, coalesce(feature_count, 0), coalesce(tile_properties, '{{}}'),
-                   coalesce(style, '{{}}'::jsonb)
+                   coalesce(style, '{{}}'::jsonb), profile_signature
             FROM layer_registry
             WHERE status IN ('published', 'loaded') AND table_name IS NOT NULL {where}
             ORDER BY table_name""",
@@ -395,8 +399,29 @@ def main() -> None:
     if args.after:
         layers = [row for row in layers if row[1] > args.after]
 
+    # What each profile is worked out from. A layer whose inputs are as they were
+    # last time keeps its profile, so a release reads only the layers that changed.
+    cur.execute(
+        """SELECT table_name, string_agg(column_name || ' ' || data_type, ',' ORDER BY column_name)
+           FROM information_schema.columns
+           WHERE table_schema = 'public' AND table_name LIKE 'layer%%' GROUP BY 1"""
+    )
+    table_columns = dict(cur.fetchall())
+
+    def signature(table: str, features: int) -> str:
+        entry = dict_tables.get(table)
+        sheet = dict_sheets.get(entry, []) if entry else []
+        inputs = [PROFILE_VERSION, features, table_columns.get(table, ""), entry, sheet]
+        return hashlib.md5(json.dumps(inputs, default=str).encode()).hexdigest()
+
+    signatures = {table: signature(table, features) for _, table, features, *_ in layers}
+    if not (args.all or args.table):
+        before = len(layers)
+        layers = [row for row in layers if row[5] != signatures[row[1]]]
+        print(f"[profile] {before - len(layers)} layers unchanged since last profiled; skipped")
+
     coloured = clickable = nothing = failed = named = from_dictionary = 0
-    for i, (rid, table, features, _old, style) in enumerate(layers, 1):
+    for i, (rid, table, features, _old, style, _signed) in enumerate(layers, 1):
         # Saved every few layers, so a dropped connection loses only those.
         if args.commit and i % 10 == 0:
             conn.commit()
@@ -417,8 +442,9 @@ def main() -> None:
                 style.pop("categories", None)
                 cur.execute(
                     "UPDATE layer_registry SET tile_properties = %s, style = %s, "
-                    "label_column = %s, content_summary = %s WHERE id = %s",
-                    (shown, json.dumps(style), label, about, rid),
+                    "label_column = %s, content_summary = %s, profile_signature = %s "
+                    "WHERE id = %s",
+                    (shown, json.dumps(style), label, about, signatures[table], rid),
                 )
                 break
             except (psycopg2.InterfaceError, psycopg2.OperationalError) as exc:

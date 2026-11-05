@@ -60,12 +60,11 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--commit", action="store_true")
     ap.add_argument("--batch", type=int, default=128)
+    ap.add_argument("--all", action="store_true", help="embed every layer, changed or not")
     args = ap.parse_args()
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
         raise SystemExit("DATABASE_URL not set")
-
-    from sentence_transformers import SentenceTransformer
 
     conn = psycopg2.connect(dsn)
     conn.autocommit = False
@@ -80,12 +79,22 @@ def main() -> None:
     cur.execute("""
         SELECT id, name_es, name_en, description_es, description_en, purpose, category,
                subcategory, source_agency, vintage_year, keywords, content_summary,
-               tile_properties, property_labels
+               tile_properties, property_labels, embed_text, embedding IS NULL AS missing
         FROM layer_registry ORDER BY id
     """)
     cols = [d[0] for d in cur.description]
     rows = [dict(zip(cols, r, strict=False)) for r in cur.fetchall()]
-    print(f"[embed] {len(rows)} layers")
+    # Only layers whose text changed: the same text gives the same embedding, and
+    # rewriting it would also make link_layer_documents score the layer again.
+    every = len(rows)
+    if not args.all:
+        rows = [r for r in rows if r["missing"] or describe(r) != r["embed_text"]]
+    print(f"[embed] {every} layers, {len(rows)} with new or changed text")
+    if not rows:
+        conn.rollback()
+        return
+
+    from sentence_transformers import SentenceTransformer
 
     model = SentenceTransformer(MODEL)
     texts = [describe(r) for r in rows]
