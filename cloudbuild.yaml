@@ -1,0 +1,23 @@
+# The image for staging, built by scripts/release.sh in the background while the
+# database steps and tests run. Production never rebuilds: it reuses the image
+# staging was checked on.
+#
+# The last image is the cache: PyTorch, the Python packages and the embedding
+# model are only installed again when requirements-api.txt changes, so a code
+# change builds in a minute or two instead of five.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args: ["-c", "docker pull ${_IMAGE}:latest || true"]
+  - name: gcr.io/cloud-builders/docker
+    env: ["DOCKER_BUILDKIT=1"]
+    args:
+      - build
+      - --build-arg=BUILDKIT_INLINE_CACHE=1
+      - --cache-from=${_IMAGE}:latest
+      - --tag=${_IMAGE}:${_SHA}
+      - --tag=${_IMAGE}:latest
+      - .
+images: ["${_IMAGE}:${_SHA}", "${_IMAGE}:latest"]
+options:
+  machineType: E2_HIGHCPU_8

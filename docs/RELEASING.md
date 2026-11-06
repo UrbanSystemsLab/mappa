@@ -41,14 +41,24 @@ Until they are switched on, the same steps run from a laptop:
 ```
 
 Both ways run `scripts/release.sh`. For staging it refuses to run with
-uncommitted changes, then:
+uncommitted changes, without the database proxy, or with an expired Google Cloud
+login (`gcloud auth login` fixes it), then:
 
+0. starts building the site's image from the commit, in the background
+   (`cloudbuild.yaml`; the last image is its cache, so a code change builds in a
+   minute or two and only a change to `requirements-api.txt` reinstalls PyTorch)
 1. lint and unit tests
 2. database migrations on `mappa_staging`
-3. loads the data files in `data/` and profiles the layers
+3. loads the data files in `data/`, then profiles, embeds and links the layers -
+   only those that changed since the last release
 4. integration and answer tests against `mappa_staging` - the real data
-5. builds the site from the commit and deploys it to `mappa-staging`
+5. waits for the image and deploys it to `mappa-staging`
 6. checks the site answers, including one real question
+
+A release with no data changes takes about five minutes. To redo a data step for
+every layer - after changing how it works without changing its version number -
+run it by hand with `--all` (`profile_layers`, `embed_layers`,
+`link_layer_documents`, `profile_places`).
 
 For production it additionally refuses unless the commit is on `main` or
 `release`, is the same as that branch on GitHub, and **is already what staging is

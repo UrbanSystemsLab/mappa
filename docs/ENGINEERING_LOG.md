@@ -814,3 +814,14 @@ the same on every shape was being picked), not numbers.
 
 Both pipelines run in `release.sh` and only recompute what changed. The first run
 takes about an hour per database.
+
+**Faster releases.** A staging release took 15-20 minutes even for a small change,
+and an expired Google Cloud login was found only at the deploy step. Now:
+- the login and the database proxy are checked before anything runs;
+- the image builds in the background from the start, with the last image as its
+  cache (`cloudbuild.yaml`): 8.5 min with no cache, 2.5 min with it, beside the tests;
+- `profile_layers` and `embed_layers` skip unchanged layers (migration 0012 records
+  what each profile came from): profiling went from 3 min 22 s to seconds, embedding
+  from 722 layers to the few whose text changed.
+`frontend/tsconfig.tsbuildinfo`, rewritten by every build, is no longer tracked; it
+made the release refuse to run ("uncommitted changes").

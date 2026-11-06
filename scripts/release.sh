@@ -41,6 +41,10 @@ SHA=$(git rev-parse --short HEAD)
 # GitHub checks out the commit itself, so the branch comes from its own variable.
 BRANCH=${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD)}
 nc -z 127.0.0.1 5432 2>/dev/null || fail "the Cloud SQL proxy is not running on port 5432."
+# Checked now, not at the deploy step after the database work: an expired login
+# used to stop a release after fifteen minutes.
+gcloud auth print-access-token >/dev/null 2>&1 \
+  || fail "your Google Cloud login has expired. Run: gcloud auth login - then run this again."
 DB_URL="postgresql://mappa:$(cat .mappa_db_pw)@127.0.0.1:5432/$DB"
 
 if [ "$TARGET" = production ]; then
@@ -60,6 +64,18 @@ if [ "$TARGET" = production ]; then
     read -r -p "Type 'production' to continue: " ok
     [ "$ok" = production ] || fail "not confirmed."
   fi
+fi
+
+# --- the staging image, built while the rest runs ------------------------------
+# Building takes a few minutes; it starts now, beside the tests and database
+# steps, and the deploy step waits for it. Production reuses staging's image.
+REPO="$REGION-docker.pkg.dev/$PROJECT/cloud-run-source-deploy/mappa"
+if [ "$TARGET" = staging ]; then
+  BUILD_LOG=$(mktemp "${TMPDIR:-/tmp}/mappa-build.XXXXXX")
+  gcloud builds submit . --project "$PROJECT" --region "$REGION" --config cloudbuild.yaml \
+    --substitutions "_IMAGE=$REPO,_SHA=$SHA" >"$BUILD_LOG" 2>&1 &
+  BUILD_PID=$!
+  echo "Building the image in the background (log: $BUILD_LOG)"
 fi
 
 # --- 1. tests that need no database --------------------------------------------
@@ -102,8 +118,9 @@ DATABASE_URL="$DB_URL" ./venv/bin/python -m pytest tests/e2e -q
 say "5/6  Deploying $SHA to $SERVICE"
 COMMON=(--region "$REGION" --project "$PROJECT" --labels "git-sha=$SHA,env=$TARGET")
 if [ "$TARGET" = staging ]; then
-  # Built here, from this commit. Production later reuses this exact build.
-  gcloud run deploy "$SERVICE" --source . "${COMMON[@]}" \
+  # Built above, from this commit. Production later reuses this exact build.
+  wait "$BUILD_PID" || { tail -30 "$BUILD_LOG"; fail "the image did not build (log: $BUILD_LOG)"; }
+  gcloud run deploy "$SERVICE" --image "$REPO:$SHA" "${COMMON[@]}" \
     --service-account "$RUNTIME_SA" --add-cloudsql-instances "$INSTANCE" \
     --set-secrets "DATABASE_URL=mappa-database-url:latest" \
     --set-env-vars "APP_ENV=staging,DATABASE_NAME=$DB,GCP_PROJECT=$PROJECT,VERTEX_LOCATION=$REGION" \
