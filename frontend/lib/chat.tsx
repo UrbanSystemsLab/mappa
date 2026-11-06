@@ -43,14 +43,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // The answer arrives whole - every figure in it is checked first - so it is
   // shown a few words at a time over about a second.
+  // The animation only moves how much is shown: the text itself is set once
+  // here and replaced by the server's cleaned answer on 'done', which a later
+  // tick must not undo.
   const reveal = (i: number, text: string) => {
     if (prefersCalm()) { update(i, t => ({ ...t, answer: text, shown: null })); return; }
+    update(i, t => ({ ...t, answer: text, shown: 0 }));
     const started = performance.now();
     const tick = (now: number) => {
       const want = Math.min(text.length, Math.round(text.length * (now - started) / 900));
       const cut = text.indexOf(' ', want);
       const shown = want >= text.length || cut < 0 ? null : cut;
-      update(i, t => ({ ...t, answer: text, shown }));
+      update(i, t => ({ ...t, shown }));
       if (shown !== null) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
