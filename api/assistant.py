@@ -329,8 +329,17 @@ def _contents(question: str, context: Context, lang: str) -> list:
         out.append(types.Content(role="model", parts=[types.Part.from_text(text=answered)]))
     note = context.note(lang)
     text = f"{note}\n\nQuestion: {question}" if note else question
+    # Said with every question: earlier turns in the other language otherwise
+    # carry the answer into it after the reader switches.
+    text += f"\n\n{ANSWER_IN[lang]}"
     out.append(types.Content(role="user", parts=[types.Part.from_text(text=text)]))
     return out
+
+
+ANSWER_IN = {
+    "en": "Answer in English, whatever language earlier turns used.",
+    "es": "Responde en español, sin importar el idioma de los turnos anteriores.",
+}
 
 
 def answer(question: str, session: Session, context: Context) -> Iterator[str]:
